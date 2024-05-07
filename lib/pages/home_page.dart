@@ -1,5 +1,5 @@
+import 'package:Pet_Fluffy/pages/app_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:google_login/pages/app_screen.dart';
 import 'package:sign_in_button/sign_in_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';

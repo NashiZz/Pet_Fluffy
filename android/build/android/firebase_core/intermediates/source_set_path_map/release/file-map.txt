@@ -1,0 +1,14 @@
+io.flutter.plugins.firebase.core.firebase_core-jetified-annotation-experimental-1.1.0-0 C:\Users\User\.gradle\caches\transforms-3\09db32a73384ac2dccccf916d7dc0262\transformed\jetified-annotation-experimental-1.1.0\res
+io.flutter.plugins.firebase.core.firebase_core-core-1.6.0-1 C:\Users\User\.gradle\caches\transforms-3\168e459aae59caaab0d2c703cf9d67ab\transformed\core-1.6.0\res
+io.flutter.plugins.firebase.core.firebase_core-jetified-window-1.0.0-beta04-2 C:\Users\User\.gradle\caches\transforms-3\29fe38a5fd6c3bf46cd8e59c2b63489e\transformed\jetified-window-1.0.0-beta04\res
+io.flutter.plugins.firebase.core.firebase_core-jetified-play-services-basement-18.1.0-3 C:\Users\User\.gradle\caches\transforms-3\812b774e80ed6f3274e67e516e447223\transformed\jetified-play-services-basement-18.1.0\res
+io.flutter.plugins.firebase.core.firebase_core-jetified-firebase-common-20.4.2-4 C:\Users\User\.gradle\caches\transforms-3\8adc41e1868e9d15f43c78d8ff0d3012\transformed\jetified-firebase-common-20.4.2\res
+io.flutter.plugins.firebase.core.firebase_core-jetified-window-java-1.0.0-beta04-5 C:\Users\User\.gradle\caches\transforms-3\978180320ed1d29d66a82edc9d24751e\transformed\jetified-window-java-1.0.0-beta04\res
+io.flutter.plugins.firebase.core.firebase_core-main-6 C:\Users\User\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-2.27.0\android\src\main\res
+io.flutter.plugins.firebase.core.firebase_core-release-7 C:\Users\User\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-2.27.0\android\src\release\res
+io.flutter.plugins.firebase.core.firebase_core-pngs-8 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\generated\res\pngs\release
+io.flutter.plugins.firebase.core.firebase_core-resValues-9 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\generated\res\resValues\release
+io.flutter.plugins.firebase.core.firebase_core-rs-10 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\generated\res\rs\release
+io.flutter.plugins.firebase.core.firebase_core-mergeReleaseResources-11 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\intermediates\incremental\release\mergeReleaseResources\merged.dir
+io.flutter.plugins.firebase.core.firebase_core-mergeReleaseResources-12 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+io.flutter.plugins.firebase.core.firebase_core-merged_res-13 D:\P_3_t2\Project\google_login\android\build\android\firebase_core\intermediates\merged_res\release

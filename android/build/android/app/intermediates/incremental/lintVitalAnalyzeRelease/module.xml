@@ -1,0 +1,18 @@
+<lint-module
+    format="1"
+    dir="D:\P_3_t2\Project\google_login\android\app"
+    name=":app"
+    type="APP"
+    maven="android:app:"
+    gradle="7.3.0"
+    buildFolder="D:\P_3_t2\Project\google_login\android\build\android\app"
+    bootClassPath="C:\Users\User\AppData\Local\Android\Sdk\platforms\android-34\android.jar;C:\Users\User\AppData\Local\Android\Sdk\build-tools\30.0.3\core-lambda-stubs.jar"
+    javaSourceLevel="1.8"
+    compileTarget="android-34">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>

@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "45041686936",
+    "firebase_url": "https://login-3c8fb-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "login-3c8fb",
     "storage_bucket": "login-3c8fb.appspot.com"
   },
@@ -13,6 +14,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "45041686936-c1lmgv253aeg5otq3maconsommbjn23p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.google_login",
+            "certificate_hash": "2ced6e6feb0da22bf681fe2963f4e1e1428d990d"
+          }
+        },
         {
           "client_id": "45041686936-krqud307v26r28qb0ekipv0i9qmie1bh.apps.googleusercontent.com",
           "client_type": 3
