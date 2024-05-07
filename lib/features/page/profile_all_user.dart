@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/page/owner_pet/edit_profile.dart';
@@ -11,7 +10,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 class ProfileAllUserPage extends StatefulWidget {
-  const ProfileAllUserPage({Key? key}) : super(key: key);
+  final String userId;
+  const ProfileAllUserPage({Key? key, required this.userId}) : super(key: key);
 
   @override
   State<ProfileAllUserPage> createState() => _ProfileAllUserPageState();
@@ -19,12 +19,14 @@ class ProfileAllUserPage extends StatefulWidget {
 
 class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
   late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
-  late String userId;
   late int numPet = 0;
   late Map<String, dynamic> userData = {};
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
   late String userImageBase64 = '';
+  late String username = '';
+  int dogCount = 0;
+  int catCount = 0;
 
   @override
   void initState() {
@@ -32,9 +34,8 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
     _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      userId = user!.uid;
-      _getUserDataFromFirestore();
-      _getPetUserDataFromFirestore();
+      _getUserDataFromFirestore(widget.userId);
+      _getPetUserDataFromFirestore(widget.userId);
     }
   }
 
@@ -56,25 +57,40 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
         platformChannelDetail);
   }
 
-  Future<void> _getPetUserDataFromFirestore() async {
+  Future<void> _getPetUserDataFromFirestore(String userId) async {
     try {
       QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
           .collection('Pet_User')
-          .where('user_id', isEqualTo: user!.uid)
+          .where('user_id', isEqualTo: userId)
           .get();
+      
+      //นับจำนวนสัตว์เลี้ยงทั้งหมด
       numPet = petUserQuerySnapshot.docs.length;
+
+      // นับจำนวนสัตว์เลี้ยงแต่ละชนิด
+      petUserQuerySnapshot.docs.forEach((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        String petType = data['type_pet'];
+
+        if (petType == 'สุนัข') {
+          dogCount++;
+        } else if (petType == 'แมว') {
+          catCount++;
+        }
+      });
 
       setState(() {
         petUserDataList = petUserQuerySnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
+      
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
     }
   }
 
-  Future<void> _getUserDataFromFirestore() async {
+  Future<void> _getUserDataFromFirestore(String userId) async {
     try {
       DocumentSnapshot userDocSnapshot =
           await FirebaseFirestore.instance.collection('user').doc(userId).get();
@@ -82,7 +98,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
       setState(() {
         userData = userDocSnapshot.data() as Map<String, dynamic>;
         userImageBase64 = userData['photoURL'] ?? '';
-
+        username = userData['username'] ?? '';
       });
     } catch (e) {
       print('Error getting user data from Firestore: $e');
@@ -99,7 +115,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
             },
             icon: const Icon(LineAwesomeIcons.angle_left)),
         title: Text(
-          "โปรไฟล์เจ้าของสัตว์เลี้ยง",
+          "โปรไฟล์ $username",
           style: Theme.of(context).textTheme.titleLarge,
         ),
         centerTitle: true,
@@ -170,9 +186,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                     Text(
                       userData['username'] ?? '',
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -191,6 +205,18 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                           'สัตว์เลี้ยง',
                           style: TextStyle(
                             fontSize: 18,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                'สุนัข: $dogCount แมว: $catCount',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey.shade600),
+                              )
+                            ],
                           ),
                         )
                       ],

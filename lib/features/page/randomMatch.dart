@@ -7,6 +7,7 @@ import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -313,7 +314,13 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                             ),
                                             GestureDetector(
                                               onTap: () => {
-                                                
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        ProfileAllUserPage(userId: petData['user_id']),
+                                                  ),
+                                                )
                                               },
                                               child: Container(
                                                 width: 50,

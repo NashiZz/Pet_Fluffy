@@ -26,6 +26,8 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
   late String userImageBase64 = '';
+  int dogCount = 0;
+  int catCount = 0;
 
   @override
   void initState() {
@@ -63,7 +65,20 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
           .collection('Pet_User')
           .where('user_id', isEqualTo: user!.uid)
           .get();
+      //นับจำนวนสัตว์เลี้ยงทั้งหมด
       numPet = petUserQuerySnapshot.docs.length;
+
+      // นับจำนวนสัตว์เลี้ยงแต่ละชนิด
+      petUserQuerySnapshot.docs.forEach((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+        String petType = data['type_pet'];
+
+        if (petType == 'สุนัข') {
+          dogCount++;
+        } else if (petType == 'แมว') {
+          catCount++;
+        }
+      });
 
       setState(() {
         petUserDataList = petUserQuerySnapshot.docs
@@ -192,6 +207,18 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
                           'สัตว์เลี้ยง',
                           style: TextStyle(
                             fontSize: 18,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Text(
+                                'สุนัข: $dogCount แมว: $catCount',
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey.shade600),
+                              )
+                            ],
                           ),
                         )
                       ],
