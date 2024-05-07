@@ -1,6 +1,6 @@
-# google_login
+# Pet_Fluffy Application Project
 
-A new Flutter project.
+A new Flutter project Pet Fluffy Application.
 
 ## Getting Started
 
