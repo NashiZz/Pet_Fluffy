@@ -2,6 +2,10 @@
 
 A new Flutter project Pet Fluffy Application.
 
+## Project creator
+1. Poonsap Channgam ( CS MSU )
+2. Preecha Lanchanthong ( CS MSU )
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
