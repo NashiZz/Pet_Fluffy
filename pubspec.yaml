@@ -59,7 +59,7 @@ dependencies:
   get: ^4.6.6
 
   image: ^4.1.7
-  widget_to_marker: ^1.0.4
+  widget_to_marker: ^1.0.5
   flutter_launcher_icons: ^0.13.1
   flutter_image_compress: ^2.2.0
   shared_preferences: ^2.2.3

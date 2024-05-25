@@ -27,3 +27,16 @@ plugins {
 }
 
 include ":app"
+
+def flutterProjectRoot = rootProject.projectDir.parentFile.toPath()
+
+def plugins = new File(flutterProjectRoot.toFile(), '.flutter-plugins-dependencies')
+if (plugins.exists()) {
+    plugins.eachLine { line ->
+        def plugin = line.split('=')
+        if (plugin.size() == 2) {
+            include ":${plugin[0]}"
+            project(":${plugin[0]}").projectDir = new File(plugin[1])
+        }
+    }
+}
