@@ -9,13 +9,17 @@ final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
+  //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
 
+  //ทำการเชื่อมต่อแอปกับ Firebase 
   await Firebase.initializeApp();
 
+  //กำหนดการตั้งค่าเริ่มต้นสำหรับการแจ้ง
   const AndroidInitializationSettings androidInitializationSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
+  //กำหนดการตั้งค่าเริ่มต้นสำหรับการเริ่มต้นการใช้งาน Firebase Cloud Messaging
   const InitializationSettings initializationSettings =
       InitializationSettings(android: androidInitializationSettings);
 
@@ -35,6 +39,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        // Set Font
         textTheme: GoogleFonts.kanitTextTheme(
           Theme.of(context).textTheme,
         ),

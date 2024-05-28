@@ -16,6 +16,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:widget_to_marker/widget_to_marker.dart';
 
+//หน้า Menu Maps ของ App
 class Maps_Page extends StatefulWidget {
   const Maps_Page({super.key});
 
@@ -24,22 +25,22 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
-  User? user = FirebaseAuth.instance.currentUser;
-  late List<Map<String, dynamic>> petUserDataList = [];
-  LocationData? _locationData; //เก็บตำแหน่งข้อมูล
+  User? user = FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
+  late List<Map<String, dynamic>> petUserDataList = []; //ใช้เก็บข้อมูลของสัตว์เลี้ยง
+  LocationData? _locationData; //เก็บตำแหน่งข้อมูล as GPS 
   late Location location;
   bool _isSelectingLocation = false;
 
-  List<LatLng> selectedLocations = [];
-  LatLng? _selectedLocation;
-  final Set<Marker> _markers = {};
-  StreamSubscription<LocationData>? _locationSubscription;
+  LatLng? _selectedLocation; //ใช้เก็บตำแหน่งที่ถูกเลือก
+  final Set<Marker> _markers = {}; 
+  StreamSubscription<LocationData>? _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
 
   late String userId;
   late String userImageBase64;
-  List<String> userAllImg = [];
+  List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
 
+  //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -73,6 +74,7 @@ class _MapsPageState extends State<Maps_Page> {
     zoom: 14.4746,
   );
 
+  //สร้าง Marker แสดงตำแหน่งปัจจุบันของผู้ใช้
   void _createUserLocationMarker() {
     _markers.add(Marker(
       markerId: const MarkerId('currentLocation'),
@@ -85,6 +87,7 @@ class _MapsPageState extends State<Maps_Page> {
     ));
   }
 
+  //เมื่อมีการเปลี่ยนแปลงตำแหน่งของผู้ใช้ marker จะแสดงตามตำแหน่งของผู้ใช้
   void _updateUserLocationMarker() {
     setState(() {
       _markers
@@ -177,6 +180,8 @@ class _MapsPageState extends State<Maps_Page> {
               },
               markers: _markers,
             ),
+
+            //แสดงรูปภาพโปรไฟล์ผู้ใช้ และ ปุ่มค้นหา
             Positioned(
               top: 10,
               left: 10,
@@ -221,7 +226,6 @@ class _MapsPageState extends State<Maps_Page> {
                             border: InputBorder.none,
                           ),
                           onChanged: (value) {
-                            // Add search functionality
                           },
                         ),
                       ),
@@ -239,6 +243,7 @@ class _MapsPageState extends State<Maps_Page> {
           ],
         ),
       ),
+      //ปุ่มเลือก ตำแหน่งแสดงผลสัตว์เลี้ยง
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _startSelectingLocation();
@@ -255,6 +260,7 @@ class _MapsPageState extends State<Maps_Page> {
         .animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
   }
 
+  //เลือกตำแหน่งแสดงผลสัตว์เลี้ยง
   void _startSelectingLocation() {
     showDialog(
       context: context,
@@ -328,6 +334,7 @@ class _MapsPageState extends State<Maps_Page> {
     );
   }
 
+  //เก็บตำแหน่งที่เลือกมาเก็บไว้ในนี้และ บันทึกลงฐานข้อมูล
   void _selectLocation(LatLng position) {
     final Marker newMarker = Marker(
       markerId: const MarkerId('userSelectedLocation'),
@@ -347,6 +354,7 @@ class _MapsPageState extends State<Maps_Page> {
     _addLocationToFirestore(position);
   }
 
+  //บันทึกข้อมูลตำแหน่ง lat lng ลงฐานข้อมูล
   void _addLocationToFirestore(LatLng position) async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -388,10 +396,11 @@ class _MapsPageState extends State<Maps_Page> {
     });
   }
 
+  //สร้าง Maker สำหรับแสดง รูปภาพสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Widget _createMarkerIcon(Uint8List markerImages) {
     return Container(
-      width: 50,
-      height: 50,
+      width: 80,
+      height: 80,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -418,6 +427,7 @@ class _MapsPageState extends State<Maps_Page> {
     );
   }
 
+  //คำนวณอายุสัตว์เลี้ยง
   String calculateAge(DateTime birthdate) {
     final now = DateTime.now();
     int years = now.year - birthdate.year;
@@ -446,6 +456,7 @@ class _MapsPageState extends State<Maps_Page> {
     return ageString;
   }
 
+  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Future<void> _loadAllPetLocations(BuildContext context) async {
     try {
       setState(() {
@@ -471,6 +482,7 @@ class _MapsPageState extends State<Maps_Page> {
 
         double lat = userSnapshot['lat'] ?? 0.0;
         double lng = userSnapshot['lng'] ?? 0.0;
+        //random ตำแหน่ง ให้สัตว์เลี้ยงไม่ซ้อนกัน
         lat += Random().nextDouble() * 0.0002;
         lng += Random().nextDouble() * 0.0002;
         LatLng petLocation = LatLng(lat, lng);
@@ -518,7 +530,7 @@ class _MapsPageState extends State<Maps_Page> {
         isLoading = false;
       });
 
-      // รายงานข้อผิดพลาดทั้งหมด (ถ้ามี)
+      // รายงานข้อผิดพลาดทั้งหมด 
       if (errors.isNotEmpty) {
         for (var error in errors) {
           print(error);
@@ -529,6 +541,7 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
+  //Show Dialog เมื่อมีการคลิก Maker สัตว์เลี้ยง
   void _showPetDetails(
     BuildContext context,
     String petID,

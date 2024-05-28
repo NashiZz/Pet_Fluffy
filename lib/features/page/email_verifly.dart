@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า ยืนยัน email ก่อนเข้าใช้งาน app
 class EmailVerifly_Page extends StatefulWidget {
   const EmailVerifly_Page({super.key});
 
@@ -126,7 +127,7 @@ class _EmailVerifly_PageState extends State<EmailVerifly_Page> {
                     ),
                     SizedBox(height: 15),
                     Text(
-                      'หลังจากที่ผู้ใช้ ยืนยันอีเมลแล้ว จะกลับไปหน้า ล๊อคอินโดยอัตโนมัติ',
+                      'หลังจากที่ผู้ใช้ ยืนยันอีเมลแล้ว จะล๊อคอินเข้าสู่ระบบให้ทันที',
                       style: TextStyle(
                         fontStyle: FontStyle.normal,
                         color: Colors.white,
@@ -181,7 +182,7 @@ class _EmailVerifly_PageState extends State<EmailVerifly_Page> {
                           }
                         : null,
                     style: ButtonStyle(
-                      minimumSize: MaterialStateProperty.all(
+                      minimumSize: WidgetStateProperty.all(
                           const Size(260, 40)), // กำหนดขนาดของปุ่ม
                     ),
                     child: Text(

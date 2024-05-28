@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Profile ของ สัตว์เลี้ยง
 class Profile_pet_Page extends StatefulWidget {
   final String petId;
   const Profile_pet_Page({super.key, required this.petId});
@@ -82,6 +83,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     return ageString;
   }
 
+  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Future<void> _loadAllPet(String petId) async {
     try {
       DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
@@ -118,6 +120,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     }
   }
 
+  //ดึงข้อมูลรูปภาพผู้ใช้ทั้งหมด
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -368,6 +371,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                           ],
                                         ),
                                         const SizedBox(height: 10),
+                                        
+                                        //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง
                                         FutureBuilder<QuerySnapshot>(
                                           future: FirebaseFirestore.instance
                                               .collection('imgs_pet')
@@ -560,6 +565,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
         });
   }
 
+  // รูป Banner
   Widget buildCoverImage() => Container(
         color: Colors.grey,
         child: petImageBase64.isNotEmpty
@@ -572,6 +578,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
             : const CircularProgressIndicator(), // กรณีที่ไม่มีข้อมูลภาพ
       );
 
+  // รูป Profile
   Widget buildProfileImage() => Container(
         width: 110,
         height: 110,
