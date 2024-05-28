@@ -1,7 +1,6 @@
 // ignore_for_file: camel_case_types, file_names
 
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -25,9 +24,6 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
   String? userImageBase64;
 
   bool isLoading = true;
-  late Random random;
-
-  List<Map<String, dynamic>> randomPetDataList = [];
 
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
@@ -35,29 +31,19 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
       userId = userData.uid;
       Map<String, dynamic>? userDataFromFirestore =
           await ApiUserService.getUserDataFromFirestore(userId!);
-      if (userDataFromFirestore != null) {
-        userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
+      if (userDataFromFirestore != null && mounted) {
         setState(() {
+          userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
           isLoading = false;
         });
       }
     }
   }
 
-  void _loadAllPet() async {
-    List<Map<String, dynamic>> petList = await ApiPetService.loadAllPet();
-    setState(() {
-      randomPetDataList = petList;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
     _getUserDataFromFirestore();
-    random = Random();
-    randomPetDataList = [];
-    _loadAllPet();
   }
 
   @override
@@ -125,10 +111,10 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 ),
               ),
             ),
-            StreamBuilder<QuerySnapshot>(
-              stream: ApiPetService.getPetUserDataStream(),
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Stream.fromFuture(ApiPetService.loadAllPet()),
               builder: (BuildContext context,
-                  AsyncSnapshot<QuerySnapshot> snapshot) {
+                  AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
                     child: Column(
@@ -144,15 +130,21 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 if (snapshot.hasError) {
                   return Text('Error: ${snapshot.error}');
                 }
-                List<DocumentSnapshot> randomPetData =
-                    snapshot.data!.docs.toList();
-                randomPetData.shuffle();
+
+                if (snapshot.data == null || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Text('ไม่พบข้อมูลสัตว์เลี้ยง'),
+                  );
+                }
+
+                List<Map<String, dynamic>> randomPetData = snapshot.data!;
+
                 return Expanded(
                   child: ListView.builder(
                     itemCount: randomPetData.length,
                     itemBuilder: (context, index) {
                       Map<String, dynamic> petData =
-                          randomPetData[index].data() as Map<String, dynamic>;
+                          randomPetData[index];
                       DateTime birthDate = DateTime.parse(petData['birthdate']);
                       final now = DateTime.now();
                       int years = now.year - birthDate.year;
@@ -318,7 +310,9 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (context) =>
-                                                        ProfileAllUserPage(userId: petData['user_id']),
+                                                        ProfileAllUserPage(
+                                                            userId: petData[
+                                                                'user_id']),
                                                   ),
                                                 )
                                               },

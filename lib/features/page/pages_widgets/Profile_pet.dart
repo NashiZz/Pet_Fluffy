@@ -430,7 +430,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                             } 
                                             return Text('ไม่มีรูปภาพ');
                                           },
-                                        )
+                                        ),
+                                        const SizedBox(height: 5)
                                       ]),
                                 ),
                                 SingleChildScrollView(
