@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Login
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -280,6 +281,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  //บันทึกข้อมูลผู้ใช้ จากการสมัครสมาชิกด้วย Google
   Future<void> saveUserGoogle(User user) async {
     // ตรวจสอบว่ามีข้อมูลของผู้ใช้ใน Firestore หรือไม่
     final userRef = FirebaseFirestore.instance.collection('user').doc(user.uid);
@@ -310,6 +312,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // เข้าสู่ระบบ และ สมัครสมาชิกด้วย Google
   Future<void> signInwithGoogle() async {
     setState(() {
       _isSigning = true;
@@ -367,6 +370,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+   // เข้าสู่ระบบด้วย email password
   void _signIn() async {
     setState(() {
       _isSigning = true;

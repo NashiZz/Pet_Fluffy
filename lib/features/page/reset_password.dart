@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+//หน้าลืมรหัสผ่าน Login
 class ResetPwd extends StatefulWidget {
   const ResetPwd({Key? key}) : super(key: key);
 
@@ -24,6 +25,7 @@ class _ResetPwdState extends State<ResetPwd> {
 
   Future passwordReset() async {
     try {
+      //ส่งอีเมลการรีเซ็ตรหัสผ่านไปยังอีเมลที่ผู้ใช้ป้อน
       await FirebaseAuth.instance
           .sendPasswordResetEmail(email: _emailController.text.trim());
       showDialog(

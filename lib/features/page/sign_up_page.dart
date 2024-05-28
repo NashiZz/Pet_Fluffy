@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 
 import 'package:image_picker/image_picker.dart';
 
+//หน้า การสมัครสมาชิก
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
@@ -41,6 +42,7 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
+  //Select Img
   Uint8List? _image;
 
   void selectImage() async {
@@ -50,8 +52,8 @@ class _SignUpPageState extends State<SignUpPage> {
     });
   }
 
-  String uint8ListToBase64(Uint8List data) {
-    return base64Encode(data);
+  String uint8ListToBase64(Uint8List _image) {
+    return base64Encode(_image);
   }
 
   Future<bool> _checkDuplicateEmail(String email) async {

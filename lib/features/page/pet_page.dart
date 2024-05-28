@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
 
+//หน้า เพิ่มสัตว์เลี้ยง
 class Pet_Page extends StatefulWidget {
   const Pet_Page({Key? key}) : super(key: key);
 
@@ -48,6 +49,7 @@ class _Pet_PageState extends State<Pet_Page> {
 
   bool _isLoading = false;
 
+  //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
       QuerySnapshot querySnapshot =
@@ -62,6 +64,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //พันธ์สุนัข
   void _fetchBreadDataDog() async {
     try {
       QuerySnapshot querySnapshot =
@@ -76,6 +79,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //พันธ์แมว
   void _fetchBreadDataCat() async {
     try {
       QuerySnapshot querySnapshot =
@@ -90,7 +94,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  // เพื่อเข้าถึงตัวเลือกรูปภาพของอุปกรณ์
+  //เลือกรูปภาพ โปรไฟล์สัตว์เลี้ยง
   Future<void> selectImage() async {
     Uint8List? img = await pickImage(ImageSource.gallery);
     if (img != null) {
@@ -110,6 +114,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //เลือกรูปภาพ ใบpetdegree
   void selectNormalImage() async {
     Uint8List? img = await pickImage(ImageSource.gallery);
     if (img != null) {
@@ -486,6 +491,7 @@ class _Pet_PageState extends State<Pet_Page> {
               )));
   }
 
+  //เพิ่มข้อมูลลงฐานข้อมูล
   void addPetToFirestore() async {
     setState(() {
       _isLoading = true;
@@ -571,6 +577,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //เข้าถึงภายในข้อมูลรูปภาพ ใน gallery
   Future<Uint8List?> pickImage(ImageSource source) async {
     final ImagePicker _picker = ImagePicker();
     final XFile? pickedFile = await _picker.pickImage(source: source);
@@ -582,6 +589,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //ใช้สำหรับการบีบอัดรูปภาพ
   Future<Uint8List?> compressImage(Uint8List image) async {
     try {
       List<int> compressedImage = await FlutterImageCompress.compressWithList(
