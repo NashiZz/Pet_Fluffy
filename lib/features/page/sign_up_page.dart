@@ -1,12 +1,9 @@
 // ignore_for_file: unnecessary_null_comparison, avoid_print, use_build_context_synchronously, no_leading_underscores_for_local_identifiers
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:Pet_Fluffy/features/page/email_verifly.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +27,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _compasswordController = TextEditingController();
 
+  final AuthService _authService = AuthService();
   bool isSigningUp = false;
 
   @override
@@ -46,31 +44,10 @@ class _SignUpPageState extends State<SignUpPage> {
   Uint8List? _image;
 
   void selectImage() async {
-    Uint8List? img = await pickImage(ImageSource.gallery);
+    Uint8List? img = await _authService.pickImage(ImageSource.gallery);
     setState(() {
       _image = img;
     });
-  }
-
-  String uint8ListToBase64(Uint8List _image) {
-    return base64Encode(_image);
-  }
-
-  Future<bool> _checkDuplicateEmail(String email) async {
-    try {
-      // เรียกใช้งานเมธอด fetchSignInMethodsForEmail() เพื่อตรวจสอบว่ามีวิธีการเข้าสู่ระบบที่เชื่อมโยงกับอีเมลที่ให้ไว้หรือไม่
-      List<String> signInMethods =
-          // ignore: deprecated_member_use
-          await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
-      return signInMethods.isNotEmpty;
-    } catch (e) {
-      print('Error checking duplicate email: $e');
-      return false;
-    }
-  }
-
-  bool _isPasswordMatched() {
-    return _passwordController.text == _compasswordController.text;
   }
 
   @override
@@ -279,6 +256,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
     String email = _emailController.text;
     String password = _passwordController.text;
+    String compass = _compasswordController.text;
 
     if (password.length < 6) {
       setState(() {
@@ -293,19 +271,64 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
+    if (password != compass) {
+      setState(() {
+        isSigningUp = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    bool emailExists = await _authService.checkDuplicateEmail(email);
+    if (emailExists) {
+      setState(() {
+        isSigningUp = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('อีเมลนี้มีผู้ใช้งานแล้ว'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     try {
       // สร้างบัญชีผู้ใช้ใหม่ด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential? userCredential =
+          await _authService.signUp(email, password);
 
-      // ส่งอีเมลยืนยันไปยังผู้ใช้
-      await userCredential.user?.sendEmailVerification();
+      if (userCredential == null) {
+        setState(() {
+          isSigningUp = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      await _authService.saveUserDataToFirestore(
+        userCredential.user!.uid,
+        _usernameController.text,
+        _nameController.text,
+        email,
+        password,
+        _image,
+      );
 
       setState(() {
         isSigningUp = false;
       });
 
-      // แสดงข้อความหรือ UI ที่เตือนผู้ใช้ให้ยืนยันอีเมล
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content:
@@ -313,71 +336,16 @@ class _SignUpPageState extends State<SignUpPage> {
           backgroundColor: Colors.green,
         ),
       );
-      
-      // คุณสามารถบันทึกข้อมูลลงใน Firestore ตามปกติได้
-      await saveUserDataToFirestore(userCredential.user!.uid);
 
-      // เช็คการสร้างบัญชีผู้ใช้
-      if (userCredential.user != null) {
-        print("User is Successfully created");
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
+      );
     } catch (error) {
       print("Error creating user: $error");
       setState(() {
         isSigningUp = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> saveUserDataToFirestore(String userId) async {
-    String username = _usernameController.text;
-    String email = _emailController.text;
-    String password = _passwordController.text;
-    String name = _nameController.text;
-    String img = uint8ListToBase64(_image!);
-
-    DocumentReference userRef =
-        FirebaseFirestore.instance.collection('user').doc(userId);
-
-    await userRef.set({
-      'uid': userId,
-      'username': username,
-      'fullname': name,
-      'email': email,
-      'password': password,
-      'photoURL': img,
-      'phone': '',
-      'nickname': '',
-      'gender': '',
-      'birtdate': '',
-      'country': '',
-      'facebook': '',
-      'line': ''
-    }).then((_) {
-      print("User data added to Firestore");
-    }).catchError((error) {
-      print("Failed to add user data: $error");
-    });
-  }
-
-  Future<Uint8List?> pickImage(ImageSource source) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
-      final File file = File(pickedFile.path);
-      return await file.readAsBytes();
-    } else {
-      return null;
     }
   }
 }
