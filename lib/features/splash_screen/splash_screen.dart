@@ -20,8 +20,7 @@ class _SplashPageState extends State<Splash_Page> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    _isMounted = true;
-    // Perform asynchronous tasks here
+    _isMounted = true; //วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
   }
 
   @override
@@ -40,7 +39,6 @@ class _SplashPageState extends State<Splash_Page> {
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
       Future.delayed(const Duration(seconds: 3), () {
-        // Check if the widget is still mounted before proceeding
         if (_isMounted) {
           if (user != null && user.emailVerified) {
             // หากผู้ใช้ล็อกอินแล้วและยืนยันอีเมลแล้ว นำทางไปยังหน้า Navigator Page

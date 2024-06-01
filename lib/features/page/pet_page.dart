@@ -7,11 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
 
+//หน้า เพิ่มสัตว์เลี้ยง
 class Pet_Page extends StatefulWidget {
   const Pet_Page({Key? key}) : super(key: key);
 
@@ -29,7 +30,8 @@ class _Pet_PageState extends State<Pet_Page> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
-
+// Obtain shared preferences.
+  
   Uint8List? _profileImage;
   Uint8List? _normalImage;
   final TextEditingController _imageFileController = TextEditingController();
@@ -47,7 +49,10 @@ class _Pet_PageState extends State<Pet_Page> {
   List<String> _breedsOfType2 = [];
 
   bool _isLoading = false;
+  
 
+  
+  //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
       QuerySnapshot querySnapshot =
@@ -62,6 +67,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //พันธ์สุนัข
   void _fetchBreadDataDog() async {
     try {
       QuerySnapshot querySnapshot =
@@ -76,6 +82,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //พันธ์แมว
   void _fetchBreadDataCat() async {
     try {
       QuerySnapshot querySnapshot =
@@ -90,7 +97,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  // เพื่อเข้าถึงตัวเลือกรูปภาพของอุปกรณ์
+  //เลือกรูปภาพ โปรไฟล์สัตว์เลี้ยง
   Future<void> selectImage() async {
     Uint8List? img = await pickImage(ImageSource.gallery);
     if (img != null) {
@@ -110,6 +117,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //เลือกรูปภาพ ใบpetdegree
   void selectNormalImage() async {
     Uint8List? img = await pickImage(ImageSource.gallery);
     if (img != null) {
@@ -486,11 +494,12 @@ class _Pet_PageState extends State<Pet_Page> {
               )));
   }
 
+  //เพิ่มข้อมูลลงฐานข้อมูล
   void addPetToFirestore() async {
     setState(() {
       _isLoading = true;
     });
-
+    
     String userId = user!.uid;
     String profileBase64 =
         _profileImage != null ? base64Encode(_profileImage!) : '';
@@ -528,6 +537,11 @@ class _Pet_PageState extends State<Pet_Page> {
       String docId = newPetRef.id;
 
       await newPetRef.update({'pet_id': docId});
+      // Async func to handle Futures easier; or use Future.then
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('idPet', docId);
+      
+      
 
       setState(() {
         _isLoading = false;
@@ -571,6 +585,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //เข้าถึงภายในข้อมูลรูปภาพ ใน gallery
   Future<Uint8List?> pickImage(ImageSource source) async {
     final ImagePicker _picker = ImagePicker();
     final XFile? pickedFile = await _picker.pickImage(source: source);
@@ -582,6 +597,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
+  //ใช้สำหรับการบีบอัดรูปภาพ
   Future<Uint8List?> compressImage(Uint8List image) async {
     try {
       List<int> compressedImage = await FlutterImageCompress.compressWithList(

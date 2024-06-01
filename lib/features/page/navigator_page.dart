@@ -6,6 +6,7 @@ import 'package:Pet_Fluffy/features/page/randomMatch.dart';
 import 'package:Pet_Fluffy/features/page/setting.dart';
 import 'package:flutter/material.dart';
 
+//หน้า Menu ของ App (Home,Maps,Pets,Setting)
 class Navigator_Page extends StatefulWidget {
   //ตั้งตัวแปลไว้ใช้ และ รับค่ามาเพื่อเอามาใช้กำหนดค่า
   final int initialIndex;

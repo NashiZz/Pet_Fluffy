@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+//หน้า Menu Home ของ App
 class randomMathch_Page extends StatefulWidget {
   const randomMathch_Page({super.key});
 
@@ -25,6 +26,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
 
   bool isLoading = true;
 
+  //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -111,6 +113,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 ),
               ),
             ),
+            // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
             StreamBuilder<List<Map<String, dynamic>>>(
               stream: Stream.fromFuture(ApiPetService.loadAllPet()),
               builder: (BuildContext context,
@@ -138,8 +141,9 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 }
 
                 List<Map<String, dynamic>> randomPetData = snapshot.data!;
-
+                
                 return Expanded(
+                  //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
                   child: ListView.builder(
                     itemCount: randomPetData.length,
                     itemBuilder: (context, index) {
@@ -154,7 +158,6 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                         years--;
                         months += 12;
                       }
-
                       String ageString = '';
                       if (years > 0) {
                         ageString += '$years ขวบ';
@@ -170,6 +173,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                         }
                       }
 
+                      //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
                       return FutureBuilder<DocumentSnapshot>(
                         future: ApiUserService.getUserData(petData['user_id']),
                         builder: (BuildContext context,
@@ -181,6 +185,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                               !userSnapshot.data!.exists) {
                             return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
                           }
+                          //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา 
                           Map<String, dynamic> userData =
                               userSnapshot.data!.data() as Map<String, dynamic>;
                           String? userImageURL = userData['photoURL'];
