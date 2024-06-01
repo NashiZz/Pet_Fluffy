@@ -27,7 +27,7 @@ class _FaveritePageState extends State<FaveritePage> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('idPet');
-      print('kuyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
+      print('kuyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
       print(token);
       //ดึงข้อมูลจาก firebase collection favorites where document pet_request = id pet request
       QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
