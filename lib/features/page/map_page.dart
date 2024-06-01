@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
@@ -65,6 +66,10 @@ class _MapsPageState extends State<Maps_Page> {
         print('Error getting user data from Firestore: $e');
       }
     }
+    // shared 
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    //   prefs.setString(userId, 'zbMGHhSvWbyAvAEruRv3');
+      
     setState(() {
       isLoading = false;
     });

@@ -2,7 +2,9 @@
 
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า การเพิ่ม Pet ก่อนเริ่มใช้งาน App
 class Setting_Pet_Page extends StatefulWidget {
@@ -13,6 +15,9 @@ class Setting_Pet_Page extends StatefulWidget {
 }
 
 class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
+  User? user = FirebaseAuth.instance.currentUser;
+  late String userId;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,8 +59,7 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => const Pet_Page()),
+                      MaterialPageRoute(builder: (context) => const Pet_Page()),
                     );
                   },
                   style: ButtonStyle(
@@ -67,6 +71,7 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
                 const SizedBox(width: 20),
                 ElevatedButton(
                   onPressed: () {
+                    shared();
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -86,5 +91,14 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
         ),
       ),
     );
+  }
+
+  Future shared() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+    userId = userData.uid;  
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString(userId, '');
+    }
   }
 }
