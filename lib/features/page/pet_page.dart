@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -30,7 +30,8 @@ class _Pet_PageState extends State<Pet_Page> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
-
+// Obtain shared preferences.
+  
   Uint8List? _profileImage;
   Uint8List? _normalImage;
   final TextEditingController _imageFileController = TextEditingController();
@@ -48,7 +49,9 @@ class _Pet_PageState extends State<Pet_Page> {
   List<String> _breedsOfType2 = [];
 
   bool _isLoading = false;
+  
 
+  
   //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
@@ -496,7 +499,7 @@ class _Pet_PageState extends State<Pet_Page> {
     setState(() {
       _isLoading = true;
     });
-
+    
     String userId = user!.uid;
     String profileBase64 =
         _profileImage != null ? base64Encode(_profileImage!) : '';
@@ -534,6 +537,11 @@ class _Pet_PageState extends State<Pet_Page> {
       String docId = newPetRef.id;
 
       await newPetRef.update({'pet_id': docId});
+      // Async func to handle Futures easier; or use Future.then
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('idPet', docId);
+      
+      
 
       setState(() {
         _isLoading = false;

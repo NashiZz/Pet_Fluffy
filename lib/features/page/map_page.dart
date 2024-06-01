@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
@@ -25,20 +24,26 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
-  User? user = FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
-  late List<Map<String, dynamic>> petUserDataList = []; //ใช้เก็บข้อมูลของสัตว์เลี้ยง
-  LocationData? _locationData; //เก็บตำแหน่งข้อมูล as GPS 
+  User? user =
+      FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
+  late List<Map<String, dynamic>> petUserDataList =
+      []; //ใช้เก็บข้อมูลของสัตว์เลี้ยง
+  LocationData? _locationData; //เก็บตำแหน่งข้อมูล as GPS
   late Location location;
   bool _isSelectingLocation = false;
 
   LatLng? _selectedLocation; //ใช้เก็บตำแหน่งที่ถูกเลือก
-  final Set<Marker> _markers = {}; 
-  StreamSubscription<LocationData>? _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
+  final Set<Marker> _markers = {};
+  StreamSubscription<LocationData>?
+      _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
 
   late String userId;
   late String userImageBase64;
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
+
+  // Async func to handle Futures easier; or use Future.then
+      
 
   //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
   void _getUserDataFromFirestore() async {
@@ -225,8 +230,7 @@ class _MapsPageState extends State<Maps_Page> {
                             hintText: 'ค้นหา',
                             border: InputBorder.none,
                           ),
-                          onChanged: (value) {
-                          },
+                          onChanged: (value) {},
                         ),
                       ),
                       IconButton(
@@ -530,7 +534,7 @@ class _MapsPageState extends State<Maps_Page> {
         isLoading = false;
       });
 
-      // รายงานข้อผิดพลาดทั้งหมด 
+      // รายงานข้อผิดพลาดทั้งหมด
       if (errors.isNotEmpty) {
         for (var error in errors) {
           print(error);
