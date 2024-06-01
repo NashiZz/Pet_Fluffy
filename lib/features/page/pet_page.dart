@@ -539,7 +539,7 @@ class _Pet_PageState extends State<Pet_Page> {
       await newPetRef.update({'pet_id': docId});
       // Async func to handle Futures easier; or use Future.then
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('idPet', docId);
+      prefs.setString(userId, docId);
       
       
 

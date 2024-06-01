@@ -1,9 +1,11 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
 class FaveritePage extends StatefulWidget {
   const FaveritePage({Key? key}) : super(key: key);
 
@@ -14,61 +16,61 @@ class FaveritePage extends StatefulWidget {
 class _FaveritePageState extends State<FaveritePage> {
   late List<Map<String, dynamic>> petUserDataList = [];
   late List<Map<String, dynamic>> getPetDataList = [];
-  
+  User? user = FirebaseAuth.instance.currentUser;
+  late String userId;
 
-  //ใหม่ล่าสุดดดดดดดดดดดดดดดดดดดดดด
-  
   @override
   void initState() {
     super.initState();
     _getPetUserDataFromFirestore();
   }
 
-  //ดึงข้อมูลจาก firebase 
+  //ดึงข้อมูลจาก firebase
   Future<void> _getPetUserDataFromFirestore() async {
-    try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? token = prefs.getString('idPet');
-      print('kuyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
-      print(token);
-      //ดึงข้อมูลจาก firebase collection favorites where document pet_request = id pet request
-      QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-          .collection('favorites')
-          .where('pet_request', isEqualTo: "rSduQynENWQx1aUESvCO")
-          .get();
-
-      // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
-      List<dynamic> petResponses = petUserQuerySnapshot.docs
-          .map((doc) => doc.data() ?? ['pet_respone'])
-          .where((response) => response != null)
-          .toList();
-
-      // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
-      List<Map<String, dynamic>> allPetDataList = [];
-
-      // ลูปเพื่อดึงข้อมูลแต่ละรายการ
-      for (var petRespone in petResponses) {
-        print(petRespone);
-
-        // ดึงข้อมูลจาก pet_user
-        QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
-            .collection('Pet_User')
-            .where('pet_id', isEqualTo: petRespone['pet_respone'])
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      try {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String? petId = prefs.getString(userId);
+        //ดึงข้อมูลจาก firebase collection favorites where document pet_request = id pet request
+        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+            .collection('favorites')
+            .where('pet_request', isEqualTo: petId)
             .get();
 
-        // เพิ่มข้อมูลลงใน List
-        allPetDataList.addAll(getPetQuerySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList());
-      }
-      
+        // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
+        List<dynamic> petResponses = petUserQuerySnapshot.docs
+            .map((doc) => doc.data() ?? ['pet_respone'])
+            .where((response) => response != null)
+            .toList();
+
+        // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
+        List<Map<String, dynamic>> allPetDataList = [];
+
+        // ลูปเพื่อดึงข้อมูลแต่ละรายการ
+        for (var petRespone in petResponses) {
+          print(petRespone);
+
+          // ดึงข้อมูลจาก pet_user
+          QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
+              .collection('Pet_User')
+              .where('pet_id', isEqualTo: petRespone['pet_respone'])
+              .get();
+
+          // เพิ่มข้อมูลลงใน List
+          allPetDataList.addAll(getPetQuerySnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList());
+        }
 
 // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-      setState(() {
-        petUserDataList = allPetDataList;
-      });
-    } catch (e) {
-      print('Error getting pet user data from Firestore: $e');
+        setState(() {
+          petUserDataList = allPetDataList;
+        });
+      } catch (e) {
+        print('Error getting pet user data from Firestore: $e');
+      }
     }
   }
 

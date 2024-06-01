@@ -10,6 +10,7 @@ import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Menu Home ของ App
 class randomMathch_Page extends StatefulWidget {
@@ -141,14 +142,13 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 }
 
                 List<Map<String, dynamic>> randomPetData = snapshot.data!;
-                
+
                 return Expanded(
                   //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
                   child: ListView.builder(
                     itemCount: randomPetData.length,
                     itemBuilder: (context, index) {
-                      Map<String, dynamic> petData =
-                          randomPetData[index];
+                      Map<String, dynamic> petData = randomPetData[index];
                       DateTime birthDate = DateTime.parse(petData['birthdate']);
                       final now = DateTime.now();
                       int years = now.year - birthDate.year;
@@ -185,7 +185,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                               !userSnapshot.data!.exists) {
                             return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
                           }
-                          //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา 
+                          //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา
                           Map<String, dynamic> userData =
                               userSnapshot.data!.data() as Map<String, dynamic>;
                           String? userImageURL = userData['photoURL'];
@@ -300,7 +300,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                               ),
                                               child: IconButton(
                                                 onPressed: () {
-                                                  // Add your code to handle the "exit" action here
+                                                  addFaverite(
+                                                      petData['pet_id']);
                                                 },
                                                 icon: const Icon(
                                                   Icons.star_rounded,
@@ -395,5 +396,50 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
         ),
       ),
     );
+  }
+
+  void addFaverite(String petIdd) async {
+    setState(() {
+      isLoading = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String? petId = prefs.getString(userId.toString());
+    String pet_request = petId.toString();
+    String pet_respone = petIdd.toString();
+
+    CollectionReference faverite =
+        FirebaseFirestore.instance.collection('favorites');
+    try {
+      await faverite.add({
+        'created_at': "",
+        'pet_request': pet_request,
+        'pet_respone': pet_respone,
+      });
+
+      setState(() {
+        isLoading = false;
+      });
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          Future.delayed(const Duration(seconds: 1), () {
+            Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
+           
+          });
+          return const AlertDialog(
+            title: Text('Success'),
+            content: Text('เพิ่มสัตว์เลี้ยงสำเร็จ'),
+          );
+        },
+      );
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }
