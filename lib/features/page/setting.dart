@@ -7,6 +7,7 @@ import 'package:Pet_Fluffy/features/page/faverite_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 // import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Menu Setting ใน App
 class Setting_Page extends StatefulWidget {
@@ -28,6 +30,7 @@ class _Setting_PageState extends State<Setting_Page> {
   late String userName;
   late String userEmail;
   late String userImageBase64;
+  late String? petId;
   bool isLoading = true;
 
   @override
@@ -43,6 +46,8 @@ class _Setting_PageState extends State<Setting_Page> {
     if (userData != null) {
       userId = userData.uid;
       try {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        petId = prefs.getString(userId);
         // ระบุคอลเลคชันที่จะใช้ใน Firestore
         DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
             .collection('user')
@@ -70,13 +75,15 @@ class _Setting_PageState extends State<Setting_Page> {
       appBar: AppBar(
         leading: IconButton(
             onPressed: () {}, icon: const Icon(LineAwesomeIcons.cog)),
-        title: Text("การตั้งค่า", style: Theme.of(context).textTheme.headlineMedium),
+        title: Text("การตั้งค่า",
+            style: Theme.of(context).textTheme.headlineMedium),
         actions: [
           IconButton(
               onPressed: () {
                 // ส่งไปยังหน้า Navigator Page พร้อมกับ index ที่ 0 เพื่อไปยังหน้าแรกของ Navigator Page ที่ Set ไว้
                 Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (context) => const Navigator_Page(initialIndex: 0)));
+                    builder: (context) =>
+                        const Navigator_Page(initialIndex: 0)));
               },
               icon: const Icon(LineAwesomeIcons.times))
         ],
@@ -115,10 +122,11 @@ class _Setting_PageState extends State<Setting_Page> {
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const Profile_user_Page()),
-                        );
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const Profile_user_Page()),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor:
@@ -137,7 +145,15 @@ class _Setting_PageState extends State<Setting_Page> {
                       title: "โปรไฟล์สัตว์เลี้ยง",
                       icon: LineAwesomeIcons.dog,
                       onPress: () {
-                        
+                        if (petId != '') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  Profile_pet_Page(petId: petId.toString()),
+                            ),
+                          );
+                        }
                       },
                     ),
                     const SizedBox(height: 10),
@@ -180,7 +196,8 @@ class _Setting_PageState extends State<Setting_Page> {
                           builder: (BuildContext context) {
                             return AlertDialog(
                               title: const Text("ออกจากระบบ"),
-                              content: const Text("คุณต้องการออกจากระบบหรือไม่?"),
+                              content:
+                                  const Text("คุณต้องการออกจากระบบหรือไม่?"),
                               actions: [
                                 TextButton(
                                   onPressed: () {
@@ -197,7 +214,8 @@ class _Setting_PageState extends State<Setting_Page> {
                                       // ignore: use_build_context_synchronously
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => const LoginPage()),
+                                          builder: (context) =>
+                                              const LoginPage()),
                                       (Route<dynamic> route) => false,
                                     );
                                   },

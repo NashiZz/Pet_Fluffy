@@ -65,6 +65,10 @@ class _MapsPageState extends State<Maps_Page> {
         print('Error getting user data from Firestore: $e');
       }
     }
+    // shared 
+    // SharedPreferences prefs = await SharedPreferences.getInstance();
+    //   prefs.setString(userId, 'zbMGHhSvWbyAvAEruRv3');
+      
     setState(() {
       isLoading = false;
     });
