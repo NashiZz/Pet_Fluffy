@@ -4,12 +4,12 @@ import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
-import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Menu Home ของ App
@@ -23,6 +23,10 @@ class randomMathch_Page extends StatefulWidget {
 class _randomMathch_PageState extends State<randomMathch_Page> {
   User? user = FirebaseAuth.instance.currentUser;
   String? userId;
+  String? petId;
+  String? petType;
+  String? petGender;
+  String? petImg;
   String? userImageBase64;
 
   bool isLoading = true;
@@ -43,10 +47,61 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     }
   }
 
+  Future<void> _getUsage_pet() async {
+    if (user != null) {
+      userId = user!.uid;
+      try {
+        // ระบุคอลเลคชันที่จะใช้ใน Firestore
+        DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
+            .collection('Usage_pet')
+            .doc(userId)
+            .get();
+
+        if (userDocSnapshot.exists) {
+          // ดึงข้อมูลผู้ใช้จาก Snapshot
+          petId = userDocSnapshot['pet_id'];
+
+          // ค้นหาข้อมูลในคอลเลคชัน Pet_user เพื่อดึงประเภทสัตว์เลี้ยงและเพศ
+          DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+              .collection('Pet_User')
+              .doc(petId)
+              .get();
+
+          if (petDocSnapshot.exists) {
+            setState(() {
+              petType = petDocSnapshot['type_pet'];
+              petGender = petDocSnapshot['gender'];
+              petImg = petDocSnapshot['img_profile'] ?? '';
+              isLoading = false;
+            });
+
+            print('Type : $petType, Gender : $petGender');
+          } else {
+            print('No pet data found with pet_id: $petId');
+          }
+        } else {
+          // หากไม่มีข้อมูลใน Usage_pet ให้สร้างเอกสารใหม่
+          await FirebaseFirestore.instance
+              .collection('Usage_pet')
+              .doc(userId)
+              .set({
+            'pet_id': '',
+          });
+          setState(() {
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        print('Error getting user data from Firestore: $e');
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _getUserDataFromFirestore();
+    _getUsage_pet();
   }
 
   @override
@@ -69,21 +124,21 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                       child: ClipOval(
                         child: GestureDetector(
                           onTap: () {
-                            if (userImageBase64 != null) {
+                            if (petImg != null) {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) =>
-                                      const Profile_user_Page(),
+                                      Profile_pet_Page(petId: petId!),
                                 ),
                               );
                             } else {
                               print('User image is not available');
                             }
                           },
-                          child: userImageBase64 != null
+                          child: petImg != null
                               ? Image.memory(
-                                  base64Decode(userImageBase64!),
+                                  base64Decode(petImg!),
                                   width: 40,
                                   height: 40,
                                   fit: BoxFit.cover,
@@ -141,14 +196,26 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                   );
                 }
 
-                List<Map<String, dynamic>> randomPetData = snapshot.data!;
+                List<Map<String, dynamic>> allPetData = snapshot.data!;
+                // กำหนดเพศตรงข้าม
+                String oppositeGender = (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                List<Map<String, dynamic>> filteredPetData = snapshot.data!
+                    .where((pet) =>
+                        pet['type_pet'] == petType &&
+                        pet['gender'] == oppositeGender)
+                    .toList();
+
+                if (filteredPetData.isEmpty) {
+                  filteredPetData =
+                      allPetData; // แสดงข้อมูลทั้งหมดเมื่อไม่ตรงตามเงื่อนไข
+                }
 
                 return Expanded(
                   //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
                   child: ListView.builder(
-                    itemCount: randomPetData.length,
+                    itemCount: filteredPetData.length,
                     itemBuilder: (context, index) {
-                      Map<String, dynamic> petData = randomPetData[index];
+                      Map<String, dynamic> petData = filteredPetData[index];
                       DateTime birthDate = DateTime.parse(petData['birthdate']);
                       final now = DateTime.now();
                       int years = now.year - birthDate.year;
@@ -300,7 +367,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                               ),
                                               child: IconButton(
                                                 onPressed: () {
-                                                  addFaverite(
+                                                  add_Faverite(
                                                       petData['pet_id']);
                                                 },
                                                 icon: const Icon(
@@ -398,7 +465,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     );
   }
 
-  void addFaverite(String petIdd) async {
+  void add_Faverite(String petIdd) async {
     setState(() {
       isLoading = true;
     });
@@ -408,14 +475,31 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     String pet_request = petId.toString();
     String pet_respone = petIdd.toString();
 
-    CollectionReference faverite =
-        FirebaseFirestore.instance.collection('favorites');
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
+    DocumentReference userFavoritesRef =
+        FirebaseFirestore.instance.collection('favorites').doc(userId);
+
+    // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+    CollectionReference petFavoriteRef =
+        userFavoritesRef.collection('pet_favorite');
+
+    // เพิ่มเอกสารใหม่ในคอลเลกชันย่อย pet_favorite
     try {
-      await faverite.add({
-        'created_at': "",
+      DocumentReference newPetfav = await petFavoriteRef.add({
+        'created_at': formatted,
         'pet_request': pet_request,
         'pet_respone': pet_respone,
       });
+
+      String docId = newPetfav.id;
+
+      await newPetfav.update({'id_fav': docId});
 
       setState(() {
         isLoading = false;
@@ -426,7 +510,6 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
         builder: (BuildContext context) {
           Future.delayed(const Duration(seconds: 1), () {
             Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
-           
           });
           return const AlertDialog(
             title: Text('Success'),
