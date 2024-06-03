@@ -19,6 +19,7 @@ class _FaveritePageState extends State<FaveritePage> {
   User? user = FirebaseAuth.instance.currentUser;
   late String userId;
   late String id_fav;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -69,52 +70,56 @@ class _FaveritePageState extends State<FaveritePage> {
         // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
           petUserDataList = allPetDataList;
+          isLoading = false;
         });
       } catch (e) {
         print('Error getting pet user data from Firestore: $e');
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
 
-  List<Map<String, dynamic>> get filteredDogPets =>
-      petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
-
-  List<Map<String, dynamic>> get filteredCatPets =>
-      petUserDataList.where((pet) => pet['type_pet'] == 'แมว').toList();
+  List<Map<String, dynamic>> get allPets => petUserDataList;
 
   @override
   Widget build(BuildContext context) {
-    // print(filteredCatPets);
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              icon: const Icon(LineAwesomeIcons.angle_left)),
-          title: Text(
-            "สัตว์เลี้ยงรายการโปรด",
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          centerTitle: true,
-          automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'สุนัข'),
-              Tab(text: 'แมว'),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          icon: const Icon(LineAwesomeIcons.angle_left),
         ),
-        body: TabBarView(
-          children: [
-            //สุนัข
-            _buildPetList(filteredDogPets),
-            //แมว
-            _buildPetList(filteredCatPets),
-          ],
+        title: Text(
+          "สัตว์เลี้ยงรายการโปรด",
+          style: Theme.of(context).textTheme.headlineMedium,
         ),
+        centerTitle: true,
+        automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
+      ),
+      body: Column(
+        children: [
+          Divider(),
+          Expanded(
+            child: isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        CircularProgressIndicator(),
+                        SizedBox(
+                            height:
+                                16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                        Text('กำลังโหลดข้อมูล'),
+                      ],
+                    ),
+                  )
+                : _buildPetList(allPets),
+          )
+        ],
       ),
     );
   }

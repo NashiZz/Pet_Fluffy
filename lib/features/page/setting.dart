@@ -67,6 +67,9 @@ class _Setting_PageState extends State<Setting_Page> {
         });
       } catch (e) {
         print('Error getting user data from Firestore: $e');
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
@@ -94,7 +97,18 @@ class _Setting_PageState extends State<Setting_Page> {
         child: Container(
           padding: const EdgeInsets.all(50),
           child: isLoading // ตรวจสอบสถานะการโหลดเพื่อแสดง UI ขณะโหลด
-              ? const CircularProgressIndicator() // แสดง Indicator ขณะโหลด
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      CircularProgressIndicator(),
+                      SizedBox(
+                          height:
+                              16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                      Text('กำลังโหลดข้อมูล'),
+                    ],
+                  ),
+                )
               : Column(
                   children: [
                     CircleAvatar(

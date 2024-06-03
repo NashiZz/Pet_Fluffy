@@ -22,6 +22,7 @@ class Pet_All_Page extends StatefulWidget {
 class _Pet_All_PageState extends State<Pet_All_Page> {
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -44,9 +45,13 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         petUserDataList = petUserQuerySnapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
+        isLoading = false;
       });
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -76,14 +81,27 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            //สุนัข
-            _buildPetList(filteredDogPets),
-            //แมว
-            _buildPetList(filteredCatPets),
-          ],
-        ),
+        body: isLoading
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(),
+                    SizedBox(
+                        height:
+                            16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                    Text('กำลังโหลดข้อมูล'),
+                  ],
+                ),
+              )
+            : TabBarView(
+                children: [
+                  //สุนัข
+                  _buildPetList(filteredDogPets),
+                  //แมว
+                  _buildPetList(filteredCatPets),
+                ],
+              ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             Navigator.push(
