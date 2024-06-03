@@ -31,7 +31,7 @@ class _Pet_PageState extends State<Pet_Page> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
 // Obtain shared preferences.
-  
+
   Uint8List? _profileImage;
   Uint8List? _normalImage;
   final TextEditingController _imageFileController = TextEditingController();
@@ -49,9 +49,7 @@ class _Pet_PageState extends State<Pet_Page> {
   List<String> _breedsOfType2 = [];
 
   bool _isLoading = false;
-  
 
-  
   //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
@@ -499,7 +497,7 @@ class _Pet_PageState extends State<Pet_Page> {
     setState(() {
       _isLoading = true;
     });
-    
+
     String userId = user!.uid;
     String profileBase64 =
         _profileImage != null ? base64Encode(_profileImage!) : '';
@@ -537,11 +535,17 @@ class _Pet_PageState extends State<Pet_Page> {
       String docId = newPetRef.id;
 
       await newPetRef.update({'pet_id': docId});
+
       // Async func to handle Futures easier; or use Future.then
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString(userId, docId);
-      
-      
+
+      CollectionReference usagePet =
+          FirebaseFirestore.instance.collection('Usage_pet');
+      await usagePet.doc(userId).set({
+        'pet_id': docId,
+        'user_id': userId,
+      });
 
       setState(() {
         _isLoading = false;

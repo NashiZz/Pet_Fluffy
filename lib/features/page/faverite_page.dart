@@ -18,6 +18,7 @@ class _FaveritePageState extends State<FaveritePage> {
   late List<Map<String, dynamic>> getPetDataList = [];
   User? user = FirebaseAuth.instance.currentUser;
   late String userId;
+  late String id_fav;
 
   @override
   void initState() {
@@ -33,16 +34,17 @@ class _FaveritePageState extends State<FaveritePage> {
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String? petId = prefs.getString(userId);
-        //ดึงข้อมูลจาก firebase collection favorites where document pet_request = id pet request
+        // ดึงข้อมูลจากคอลเล็กชัน favorites
         QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
             .collection('favorites')
+            .doc(userId)
+            .collection('pet_favorite')
             .where('pet_request', isEqualTo: petId)
             .get();
 
         // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
         List<dynamic> petResponses = petUserQuerySnapshot.docs
-            .map((doc) => doc.data() ?? ['pet_respone'])
-            .where((response) => response != null)
+            .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
         // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
@@ -50,12 +52,12 @@ class _FaveritePageState extends State<FaveritePage> {
 
         // ลูปเพื่อดึงข้อมูลแต่ละรายการ
         for (var petRespone in petResponses) {
-          print(petRespone);
+          String petResponeId = petRespone['pet_respone'];
 
           // ดึงข้อมูลจาก pet_user
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('Pet_User')
-              .where('pet_id', isEqualTo: petRespone['pet_respone'])
+              .where('pet_id', isEqualTo: petResponeId)
               .get();
 
           // เพิ่มข้อมูลลงใน List
@@ -64,7 +66,7 @@ class _FaveritePageState extends State<FaveritePage> {
               .toList());
         }
 
-// อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+        // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
           petUserDataList = allPetDataList;
         });
@@ -207,7 +209,7 @@ class _FaveritePageState extends State<FaveritePage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              // _deletePetData(petUserData['pet_id']);
+                              _deletePetData(petUserData['pet_id']);
                               Navigator.of(context).pop();
                             },
                             child: const Text("ยืนยัน"),
@@ -224,5 +226,51 @@ class _FaveritePageState extends State<FaveritePage> {
         ),
       ),
     );
+  }
+
+  void _deletePetData(String petId) async {
+    try {
+      // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
+      DocumentReference userFavoritesRef =
+          FirebaseFirestore.instance.collection('favorites').doc(userId);
+
+      // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+      CollectionReference petFavoriteRef =
+          userFavoritesRef.collection('pet_favorite');
+
+      // ดึงเอกสารที่มี pet_respone ตรงกับ petId
+      QuerySnapshot querySnapshot =
+          await petFavoriteRef.where('pet_respone', isEqualTo: petId).get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
+        DocumentSnapshot docSnapshot = querySnapshot.docs.first;
+
+        // ดึง id_fav จากเอกสาร
+        String idFav = docSnapshot.get('id_fav');
+
+        // อ้างอิงถึงเอกสารที่มี id_fav
+        DocumentReference docRef = petFavoriteRef.doc(idFav);
+
+        // ตรวจสอบเอกสารก่อนที่จะลบ
+        DocumentSnapshot docToCheck = await docRef.get();
+
+        if (docToCheck.exists) {
+          // ลบเอกสารโดยใช้ id_fav
+          await docRef.delete();
+
+          // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
+          _getPetUserDataFromFirestore();
+
+          print('Document with id_fav $idFav deleted successfully');
+        } else {
+          print('No document found with id_fav: $idFav');
+        }
+      } else {
+        print('No document found with pet_id: $petId');
+      }
+    } catch (e) {
+      print('Error deleting pet data: $e');
+    }
   }
 }

@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า แสดงสัตว์เลี้ยงของผู้ใช้ ใน menu
 class Pet_All_Page extends StatefulWidget {
@@ -44,13 +45,12 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
-      
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
     }
   }
 
-  //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว) 
+  //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว)
   List<Map<String, dynamic>> get filteredDogPets =>
       petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
 
@@ -181,14 +181,14 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
                         actions: <Widget>[
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pop(); 
+                              Navigator.of(context).pop();
                             },
                             child: const Text("ยกเลิก"),
                           ),
                           TextButton(
                             onPressed: () {
                               _deletePetData(petUserData['pet_id']);
-                              Navigator.of(context).pop(); 
+                              Navigator.of(context).pop();
                             },
                             child: const Text("ยืนยัน"),
                           ),
@@ -200,7 +200,33 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
                 icon: const Icon(LineAwesomeIcons.minus),
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("ยืนยันการเปลี่ยนตัวหลัก"),
+                        content: const Text(
+                            "คุณแน่ใจหรือไม่ที่ต้องเปลี่ยนตัวหลักเป็นตัวนี้?"),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              _shufflePet(petUserData['pet_id']);
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยืนยัน"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
                 icon: const Icon(LineAwesomeIcons.alternate_exchange),
               ),
             ],
@@ -208,6 +234,38 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         ),
       ),
     );
+  }
+
+  void _shufflePet(String petId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString(user!.uid, petId);
+
+    CollectionReference usagePet =
+        FirebaseFirestore.instance.collection('Usage_pet');
+
+    // ตรวจสอบว่าเอกสารที่ต้องการมีอยู่หรือไม่
+    DocumentSnapshot docSnapshot = await usagePet.doc(user!.uid).get();
+
+    if (docSnapshot.exists) {
+      // ถ้ามีเอกสารอยู่แล้ว ให้ทำการอัปเดต
+      try {
+        await usagePet.doc(user!.uid).update({
+          'pet_id': petId,
+        });
+      } catch (e) {
+        print('Error updating pet data: $e');
+      }
+    } else {
+      // ถ้าไม่มีเอกสารอยู่ ให้สร้างเอกสารใหม่
+      try {
+        await usagePet.doc(user!.uid).set({
+          'pet_id': petId,
+          'user_id': user!.uid, // เพิ่มข้อมูล user_id เพื่อสร้างเอกสารใหม่
+        });
+      } catch (e) {
+        print('Error creating new pet data: $e');
+      }
+    }
   }
 
   //ปุ่มลบข้อมูลสัตว์เลี้ยง
