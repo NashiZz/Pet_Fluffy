@@ -198,7 +198,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
 
                 List<Map<String, dynamic>> allPetData = snapshot.data!;
                 // กำหนดเพศตรงข้าม
-                String oppositeGender = (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                String oppositeGender =
+                    (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
                 List<Map<String, dynamic>> filteredPetData = snapshot.data!
                     .where((pet) =>
                         pet['type_pet'] == petType &&
@@ -489,34 +490,60 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     CollectionReference petFavoriteRef =
         userFavoritesRef.collection('pet_favorite');
 
-    // เพิ่มเอกสารใหม่ในคอลเลกชันย่อย pet_favorite
     try {
-      DocumentReference newPetfav = await petFavoriteRef.add({
-        'created_at': formatted,
-        'pet_request': pet_request,
-        'pet_respone': pet_respone,
-      });
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petFavoriteRef
+          .where('pet_request', isEqualTo: pet_request)
+          .where('pet_respone', isEqualTo: pet_respone)
+          .get();
 
-      String docId = newPetfav.id;
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+        setState(() {
+          isLoading = false;
+        });
 
-      await newPetfav.update({'id_fav': docId});
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return const AlertDialog(
+              title: Text('Error'),
+              content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+            );
+          },
+        );
+      } else {
+        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+        DocumentReference newPetfav = await petFavoriteRef.add({
+          'created_at': formatted,
+          'pet_request': pet_request,
+          'pet_respone': pet_respone,
+        });
 
-      setState(() {
-        isLoading = false;
-      });
+        String docId = newPetfav.id;
 
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
-          });
-          return const AlertDialog(
-            title: Text('Success'),
-            content: Text('เพิ่มสัตว์เลี้ยงสำเร็จ'),
-          );
-        },
-      );
+        await newPetfav.update({'id_fav': docId});
+
+        setState(() {
+          isLoading = false;
+        });
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 1), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return const AlertDialog(
+              title: Text('Success'),
+              content: Text('เพิ่มลงรายการโปรดสำเร็จ'),
+            );
+          },
+        );
+      }
     } catch (error) {
       print("Failed to add pet: $error");
 
