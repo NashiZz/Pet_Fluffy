@@ -96,9 +96,9 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
   Future shared() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
-    userId = userData.uid;  
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setString(userId, '');
+      userId = userData.uid;  
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString(userId, '');
     }
   }
 }

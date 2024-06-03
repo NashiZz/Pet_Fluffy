@@ -48,6 +48,8 @@ class _Setting_PageState extends State<Setting_Page> {
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         petId = prefs.getString(userId);
+
+        print('$petId');
         // ระบุคอลเลคชันที่จะใช้ใน Firestore
         DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
             .collection('user')
