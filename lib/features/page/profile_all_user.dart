@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:Pet_Fluffy/features/page/owner_pet/edit_profile.dart';
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -119,45 +118,6 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         centerTitle: true,
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'menu1',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('แก้ไขข้อมูลส่วนตัว'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'menu2',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem),
-                      SizedBox(width: 8),
-                      Text('รายงานปัญหา'),
-                    ],
-                  ),
-                ),
-              ];
-            },
-            onSelected: (value) {
-              // เมื่อเลือกเมนู
-              if (value == 'menu1') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Edit_Profile_Page()));
-              } else if (value == 'menu2') {
-                _showNotification();
-              }
-            },
-          ),
-        ],
       ),
       body: Container(
         padding: const EdgeInsets.all(40),
