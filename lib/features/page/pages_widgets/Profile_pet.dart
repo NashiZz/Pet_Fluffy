@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้า Profile ของ สัตว์เลี้ยง
@@ -21,8 +22,11 @@ class Profile_pet_Page extends StatefulWidget {
 
 class _Profile_pet_PageState extends State<Profile_pet_Page> {
   User? user = FirebaseAuth.instance.currentUser;
+  final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _infoController = TextEditingController();
 
   String pet_user = '';
+  String pet_id = '';
   String petName = '';
   String type = '';
   String petImageBase64 = '';
@@ -97,6 +101,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
         setState(() {
           // ดึงข้อมูลจาก Firestore และกำหนดค่าให้กับตัวแปรที่ใช้เก็บข้อมูล
           pet_user = petData['user_id'] ?? '';
+          pet_id = petId;
           petName = petData['name'] ?? '';
           type = petData['breed_pet'] ?? '';
           petImageBase64 = petData['img_profile'] ?? '';
@@ -136,28 +141,49 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     }
   }
 
-  // Future<void> _getPetUserDataFromFirestore() async {
-  //   try {
-  //     QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-  //         .collection('Pet_User')
-  //         .where('user_id', isEqualTo: user!.uid)
-  //         .get();
+  Future<void> _saveReportToFirestore() async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-  //     setState(() {
-  //       petUserDataList = petUserQuerySnapshot.docs
-  //           .map((doc) => doc.data() as Map<String, dynamic>)
-  //           .toList();
-  //     });
-  //   } catch (e) {
-  //     print('Error getting pet user data from Firestore: $e');
-  //   }
-  // }
+    try {
+      DocumentReference newData = await FirebaseFirestore.instance
+          .collection('report_period')
+          .doc(userId)
+          .collection('pet_user')
+          .add({
+        'pet_id': pet_id,
+        'date': _dateController.text,
+        'des': _infoController.text,
+        'created_at': formatted,
+        'updates_at': formatted,
+      });
+      String docId = newData.id;
+      await newData.update({'id_period': docId});
+    
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
+      );
 
-  // List<Map<String, dynamic>> get filteredDogPets =>
-  //     petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
+      _refreshHomePage(); 
+    } catch (e) {
+      print('Error saving report: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
+      );
+    }
+  }
 
-  // List<Map<String, dynamic>> get filteredCatPets =>
-  //     petUserDataList.where((pet) => pet['type_pet'] == 'แมว').toList();
+  Future<void> _refreshHomePage() async {
+    setState(() {
+      isLoading = true; // ตั้งค่า isLoading เป็น true เพื่อแสดงการโหลด
+    });
+    await _loadAllPet(widget.petId); // เรียกโปรแกรมใหม่เพื่อโหลดข้อมูลใหม่
+    setState(() {
+      isLoading = false; // ตั้งค่า isLoading เป็น false เมื่อโหลดเสร็จสิ้น
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -354,8 +380,10 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                             Row(
                                               children: [
                                                 Padding(
-                                                  padding: EdgeInsets.only(right: 5),
-                                                  child: Icon(LineAwesomeIcons.image),
+                                                  padding:
+                                                      EdgeInsets.only(right: 5),
+                                                  child: Icon(
+                                                      LineAwesomeIcons.image),
                                                 ),
                                                 Text(
                                                   'รูปภาพ',
@@ -371,57 +399,84 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                           ],
                                         ),
                                         const SizedBox(height: 10),
-                                        
+
                                         //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง
                                         FutureBuilder<QuerySnapshot>(
                                           future: FirebaseFirestore.instance
                                               .collection('imgs_pet')
-                                              .where('pet_id', isEqualTo: widget.petId)
+                                              .where('pet_id',
+                                                  isEqualTo: widget.petId)
                                               .get(),
                                           builder: (context, snapshot) {
-                                            if (snapshot.connectionState == ConnectionState.waiting) {
+                                            if (snapshot.connectionState ==
+                                                ConnectionState.waiting) {
                                               return const CircularProgressIndicator();
                                             }
                                             if (snapshot.hasError) {
-                                              return Text('Error: ${snapshot.error}');
+                                              return Text(
+                                                  'Error: ${snapshot.error}');
                                             }
-                                            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                                            if (snapshot.hasData &&
+                                                snapshot
+                                                    .data!.docs.isNotEmpty) {
                                               // ดึงข้อมูลและแสดงผลใน GridView.builder
                                               return GridView.builder(
                                                 shrinkWrap: true,
-                                                physics: const NeverScrollableScrollPhysics(),
-                                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                physics:
+                                                    const NeverScrollableScrollPhysics(),
+                                                gridDelegate:
+                                                    const SliverGridDelegateWithFixedCrossAxisCount(
                                                   crossAxisCount: 1,
                                                   crossAxisSpacing: 10.0,
                                                   mainAxisSpacing: 10.0,
                                                 ),
-                                                itemCount: snapshot.data!.docs.length,
+                                                itemCount:
+                                                    snapshot.data!.docs.length,
                                                 itemBuilder: (context, index) {
                                                   // ดึงข้อมูลทั้งหมดในเอกสารแต่ละเอกสาร
-                                                  DocumentSnapshot imgDoc = snapshot.data!.docs[index];
-                                                  Map<String, dynamic>? data = imgDoc.data() as Map<String, dynamic>?;
+                                                  DocumentSnapshot imgDoc =
+                                                      snapshot
+                                                          .data!.docs[index];
+                                                  Map<String, dynamic>? data =
+                                                      imgDoc.data() as Map<
+                                                          String, dynamic>?;
 
-                                                  if (data != null && data.isNotEmpty) {
+                                                  if (data != null &&
+                                                      data.isNotEmpty) {
                                                     List<String> imageUrls = [];
-                                                    for (int i = 1; i <= 9; i++) {
-                                                      String? imageUrl = data['img_$i'] as String?;
-                                                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                                                    for (int i = 1;
+                                                        i <= 9;
+                                                        i++) {
+                                                      String? imageUrl =
+                                                          data['img_$i']
+                                                              as String?;
+                                                      if (imageUrl != null &&
+                                                          imageUrl.isNotEmpty) {
                                                         imageUrls.add(imageUrl);
                                                       }
                                                     }
                                                     return GridView.builder(
-                                                      physics: const NeverScrollableScrollPhysics(),
-                                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                      physics:
+                                                          const NeverScrollableScrollPhysics(),
+                                                      gridDelegate:
+                                                          const SliverGridDelegateWithFixedCrossAxisCount(
                                                         crossAxisCount: 3,
                                                         crossAxisSpacing: 8.0,
                                                         mainAxisSpacing: 8.0,
                                                       ),
-                                                      itemCount: imageUrls.length,
-                                                      itemBuilder: (context, index) {
+                                                      itemCount:
+                                                          imageUrls.length,
+                                                      itemBuilder:
+                                                          (context, index) {
                                                         return ClipRRect(
-                                                          borderRadius: BorderRadius.circular(8.0),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      8.0),
                                                           child: Image.memory(
-                                                            base64Decode(imageUrls[index]),
+                                                            base64Decode(
+                                                                imageUrls[
+                                                                    index]),
                                                             fit: BoxFit.cover,
                                                           ),
                                                         );
@@ -432,7 +487,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                                   }
                                                 },
                                               );
-                                            } 
+                                            }
                                             return Text('ไม่มีรูปภาพ');
                                           },
                                         ),
@@ -440,7 +495,177 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                       ]),
                                 ),
                                 SingleChildScrollView(
-                                  child: Column(children: [Text('data')]),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    EdgeInsets.only(right: 5),
+                                                child: Icon(LineAwesomeIcons
+                                                    .calendar_with_day_focus),
+                                              ),
+                                              Text(
+                                                'บันทึกประจำเดือน',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.start,
+                                              ),
+                                            ],
+                                          ),
+                                          Spacer(),
+                                          ElevatedButton(
+                                            onPressed: _showInputDialog,
+                                            child: Text('บันทึกข้อมูล'),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 10),
+                                      // แสดงข้อมูลบันทึกประจำเดือน
+                                      FutureBuilder<QuerySnapshot>(
+                                        future: FirebaseFirestore.instance
+                                            .collection('report_period')
+                                            .doc(userId)
+                                            .collection('pet_user')
+                                            .where('pet_id',
+                                                isEqualTo: widget.petId)
+                                            .get(),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState ==
+                                              ConnectionState.waiting) {
+                                            return const CircularProgressIndicator();
+                                          }
+                                          if (snapshot.hasError) {
+                                            return Text(
+                                                'Error: ${snapshot.error}');
+                                          }
+                                          if (snapshot.hasData &&
+                                              snapshot.data!.docs.isNotEmpty) {
+                                            return ListView.builder(
+                                              shrinkWrap: true,
+                                              physics:
+                                                  NeverScrollableScrollPhysics(),
+                                              itemCount:
+                                                  snapshot.data!.docs.length,
+                                              itemBuilder: (context, index) {
+                                                DocumentSnapshot reportDoc =
+                                                    snapshot.data!.docs[index];
+                                                Map<String, dynamic> report =
+                                                    reportDoc.data()
+                                                        as Map<String, dynamic>;
+                                                final date = DateTime.parse(
+                                                    report['date']);
+                                                final formattedDate =
+                                                    DateFormat('dd/MM/yyyy')
+                                                        .format(date);
+
+                                                return Card(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10.0),
+                                                  ),
+                                                  elevation: 3,
+                                                  margin:
+                                                      const EdgeInsets.all(8.0),
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            12.0),
+                                                    child: Row(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Container(
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: Colors
+                                                                .pinkAccent
+                                                                .withOpacity(
+                                                                    0.2),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        10),
+                                                          ),
+                                                          padding:
+                                                              EdgeInsets.all(8),
+                                                          child: Icon(
+                                                            LineAwesomeIcons
+                                                                .calendar_with_day_focus,
+                                                            color: Colors
+                                                                .pinkAccent,
+                                                          ),
+                                                        ),
+                                                        SizedBox(width: 12),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              Text(
+                                                                'รายละเอียดการบันทึกประจำเดือน',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                ),
+                                                              ),
+                                                              SizedBox(
+                                                                  height: 4),
+                                                              Text(
+                                                                report['des'] ??
+                                                                    '',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                          .grey[
+                                                                      600],
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .end,
+                                                          children: [
+                                                            Text(
+                                                              formattedDate,
+                                                              style: TextStyle(
+                                                                fontSize: 14,
+                                                                color: Colors
+                                                                    .grey[600],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          }
+                                          return Text('ไม่มีบันทึกประจำเดือน');
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 SingleChildScrollView(
                                   child: Column(children: [Text('data')]),
@@ -602,46 +827,128 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
         ),
       );
 
-  // Widget _buildPetCard(Map<String, dynamic> petUserData) {
-  //   return Card(
-  //     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-  //     child: ListTile(
-  //       leading: CircleAvatar(
-  //         backgroundColor: Colors.transparent,
-  //         backgroundImage: petUserData['img_profile'] != null
-  //             ? MemoryImage(base64Decode(petUserData['img_profile'] as String))
-  //             : null,
-  //         child: petUserData['img_profile'] == null
-  //             ? const ImageIcon(AssetImage('assets/default_pet_image.png'))
-  //             : null,
-  //       ),
-  //       title: Text(
-  //         petUserData['name'] ?? '',
-  //         style: Theme.of(context).textTheme.titleLarge,
-  //       ),
-  //       subtitle: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           Text(
-  //             'ประเภท: ${petUserData['type_pet'] ?? ''}',
-  //             style: Theme.of(context).textTheme.bodyMedium,
-  //           ),
-  //           Text(
-  //             'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
-  //             style: Theme.of(context).textTheme.bodyMedium,
-  //           ),
-  //           Text(
-  //             'เพศ: ${petUserData['gender'] ?? ''}',
-  //             style: Theme.of(context).textTheme.bodyMedium,
-  //           ),
-  //         ],
-  //       ),
-  //       onTap: () {
-  //         // ทำสิ่งที่ต้องการเมื่อคลิกที่รายการสัตว์เลี้ยง
-  //       },
-  //     ),
-  //   );
-  // }
+  void _showInputDialog() {
+    _dateController.clear();
+    _infoController.clear();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Container(
+            width:
+                MediaQuery.of(context).size.width * 0.8, // ปรับขนาดของ Dialog
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'บันทึกประจำเดือน',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                    child: Text(
+                      'วันที่เริ่มเป็นประจำเดือน',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: _dateController,
+                  decoration: InputDecoration(
+                    suffixIcon: Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                  ),
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2101),
+                    );
+
+                    if (pickedDate != null) {
+                      setState(() {
+                        _dateController.text =
+                            pickedDate.toString().split(' ')[0];
+                      });
+                    }
+                  },
+                ),
+                SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                    child: Text(
+                      'ข้อมูลเพิ่มเติม',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ),
+                TextField(
+                  controller: _infoController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'อาการ, พฤติกรรมของสัตว์เลี้ยง',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    // การกระทำเมื่อกดปุ่มบันทึก
+                    print('Date: ${_dateController.text}');
+                    print('Additional Info: ${_infoController.text}');
+                    _saveReportToFirestore();
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                  ),
+                  child: Text('บันทึกข้อมูล'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class MenuPetWidget extends StatelessWidget {
