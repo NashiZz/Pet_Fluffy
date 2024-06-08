@@ -161,12 +161,12 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       });
       String docId = newData.id;
       await newData.update({'id_period': docId});
-    
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
 
-      _refreshHomePage(); 
+      _refreshHomePage();
     } catch (e) {
       print('Error saving report: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -668,7 +668,93 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                   ),
                                 ),
                                 SingleChildScrollView(
-                                  child: Column(children: [Text('data')]),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Padding(
+                                                padding:
+                                                    EdgeInsets.only(right: 5),
+                                                child: Icon(
+                                                    LineAwesomeIcons.syringe),
+                                              ),
+                                              Text(
+                                                'การฉีดวัคซีน (ตามเกณฑ์)',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.start,
+                                              ),
+                                            ],
+                                          ),
+                                          Spacer(),
+                                          ElevatedButton(
+                                            onPressed: _showInputDialog,
+                                            child: Text('บันทึกข้อมูล'),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20.0),
+                                        child: Column(
+                                          children: [
+                                            MenuPetWidget(
+                                              title: "ดูตารางการฉีดวัคซีน",
+                                              icon: LineAwesomeIcons.table,
+                                              onPress: () {},
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          const SizedBox(height: 15),
+                                          Row(
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Padding(
+                                                    padding: EdgeInsets.only(
+                                                        right: 5),
+                                                    child: Icon(LineAwesomeIcons
+                                                        .syringe),
+                                                  ),
+                                                  Text(
+                                                    'การฉีดวัคซีน (เพิ่มเติม)',
+                                                    style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    textAlign: TextAlign.start,
+                                                  ),
+                                                ],
+                                              ),
+                                              Spacer(),
+                                              ElevatedButton(
+                                                onPressed: _showInputDialog,
+                                                child: Text('บันทึกข้อมูล'),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                         
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
