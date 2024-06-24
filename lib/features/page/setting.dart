@@ -8,6 +8,7 @@ import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
 // import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -176,7 +177,9 @@ class _Setting_PageState extends State<Setting_Page> {
                     MenuWidget(
                       title: "สัตว์เลี้ยงของฉัน",
                       icon: LineAwesomeIcons.paw,
-                      onPress: () {},
+                      onPress: () {
+                        Navigator.push(context,MaterialPageRoute(builder: (context) => PetAllTwo()));
+                      },
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(
@@ -292,7 +295,7 @@ class MenuWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(100),
                 color: Colors.grey.withOpacity(0.1),
               ),
-              child: const Icon(LineAwesomeIcons.angle_left,
+              child: const Icon(LineAwesomeIcons.angle_right,
                   size: 18.0, color: Colors.grey),
             )
           : null,
