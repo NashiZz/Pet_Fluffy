@@ -1,3 +1,4 @@
+import 'package:Pet_Fluffy/features/api/notification_api.dart';
 import 'package:Pet_Fluffy/features/splash_screen/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ Future<void> main() async {
 
   //ทำการเชื่อมต่อแอปกับ Firebase 
   await Firebase.initializeApp();
+  await FirebaseApi().initNotifications();
 
   //กำหนดการตั้งค่าเริ่มต้นสำหรับการแจ้ง
   const AndroidInitializationSettings androidInitializationSettings =
