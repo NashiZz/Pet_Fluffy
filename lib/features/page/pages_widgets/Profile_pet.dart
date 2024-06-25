@@ -3,11 +3,10 @@
 import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/api/user_data.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/table_dataVac.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
@@ -25,6 +24,16 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _infoController = TextEditingController();
 
+  final TextEditingController _dateVacController = TextEditingController();
+  final TextEditingController _vacWeight = TextEditingController();
+  final TextEditingController _vacPrice = TextEditingController();
+  final TextEditingController _vacLocation = TextEditingController();
+
+  final TextEditingController _dateVacTable = TextEditingController();
+  final TextEditingController _vacWeightTable = TextEditingController();
+  final TextEditingController _vacPriceTable = TextEditingController();
+  final TextEditingController _vacStatusTable = TextEditingController();
+
   String pet_user = '';
   String pet_id = '';
   String petName = '';
@@ -38,12 +47,17 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
   String age = '';
   String price = '';
   String userPhotoURL = '';
+  String pet_type = '';
 
   String? userId;
   String? userImageBase64;
 
   bool isLoading = true;
   late List<Map<String, dynamic>> petUserDataList = [];
+
+  String? _selectedVac;
+  List<String> _vacOfDog = [];
+  List<String> _vacOfCat = [];
 
   final double coverHeight = 180;
   final double profileHeight = 90;
@@ -55,6 +69,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     if (user != null) {
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
+      _fetchVacDataDog();
+      _fetchVacDataCat();
     }
     isLoading = true;
   }
@@ -111,6 +127,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
           des = petData['description'] ?? '';
           price = petData['price'] ?? '';
           birthdateStr = petData['birthdate'] ?? '';
+          pet_type = petData['type_pet'] ?? '';
           DateTime birthdate = DateTime.parse(birthdateStr);
           age = calculateAge(birthdate);
 
@@ -122,6 +139,36 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       }
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
+    }
+  }
+
+  //พันธ์สุนัข
+  void _fetchVacDataDog() async {
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('dog_vac').get();
+      List<String> breeds =
+          querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      setState(() {
+        _vacOfDog = breeds;
+      });
+    } catch (error) {
+      print("Failed to fetch breed data: $error");
+    }
+  }
+
+  //พันธ์แมว
+  void _fetchVacDataCat() async {
+    try {
+      QuerySnapshot querySnapshot =
+          await FirebaseFirestore.instance.collection('cat_vac').get();
+      List<String> breeds =
+          querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      setState(() {
+        _vacOfCat = breeds;
+      });
+    } catch (error) {
+      print("Failed to fetch breed data: $error");
     }
   }
 
@@ -165,6 +212,46 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
+
+      _refreshHomePage();
+    } catch (e) {
+      print('Error saving report: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
+      );
+    }
+  }
+
+  Future<void> _saveVaccineToFirestore() async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+    try {
+      DocumentReference newData = await FirebaseFirestore.instance
+          .collection('vac_history')
+          .doc(userId)
+          .collection('vac_pet')
+          .add({
+        'pet_id': pet_id,
+        'vacName': _selectedVac ?? '',
+        'weight': _vacWeight.text,
+        'price': _vacPrice.text,
+        'location': _vacLocation.text,
+        'date': _dateVacController.text,
+        'created_at': formatted,
+        'updates_at': formatted,
+      });
+      String docId = newData.id;
+      await newData.update({'id_period': docId});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
+      );
+
+      setState(() {
+        _selectedVac = null;
+      });
 
       _refreshHomePage();
     } catch (e) {
@@ -696,7 +783,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                           ),
                                           Spacer(),
                                           ElevatedButton(
-                                            onPressed: _showInputDialog,
+                                            onPressed: _showVaccineTableDialog,
                                             child: Text('บันทึกข้อมูล'),
                                           ),
                                         ],
@@ -710,7 +797,144 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                             MenuPetWidget(
                                               title: "ดูตารางการฉีดวัคซีน",
                                               icon: LineAwesomeIcons.table,
-                                              onPress: () {},
+                                              onPress: () {
+                                                _showVaccinationScheduleDialog(context, pet_type);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                                0.9,
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                                0.3,
+                                        padding: EdgeInsets.all(20.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: SingleChildScrollView(
+                                                scrollDirection:
+                                                    Axis.horizontal,
+                                                child: SingleChildScrollView(
+                                                  scrollDirection:
+                                                      Axis.vertical,
+                                                  child: Table(
+                                                    border: TableBorder.all(),
+                                                    columnWidths: const <int,
+                                                        TableColumnWidth>{
+                                                      0: FixedColumnWidth(80),
+                                                      1: FixedColumnWidth(180),
+                                                      2: FixedColumnWidth(100),
+                                                      3: FixedColumnWidth(80),
+                                                      4: FixedColumnWidth(80),
+                                                    },
+                                                    defaultVerticalAlignment:
+                                                        TableCellVerticalAlignment
+                                                            .middle,
+                                                    children: <TableRow>[
+                                                      TableRow(
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color:
+                                                              Colors.grey[300],
+                                                        ),
+                                                        children: <Widget>[
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              'สถานะ',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                          ),
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              'วัคซีน (เข็มที่)',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                          ),
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              'วัน/เดือน/ปี',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                          ),
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              'น้ำหนัก',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                          ),
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              'ราคา',
+                                                              style: TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      _buildTableRow(
+                                                          'ฉีดแล้ว',
+                                                          'ถ่ายพยาธิ และตรวจสุขภาพ',
+                                                          '15/05/2023',
+                                                          '5 kg',
+                                                          '350 บ.'),
+                                                      _buildTableRow(
+                                                        '',
+                                                        'วัคซีนรวม 1',
+                                                        '',
+                                                        '',
+                                                        '',
+                                                      ),
+                                                      _buildTableRow(
+                                                          '',
+                                                          'วัคซีนรวม 2\nวัคซีนพิษสุนัขบ้า 1',
+                                                          '',
+                                                          '',
+                                                          ''),
+                                                      _buildTableRow(
+                                                          '',
+                                                          'วัคซีนรวม 3\nวัคซีนพิษสุนัขบ้า 2',
+                                                          '',
+                                                          '',
+                                                          ''),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -719,7 +943,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: <Widget>[
-                                          const SizedBox(height: 15),
                                           Row(
                                             children: [
                                               Row(
@@ -744,13 +967,223 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                               ),
                                               Spacer(),
                                               ElevatedButton(
-                                                onPressed: _showInputDialog,
+                                                onPressed: _showVaccineDialog,
                                                 child: Text('บันทึกข้อมูล'),
                                               ),
                                             ],
                                           ),
-                                          const SizedBox(height: 10),
-                                         
+                                          const SizedBox(height: 5),
+                                          // แสดงข้อมูลบันทึกวัคซีน
+                                          FutureBuilder<QuerySnapshot>(
+                                            future: FirebaseFirestore.instance
+                                                .collection('vac_history')
+                                                .doc(userId)
+                                                .collection('vac_pet')
+                                                .where('pet_id',
+                                                    isEqualTo: widget.petId)
+                                                .get(),
+                                            builder: (context, snapshot) {
+                                              if (snapshot.connectionState ==
+                                                  ConnectionState.waiting) {
+                                                return const CircularProgressIndicator();
+                                              }
+                                              if (snapshot.hasError) {
+                                                return Text(
+                                                    'Error: ${snapshot.error}');
+                                              }
+                                              if (snapshot.hasData &&
+                                                  snapshot
+                                                      .data!.docs.isNotEmpty) {
+                                                return ListView.builder(
+                                                  shrinkWrap: true,
+                                                  physics:
+                                                      NeverScrollableScrollPhysics(),
+                                                  itemCount: snapshot
+                                                      .data!.docs.length,
+                                                  itemBuilder:
+                                                      (context, index) {
+                                                    DocumentSnapshot reportDoc =
+                                                        snapshot
+                                                            .data!.docs[index];
+                                                    Map<String, dynamic>
+                                                        report =
+                                                        reportDoc.data() as Map<
+                                                            String, dynamic>;
+                                                    final date = DateTime.parse(
+                                                        report['date']);
+                                                    final formattedDate =
+                                                        DateFormat('dd/MM/yyyy')
+                                                            .format(date);
+
+                                                    return Card(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10.0),
+                                                      ),
+                                                      elevation: 3,
+                                                      margin:
+                                                          const EdgeInsets.all(
+                                                              8.0),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .all(12.0),
+                                                        child: Row(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Container(
+                                                              decoration:
+                                                                  BoxDecoration(
+                                                                color: Colors
+                                                                    .blueAccent
+                                                                    .withOpacity(
+                                                                        0.2),
+                                                                borderRadius:
+                                                                    BorderRadius
+                                                                        .circular(
+                                                                            10),
+                                                              ),
+                                                              padding:
+                                                                  EdgeInsets
+                                                                      .all(8),
+                                                              child: Icon(
+                                                                LineAwesomeIcons
+                                                                    .syringe,
+                                                                color: Colors
+                                                                    .black,
+                                                              ),
+                                                            ),
+                                                            SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Row(
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .spaceBetween,
+                                                                    children: [
+                                                                      Text(
+                                                                        report['vacName'] ??
+                                                                            '',
+                                                                        style:
+                                                                            TextStyle(
+                                                                          fontSize:
+                                                                              16,
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
+                                                                        ),
+                                                                      ),
+                                                                      Text(
+                                                                        formattedDate,
+                                                                        style:
+                                                                            TextStyle(
+                                                                          fontSize:
+                                                                              14,
+                                                                          color:
+                                                                              Colors.grey[600],
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  SizedBox(
+                                                                      height:
+                                                                          4),
+                                                                  Row(
+                                                                    children: [
+                                                                      Icon(
+                                                                        Icons
+                                                                            .monitor_weight,
+                                                                        color: Colors
+                                                                            .black,
+                                                                        size:
+                                                                            16,
+                                                                      ),
+                                                                      SizedBox(
+                                                                          width:
+                                                                              4),
+                                                                      Row(
+                                                                        children: [
+                                                                          Text(
+                                                                            'น้ำหนัก ${report['weight'] ?? 'N/A'} kg',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontSize: 14,
+                                                                              color: Colors.grey[600],
+                                                                            ),
+                                                                          ),
+                                                                          SizedBox(
+                                                                              width: 10), // เพิ่มระยะห่างระหว่างข้อความ
+                                                                          Text(
+                                                                            'ราคา ${report['price'] ?? 'N/A'} บ.',
+                                                                            style:
+                                                                                TextStyle(
+                                                                              fontSize: 14,
+                                                                              color: Colors.grey[600],
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  SizedBox(
+                                                                      height:
+                                                                          4),
+                                                                  Row(
+                                                                    children: [
+                                                                      Icon(
+                                                                        Icons
+                                                                            .location_on,
+                                                                        color: Colors
+                                                                            .black,
+                                                                        size:
+                                                                            16,
+                                                                      ),
+                                                                      SizedBox(
+                                                                          width:
+                                                                              4),
+                                                                      Text(
+                                                                        'สถานที่ ${report['location'] ?? 'N/A'}',
+                                                                        style:
+                                                                            TextStyle(
+                                                                          fontSize:
+                                                                              14,
+                                                                          color:
+                                                                              Colors.grey[600],
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            IconButton(
+                                                              icon: Icon(
+                                                                Icons.edit,
+                                                                color: Colors
+                                                                    .blueAccent,
+                                                              ),
+                                                              onPressed: () {
+                                                                // การกระทำเมื่อกดปุ่มแก้ไข
+                                                              },
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+                                              }
+                                              return Text(
+                                                  'ไม่มีบันทึกการฉัดวัคซีนเพิ่มเติม');
+                                            },
+                                          )
                                         ],
                                       ),
                                     ],
@@ -1034,6 +1467,585 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
         );
       },
     );
+  }
+
+  void _showVaccineDialog() {
+    _dateVacController.clear();
+    _vacWeight.clear();
+    _vacPrice.clear();
+    _vacLocation.clear();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'บันทึกการฉีดวัคซีน',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          icon: Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'ชื่อวัคซีน',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: _selectedVac,
+                      hint: Text('เลือกชื่อวัคซีน'),
+                      items: (pet_type == 'สุนัข' ? _vacOfDog : _vacOfCat)
+                          .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _selectedVac = newValue;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'น้ำหนัก',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacWeight,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'ราคา',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacPrice,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'สถานที่',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacLocation,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'วันที่ฉีด',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _dateVacController,
+                      decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2101),
+                        );
+
+                        if (pickedDate != null) {
+                          setState(() {
+                            _dateVacController.text =
+                                pickedDate.toString().split(' ')[0];
+                          });
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        _saveVaccineToFirestore();
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.0),
+                        ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      ),
+                      child: Text('บันทึกข้อมูล'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showVaccineTableDialog() {
+    // _dateVacController.clear();
+    // _vacWeight.clear();
+    // _vacPrice.clear();
+    // _vacLocation.clear();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.8),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'บันทึกการฉีดวัคซีนตามเกณฑ์',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          icon: Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'วัคซีน',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: _selectedVac,
+                      hint: Text('เลือกชื่อวัคซีน'),
+                      items: (pet_type == 'สุนัข' ? _vacOfDog : _vacOfCat)
+                          .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          _selectedVac = newValue;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'น้ำหนัก',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacWeightTable,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'ราคา',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacPriceTable,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'วันที่ฉีด',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _dateVacTable,
+                      decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2101),
+                        );
+
+                        if (pickedDate != null) {
+                          setState(() {
+                            _dateVacController.text =
+                                pickedDate.toString().split(' ')[0];
+                          });
+                        }
+                      },
+                    ),
+                    SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'สถานะ',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: _vacStatusTable,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        _saveVaccineToFirestore();
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.0),
+                        ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+                      ),
+                      child: Text('บันทึกข้อมูล'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showVaccinationScheduleDialog(BuildContext context, String petType) {
+    List<Map<String, String>> vaccinationSchedule =
+        (petType == 'สุนัข') ? vaccinationDog : vaccinationCat;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.65,
+            padding: EdgeInsets.all(15.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ตารางการฉีดวัคซีน',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Table(
+                        border: TableBorder.all(),
+                        columnWidths: const <int, TableColumnWidth>{
+                          0: FixedColumnWidth(80),
+                          1: FixedColumnWidth(150),
+                          2: FixedColumnWidth(80),
+                        },
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: <TableRow>[
+                          TableRow(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                            ),
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'อายุ/สัปดาห์',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'วัคซีน (เข็มที่)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'โปรแกรมการฉีด',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ..._buildTableVac(
+                              vaccinationSchedule),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  TableRow _buildTableRow(
+      String status, String vaccine, String date, String weight, String price) {
+    return TableRow(
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(status),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(vaccine),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(date),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(weight),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(price),
+        ),
+      ],
+    );
+  }
+
+  List<TableRow> _buildTableVac(List<Map<String, String>> vaccinationSchedule) {
+    return vaccinationSchedule.map((schedule) {
+      return TableRow(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              schedule['age']!,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              schedule['vaccine']!,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              schedule['dose']!,
+            ),
+          ),
+        ],
+      );
+    }).toList();
   }
 }
 
