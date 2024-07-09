@@ -1,6 +1,7 @@
 // ignore_for_file: camel_case_types, file_names
 
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -435,6 +436,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                               ),
                                               child: IconButton(
                                                 onPressed: () {
+                                                  add_match(petData['pet_id'],
+                                                      petData['user_id']);
                                                   // Add your code to handle the "heart" action here
                                                 },
                                                 icon: const Icon(
@@ -543,6 +546,195 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
             );
           },
         );
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void add_match(String petIdd, String userIdd) async {
+    log(petIdd);
+    setState(() {
+      isLoading = true;
+    });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? petId = prefs.getString(userId.toString());
+    String pet_request = petId.toString();
+    String pet_respone = petIdd.toString();
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    // เช็คตัวที่ถูกร้องขอ
+    DocumentReference userMatchRefCheck =
+        FirebaseFirestore.instance.collection('match').doc(userIdd);
+
+    CollectionReference petMatchRefCheck =
+        userMatchRefCheck.collection('match_pet');
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petMatchRefCheck
+          .where('pet_request', isEqualTo: pet_respone)
+          .where('pet_respone', isEqualTo: pet_request)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว ให้ทำการอัพเดตเอกสารนั้น
+        querySnapshot.docs.forEach((doc) async {
+          await doc.reference.update({'status': 'จับคู่แล้ว'});
+        });
+        DocumentReference userMatchRef =
+            FirebaseFirestore.instance.collection('match').doc(userId);
+
+        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+        CollectionReference petMatchRef = userMatchRef.collection('match_pet');
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': '',
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'จับคู่แล้ว',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 1), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Success'),
+                  content: Text('Match Success'),
+                );
+              },
+            );
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      } else {
+        DocumentReference userMatchRef =
+            FirebaseFirestore.instance.collection('match').doc(userId);
+
+        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+        CollectionReference petMatchRef = userMatchRef.collection('match_pet');
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': '',
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'กำลังรอ',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 1), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Success'),
+                  content: Text('Match Success'),
+                );
+              },
+            );
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     } catch (error) {
       print("Failed to add pet: $error");
