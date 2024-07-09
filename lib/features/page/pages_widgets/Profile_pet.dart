@@ -4,6 +4,8 @@ import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/table_dataVac.dart';
+import 'package:Pet_Fluffy/features/services/age_calculator_service.dart';
+import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,9 @@ class Profile_pet_Page extends StatefulWidget {
 }
 
 class _Profile_pet_PageState extends State<Profile_pet_Page> {
+  final ProfileService _profileService = ProfileService();
+  final AgeCalculatorService _ageCalculatorService = AgeCalculatorService();
+
   User? user = FirebaseAuth.instance.currentUser;
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _infoController = TextEditingController();
@@ -106,49 +111,35 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Future<void> _loadAllPet(String petId) async {
     try {
-      DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
-          .collection('Pet_User')
-          .doc(petId)
-          .get();
+      Map<String, dynamic> petData = await _profileService.loadPetData(petId);
+      setState(() {
+        pet_user = petData['user_id'] ?? '';
+        pet_id = petId;
+        petName = petData['name'] ?? '';
+        type = petData['breed_pet'] ?? '';
+        petImageBase64 = petData['img_profile'] ?? '';
+        color = petData['color'] ?? '';
+        weight = petData['weight'] ?? '0.0';
+        gender = petData['gender'] ?? '';
+        des = petData['description'] ?? '';
+        price = petData['price'] ?? '';
+        birthdateStr = petData['birthdate'] ?? '';
+        pet_type = petData['type_pet'] ?? '';
+        DateTime birthdate = DateTime.parse(birthdateStr);
+        age = _ageCalculatorService.calculateAge(birthdate);
 
-      if (petDocSnapshot.exists) {
-        Map<String, dynamic> petData =
-            petDocSnapshot.data() as Map<String, dynamic>;
-        setState(() {
-          // ดึงข้อมูลจาก Firestore และกำหนดค่าให้กับตัวแปรที่ใช้เก็บข้อมูล
-          pet_user = petData['user_id'] ?? '';
-          pet_id = petId;
-          petName = petData['name'] ?? '';
-          type = petData['breed_pet'] ?? '';
-          petImageBase64 = petData['img_profile'] ?? '';
-          color = petData['color'] ?? '';
-          weight = petData['weight'] ?? '0.0';
-          gender = petData['gender'] ?? '';
-          des = petData['description'] ?? '';
-          price = petData['price'] ?? '';
-          birthdateStr = petData['birthdate'] ?? '';
-          pet_type = petData['type_pet'] ?? '';
-          DateTime birthdate = DateTime.parse(birthdateStr);
-          age = calculateAge(birthdate);
-
-          isLoading = false;
-        });
-        print(price);
-      } else {
-        print('Document does not exist');
-      }
+        isLoading = false;
+      });
+      print(price);
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
     }
   }
 
-  //พันธ์สุนัข
+  // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('dog_vac').get();
-      List<String> breeds =
-          querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      List<String> breeds = await _profileService.fetchVacData('dog_vac');
       setState(() {
         _vacOfDog = breeds;
       });
@@ -157,13 +148,10 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     }
   }
 
-  //พันธ์แมว
+  // ดึงข้อมูล Vac Cat
   void _fetchVacDataCat() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('cat_vac').get();
-      List<String> breeds =
-          querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      List<String> breeds = await _profileService.fetchVacData('cat_vac');
       setState(() {
         _vacOfCat = breeds;
       });
@@ -172,13 +160,13 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     }
   }
 
-  //ดึงข้อมูลรูปภาพผู้ใช้ทั้งหมด
+  // ดึงข้อมูล User
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
       Map<String, dynamic>? userDataFromFirestore =
-          await ApiUserService.getUserDataFromFirestore(userId!);
+          await _profileService.getUserData(userId!);
       if (userDataFromFirestore != null) {
         userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
         setState(() {
@@ -187,32 +175,19 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       }
     }
   }
-
+  
+  // บันทึกข้อมูลประจำเดือน ลง FireStore
   Future<void> _saveReportToFirestore() async {
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted =
-        formatter.format(now.toUtc().add(Duration(hours: 7)));
-
     try {
-      DocumentReference newData = await FirebaseFirestore.instance
-          .collection('report_period')
-          .doc(userId)
-          .collection('pet_user')
-          .add({
-        'pet_id': pet_id,
-        'date': _dateController.text,
-        'des': _infoController.text,
-        'created_at': formatted,
-        'updates_at': formatted,
-      });
-      String docId = newData.id;
-      await newData.update({'id_period': docId});
-
+      await _profileService.saveReportToFirestore(
+        userId: userId!,
+        petId: pet_id,
+        date: _dateController.text,
+        description: _infoController.text,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
-
       _refreshHomePage();
     } catch (e) {
       print('Error saving report: $e');
@@ -222,40 +197,27 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
     }
   }
 
+  // บันทึกข้อมูล Vac ลง FireStore
   Future<void> _saveVaccineToFirestore() async {
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted =
-        formatter.format(now.toUtc().add(Duration(hours: 7)));
     try {
-      DocumentReference newData = await FirebaseFirestore.instance
-          .collection('vac_history')
-          .doc(userId)
-          .collection('vac_pet')
-          .add({
-        'pet_id': pet_id,
-        'vacName': _selectedVac ?? '',
-        'weight': _vacWeight.text,
-        'price': _vacPrice.text,
-        'location': _vacLocation.text,
-        'date': _dateVacController.text,
-        'created_at': formatted,
-        'updates_at': formatted,
-      });
-      String docId = newData.id;
-      await newData.update({'id_period': docId});
-
+      await _profileService.saveVaccineToFirestore(
+        userId: userId!,
+        petId: pet_id,
+        vacName: _selectedVac ?? '',
+        weight: _vacWeight.text,
+        price: _vacPrice.text,
+        location: _vacLocation.text,
+        date: _dateVacController.text,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
-
       setState(() {
         _selectedVac = null;
       });
-
       _refreshHomePage();
     } catch (e) {
-      print('Error saving report: $e');
+      print('Error saving vaccine data: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
       );
@@ -798,7 +760,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                               title: "ดูตารางการฉีดวัคซีน",
                                               icon: LineAwesomeIcons.table,
                                               onPress: () {
-                                                _showVaccinationScheduleDialog(context, pet_type);
+                                                _showVaccinationScheduleDialog(
+                                                    context, pet_type);
                                               },
                                             ),
                                           ],
@@ -1976,8 +1939,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                               ),
                             ],
                           ),
-                          ..._buildTableVac(
-                              vaccinationSchedule),
+                          ..._buildTableVac(vaccinationSchedule),
                         ],
                       ),
                     ),

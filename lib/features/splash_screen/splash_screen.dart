@@ -2,6 +2,8 @@
 
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,27 +38,53 @@ class _SplashPageState extends State<Splash_Page> {
     super.didChangeDependencies();
 
     // ทำงานที่ต้องการ
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
       // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
-      Future.delayed(const Duration(seconds: 3), () {
-        if (_isMounted) {
-          if (user != null && user.emailVerified) {
-            // หากผู้ใช้ล็อกอินแล้วและยืนยันอีเมลแล้ว นำทางไปยังหน้า Navigator Page
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => const Navigator_Page(initialIndex: 0),
-              ),
-            );
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (_isMounted) {
+        if (user != null && user.emailVerified) {
+          // ตรวจสอบว่าได้ตั้งค่าตำแหน่งหรือยัง
+          final userDocRef =
+              FirebaseFirestore.instance.collection('user').doc(user.uid);
+          final userData = await userDocRef.get();
+
+          if (userData.exists) {
+            final lat = userData.data()?['lat'];
+            final lng = userData.data()?['lng'];
+
+            if (lat != null && lng != null) {
+              // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => const Navigator_Page(initialIndex: 0),
+                ),
+              );
+            } else {
+              // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => const LocationSelectionPage(),
+                ),
+              );
+            }
           } else {
-            // หากผู้ใช้ยังไม่ได้ล็อกอินหรือยังไม่ได้ยืนยันอีเมล นำทางไปยังหน้า Home Page
+            // หากผู้ใช้ยังไม่มีข้อมูลใน Firestore นำทางไปยังหน้า LocationSelectionPage
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => const Home_Page(),
+                builder: (_) => const LocationSelectionPage(),
               ),
             );
           }
+        } else {
+          // หากผู้ใช้ยังไม่ได้ล็อกอินหรือยังไม่ได้ยืนยันอีเมล นำทางไปยังหน้า Home Page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const Home_Page(),
+            ),
+          );
         }
-      });
+      }
     });
   }
 

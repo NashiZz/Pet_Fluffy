@@ -11,7 +11,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
-//หน้า Set ตำแหน่ง Pet ก่อนใช้งาน 
+//หน้า Set ตำแหน่ง Pet ก่อนใช้งาน
 class LocationSelectionPage extends StatefulWidget {
   const LocationSelectionPage({super.key});
 
@@ -36,76 +36,81 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue, Colors.purple],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.add_location_alt_rounded,
-              size: 80,
-              color: Colors.white,
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'ก่อนเริ่มใช้งานแอป กรุณาเพิ่มตำแหน่งในการแสดงบนแผนที่ของสัตว์เลี้ยงคุณ',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.white,
-                  fontSize: 20,
+      body: FutureBuilder(
+        future: getLocation(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error fetching location data'));
+          } else {
+            return Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue, Colors.purple],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
                 ),
               ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    _showLocationPickerDialog();
-                  },
-                  style: ButtonStyle(
-                    minimumSize: WidgetStateProperty.all(
-                        const Size(260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.add_location_alt_rounded,
+                    size: 80,
+                    color: Colors.white,
                   ),
-                  child: const Text('เพิ่มแหน่ง'),
-                ),
-                const SizedBox(width: 20),
-                if (!_isLocationAdded) ...[
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.to(() => const Setting_Pet_Page());
-                    },
-                    style: ButtonStyle(
-                      minimumSize: WidgetStateProperty.all(const Size(
-                          260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                  const SizedBox(height: 20),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'ก่อนเริ่มใช้งานแอป กรุณาเพิ่มตำแหน่งในการแสดงบนแผนที่ของสัตว์เลี้ยงคุณ',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.white,
+                        fontSize: 20,
+                      ),
                     ),
-                    child: const Text('ต่อไป'),
+                  ),
+                  const SizedBox(height: 20),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          _showLocationPickerDialog();
+                        },
+                        style: ButtonStyle(
+                          minimumSize: MaterialStateProperty.all(const Size(
+                              260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                        ),
+                        child: const Text('เพิ่มแหน่ง'),
+                      ),
+                      const SizedBox(width: 20),
+                      if (!_isLocationAdded)
+                        ElevatedButton(
+                          onPressed: () {
+                            Get.to(() => const Setting_Pet_Page());
+                          },
+                          style: ButtonStyle(
+                            minimumSize: MaterialStateProperty.all(const Size(
+                                260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                          ),
+                          child: const Text('ต่อไป'),
+                        ),
+                    ],
                   ),
                 ],
-              ],
-            ),
-          ],
-        ),
+              ),
+            );
+          }
+        },
       ),
     );
   }
 
-  // Show Dialog Map ขึ้นมา
   void _showLocationPickerDialog() {
     showDialog(
       context: context,
@@ -180,7 +185,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
-  // หลังจากผู้ใช้เลือกตำแหน่งจะมาทำงานในนี้ต่อ
   void _selectLocation(LatLng position) {
     final Marker newMarker = Marker(
       markerId: const MarkerId('userSelectedLocation'),
@@ -194,13 +198,30 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _saveLocationToFirestore(position);
   }
 
-  //ดึงเอาตำแหน่งปัจจุบันของผู้ใช้
-  void getLocation() async {
+  Future<void> getLocation() async {
     Location location = Location();
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
     _locationData = await location.getLocation();
   }
 
-  // บันทึกข้อมูลลงฐานข้อมูล
   Future<void> _saveLocationToFirestore(LatLng location) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -237,7 +258,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     }
   }
 
-  // ทำการเช็คว่า ถ้าผู้ใช้มีการตั้งค่า ตำแหน่งแล้วให้ผู้ใช้ไปหน้าอื่น
   void checkLocationData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
