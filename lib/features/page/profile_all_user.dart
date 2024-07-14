@@ -70,23 +70,23 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
     } catch (e) {}
   }
 
-  Future<void> _showNotification() async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails('Pet_Fluffy', 'แจ้งเตือนทั่วไป',
-            importance: Importance.max,
-            priority: Priority.high,
-            ticker: 'ticker');
+  // Future<void> _showNotification() async {
+  //   const AndroidNotificationDetails androidNotificationDetails =
+  //       AndroidNotificationDetails('Pet_Fluffy', 'แจ้งเตือนทั่วไป',
+  //           importance: Importance.max,
+  //           priority: Priority.high,
+  //           ticker: 'ticker');
 
-    const NotificationDetails platformChannelDetail = NotificationDetails(
-      android: androidNotificationDetails,
-    );
+  //   const NotificationDetails platformChannelDetail = NotificationDetails(
+  //     android: androidNotificationDetails,
+  //   );
 
-    await _flutterLocalNotificationsPlugin.show(
-        0,
-        'ใกล้ถึงเวลาการผสมพันธุ์แล้วนะ',
-        'น้องสุนัข: ชินโนะสุเกะ ใกล้ถึงเวลาการผสมพันธุ์ในอีก 9 วัน',
-        platformChannelDetail);
-  }
+  //   await _flutterLocalNotificationsPlugin.show(
+  //       0,
+  //       'ใกล้ถึงเวลาการผสมพันธุ์แล้วนะ',
+  //       'น้องสุนัข: ชินโนะสุเกะ ใกล้ถึงเวลาการผสมพันธุ์ในอีก 9 วัน',
+  //       platformChannelDetail);
+  // }
 
   Future<void> _getPetUserDataFromFirestore(String userId) async {
     try {
