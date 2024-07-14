@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:developer';
 
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+import 'package:Pet_Fluffy/features/page/randomMatch.dart';
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,11 +10,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Profile ของ ผู้ใช้ทั้งหมด
 class ProfileAllUserPage extends StatefulWidget {
   final String userId;
-  const ProfileAllUserPage({Key? key, required this.userId}) : super(key: key);
+  final String userId_req;
+  const ProfileAllUserPage(
+      {Key? key, required this.userId, required this.userId_req})
+      : super(key: key);
 
   @override
   State<ProfileAllUserPage> createState() => _ProfileAllUserPageState();
@@ -27,6 +34,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
   late String username = '';
   int dogCount = 0;
   int catCount = 0;
+  bool isCheckMatch = false;
 
   @override
   void initState() {
@@ -36,7 +44,30 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
     if (user != null) {
       _getUserDataFromFirestore(widget.userId);
       _getPetUserDataFromFirestore(widget.userId);
+      _getIsCheckMatchSuccess();
     }
+  }
+
+  Future<void> _getIsCheckMatchSuccess() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String? petId = prefs.getString(widget.userId_req);
+    String pet_respone = petId.toString();
+
+    DocumentReference matchRef =
+        FirebaseFirestore.instance.collection('match').doc(widget.userId);
+
+    CollectionReference petMatchRef = matchRef.collection('match_pet');
+    try {
+      QuerySnapshot querySnapshot = await petMatchRef
+          .where('pet_respone', isEqualTo: pet_respone)
+          .where('status', isEqualTo: 'จับคู่แล้ว')
+          .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        isCheckMatch = true;
+        log(isCheckMatch.toString());
+      }
+    } catch (e) {}
   }
 
   Future<void> _showNotification() async {
@@ -106,11 +137,24 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
 
   @override
   Widget build(BuildContext context) {
+    final RouteSettings settings = ModalRoute.of(context)!.settings;
+    final String? previousPage = settings.name;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
             onPressed: () {
-              Navigator.pop(context);
+              // Navigator.pop(context);
+
+              if (previousPage.toString() == 'matchSuccess') {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => Navigator_Page(initialIndex: 0)),
+                  (Route<dynamic> route) => false,
+                );
+              }
+              else {
+                Navigator.pop(context);
+              }
             },
             icon: const Icon(LineAwesomeIcons.angle_left)),
         title: Text(
@@ -254,22 +298,31 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 20, 80, 10),
-                                child: Text(
-                                    'เบอร์โทรศัพท์ : ${userData['phone'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch != false
+                                    ? Text('เบอร์โทรศัพท์ : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text(
+                                        'เบอร์โทรศัพท์ : ${userData['phone'] ?? ''}',
+                                        style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: Text(
-                                    'Facebook : ${userData['facebook'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch != false
+                                    ? Text('Facebook : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text(
+                                        'Facebook : ${userData['facebook'] ?? ''}',
+                                        style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: Text('Line : ${userData['line'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch != false
+                                    ? Text('Line : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text('Line : ${userData['line'] ?? ''}',
+                                        style: const TextStyle(fontSize: 16)),
                               )
                             ],
                           ),
