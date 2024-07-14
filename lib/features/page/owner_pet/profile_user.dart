@@ -29,7 +29,6 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
   late String userImageBase64 = '';
   int dogCount = 0;
   int catCount = 0;
-
   @override
   void initState() {
     super.initState();
@@ -41,7 +40,6 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
       _getPetUserDataFromFirestore();
     }
   }
-
   Future<void> _showNotification() async {
     const AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails('Pet_Fluffy', 'แจ้งเตือนทั่วไป',
