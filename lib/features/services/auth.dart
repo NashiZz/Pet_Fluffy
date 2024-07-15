@@ -11,6 +11,22 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // เข้าสู่ระบบโดยไม่สมัครสมาชิก
+  Future<User?> signInAnonymously() async {
+    try {
+      UserCredential userCredential = await _auth.signInAnonymously();
+      return userCredential.user;
+    } catch (e) {
+      print('Error during anonymous sign-in: $e');
+      return null;
+    }
+  }
+
+  bool isAnonymous() {
+    User? user = _auth.currentUser;
+    return user != null && user.isAnonymous;
+  }
+
   // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
   Future<User?> signInWithEmailAndPassword(
       String email, String password) async {

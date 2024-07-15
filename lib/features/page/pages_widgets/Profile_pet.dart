@@ -1,6 +1,8 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
 
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/table_dataVac.dart';
@@ -9,6 +11,8 @@ import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
@@ -67,6 +71,9 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
   final double coverHeight = 180;
   final double profileHeight = 90;
 
+  List<XFile?> _images = [];
+  List<String> _firestoreImages = [];
+
   @override
   void initState() {
     super.initState();
@@ -78,6 +85,392 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       _fetchVacDataCat();
     }
     isLoading = true;
+  }
+
+  Future<List<String>> _fetchImgsFromFirestore(String petId) async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('imgs_pet')
+        .doc(petId)
+        .get();
+    if (doc.exists) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      List<String> images = [];
+      for (int i = 1; i <= 9; i++) {
+        String? img = data['img_$i'];
+        if (img != null && img.isNotEmpty) {
+          images.add(img);
+        }
+      }
+      print('Fetched images from Firestore for petId $petId: $images');
+      return images;
+    } else {
+      print('No images found for petId $petId');
+      return [];
+    }
+  }
+
+  //ใช้สำหรับการบีบอัดรูปภาพ
+  Future<Uint8List?> compressImage(Uint8List image) async {
+    try {
+      // ลดความสูงเป็น 480 pixel และลดความกว้างเป็น 640 pixel เพื่อลดขนาดของรูปภาพให้เล็กลง
+      List<int> compressedImage = await FlutterImageCompress.compressWithList(
+        image,
+        minHeight: 480, // ลดความสูงเป็น 480 pixel
+        minWidth: 640, // ลดความกว้างเป็น 640 pixel
+        quality: 70, // ลดคุณภาพรูปภาพเป็น 70%
+      );
+      return Uint8List.fromList(compressedImage);
+    } catch (e) {
+      print('Error compressing image: $e');
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _pickAndCompressImage(ImageSource source) async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      final File file = File(pickedFile.path);
+      Uint8List? imageBytes = await file.readAsBytes();
+      if (imageBytes != null) {
+        return await compressImage(imageBytes);
+      } else {
+        print('Failed to read image bytes');
+        return null;
+      }
+    } else {
+      print('No image selected');
+      return null;
+    }
+  }
+
+  String uint8ListToBase64(Uint8List data) {
+    return base64Encode(data);
+  }
+
+  Uint8List? base64ToUint8List(String base64String) {
+    try {
+      return base64Decode(base64String);
+    } catch (e) {
+      print('Error decoding base64: $e');
+      return null;
+    }
+  }
+
+  Future<void> _loadAllPet(String petId) async {
+    try {
+      Map<String, dynamic> petData = await _profileService.loadPetData(petId);
+      List<String> firestoreImages = await _fetchImgsFromFirestore(petId);
+      setState(() {
+        pet_user = petData['user_id'] ?? '';
+        pet_id = petId;
+        petName = petData['name'] ?? '';
+        type = petData['breed_pet'] ?? '';
+        petImageBase64 = petData['img_profile'] ?? '';
+        color = petData['color'] ?? '';
+        weight = petData['weight'] ?? '0.0';
+        gender = petData['gender'] ?? '';
+        des = petData['description'] ?? '';
+        price = petData['price'] ?? '';
+        birthdateStr = petData['birthdate'] ?? '';
+        pet_type = petData['type_pet'] ?? '';
+        DateTime birthdate = DateTime.parse(birthdateStr);
+        age = _ageCalculatorService.calculateAge(birthdate);
+        _firestoreImages = firestoreImages;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error getting pet user data from Firestore: $e');
+    }
+  }
+
+  void _showAddImg() async {
+    final List<Uint8List?> compressedImages = [];
+    final List<String?> base64Images = [];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('เพิ่มรูปภาพ'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300, // กำหนดความสูงของ Dialog Content
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // แสดงรูปภาพที่ถูกเลือกใน Dialog
+                    if (_firestoreImages.isNotEmpty ||
+                        compressedImages.isNotEmpty)
+                      Container(
+                        height: 200, // กำหนดความสูงของ GridView
+                        child: GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
+                          itemCount:
+                              _firestoreImages.length + compressedImages.length,
+                          itemBuilder: (context, index) {
+                            if (index < _firestoreImages.length) {
+                              Uint8List? imageData =
+                                  base64ToUint8List(_firestoreImages[index]);
+                              if (imageData == null) {
+                                return Container(
+                                  color: Colors.grey,
+                                  child: Center(
+                                    child: Text(
+                                      'Invalid image',
+                                      style: TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return Stack(
+                                children: [
+                                  Image.memory(
+                                    imageData,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon:
+                                          Icon(Icons.close, color: Colors.red),
+                                      onPressed: () {
+                                        print(
+                                            'Requesting confirmation for deleting image at index: $index');
+                                        // Show confirmation dialog
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) {
+                                            return AlertDialog(
+                                              title: Text('ยืนยันการลบ'),
+                                              content: Text(
+                                                  'คุณต้องการลบรูปภาพนี้ออกจากระบบหรือไม่?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context)
+                                                        .pop(); // ปิด Dialog
+                                                  },
+                                                  child: Text('ยกเลิก'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context)
+                                                        .pop(); // ปิด Dialog
+                                                    _deleteImageFromFirestore(
+                                                            index)
+                                                        .then((_) {
+                                                      setState(() {
+                                                        _firestoreImages
+                                                            .removeAt(index);
+                                                      });
+                                                    }).catchError((e) {
+                                                      print(
+                                                          'Error deleting image: $e');
+                                                    });
+                                                  },
+                                                  child: Text('ยืนยัน'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            } else {
+                              return Stack(
+                                children: [
+                                  Image.memory(
+                                    compressedImages[
+                                        index - _firestoreImages.length]!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon:
+                                          Icon(Icons.close, color: Colors.red),
+                                      onPressed: () {
+                                        print(
+                                            'Removing compressed image at index: ${index - _firestoreImages.length}');
+                                        setState(() {
+                                          compressedImages.removeAt(
+                                              index - _firestoreImages.length);
+                                          base64Images.removeAt(
+                                              index - _firestoreImages.length);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    TextButton(
+                      onPressed: () async {
+                        final compressedImage =
+                            await _pickAndCompressImage(ImageSource.gallery);
+                        if (compressedImage != null) {
+                          final base64Image =
+                              uint8ListToBase64(compressedImage);
+                          print('Picked image from gallery: $base64Image');
+                          setState(() {
+                            if (_firestoreImages.length +
+                                    compressedImages.length <
+                                9) {
+                              _images.add(XFile.fromData(compressedImage));
+                              compressedImages.add(compressedImage);
+                              base64Images.add(base64Image);
+                              print(
+                                  'Added compressed image from gallery: $base64Image');
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'คุณสามารถเพิ่มรูปภาพได้สูงสุด 9 รูป')),
+                              );
+                            }
+                          });
+                        }
+                      },
+                      child: Text('เลือกรูปจาก Gallery'),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final compressedImage =
+                            await _pickAndCompressImage(ImageSource.camera);
+                        if (compressedImage != null) {
+                          final base64Image =
+                              uint8ListToBase64(compressedImage);
+                          print('Picked image from camera: $base64Image');
+                          setState(() {
+                            if (_firestoreImages.length +
+                                    compressedImages.length <
+                                9) {
+                              _images.add(XFile.fromData(compressedImage));
+                              compressedImages.add(compressedImage);
+                              base64Images.add(base64Image);
+                              print(
+                                  'Added compressed image from camera: $base64Image');
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'คุณสามารถเพิ่มรูปภาพได้สูงสุด 9 รูป')),
+                              );
+                            }
+                          });
+                        }
+                      },
+                      child: Text('ถ่ายรูปจาก Camera'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('ยกเลิก'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    print('Saving images to Firestore: $base64Images');
+                    await _saveImgsPetToFirestore(base64Images: base64Images);
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('ยืนยันการเพิ่ม'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<int> _getNextAvailableIndex() async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('imgs_pet')
+        .doc(widget.petId)
+        .get();
+    if (doc.exists) {
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      for (int i = 1; i <= 9; i++) {
+        if (data['img_$i'] == null || data['img_$i'].isEmpty) {
+          return i;
+        }
+      }
+    }
+    return -1; // หมายความว่าไม่มีตำแหน่งที่ว่าง
+  }
+
+  Future<void> _deleteImageFromFirestore(int index) async {
+    DocumentReference docRef =
+        FirebaseFirestore.instance.collection('imgs_pet').doc(pet_id);
+    Map<String, dynamic> updateData = {
+      'img_${index + 1}': FieldValue.delete(),
+    };
+    try {
+      print('Deleting image at index: $index from Firestore');
+      await docRef.update(updateData);
+      print('Deleted image from Firestore');
+    } catch (error) {
+      print('Error deleting image: $error');
+    }
+  }
+
+  Future<void> _saveImgsPetToFirestore({
+    required List<String?> base64Images,
+  }) async {
+    try {
+      final List<String?> images = List.generate(
+          9, (index) => base64Images.length > index ? base64Images[index] : '');
+
+      await _profileService.saveImgsPetToFirestore(
+        petId: pet_id,
+        img1: images[0] ?? '',
+        img2: images[1] ?? '',
+        img3: images[2] ?? '',
+        img4: images[3] ?? '',
+        img5: images[4] ?? '',
+        img6: images[5] ?? '',
+        img7: images[6] ?? '',
+        img8: images[7] ?? '',
+        img9: images[8] ?? '',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
+      );
+      setState(() {
+        _selectedVac = null;
+      });
+      _refreshHomePage();
+    } catch (e) {
+      print('Error saving images to Firestore: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
+      );
+    }
   }
 
   String calculateAge(DateTime birthdate) {
@@ -109,32 +502,32 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
   }
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
-  Future<void> _loadAllPet(String petId) async {
-    try {
-      Map<String, dynamic> petData = await _profileService.loadPetData(petId);
-      setState(() {
-        pet_user = petData['user_id'] ?? '';
-        pet_id = petId;
-        petName = petData['name'] ?? '';
-        type = petData['breed_pet'] ?? '';
-        petImageBase64 = petData['img_profile'] ?? '';
-        color = petData['color'] ?? '';
-        weight = petData['weight'] ?? '0.0';
-        gender = petData['gender'] ?? '';
-        des = petData['description'] ?? '';
-        price = petData['price'] ?? '';
-        birthdateStr = petData['birthdate'] ?? '';
-        pet_type = petData['type_pet'] ?? '';
-        DateTime birthdate = DateTime.parse(birthdateStr);
-        age = _ageCalculatorService.calculateAge(birthdate);
+  // Future<void> _loadAllPet(String petId) async {
+  //   try {
+  //     Map<String, dynamic> petData = await _profileService.loadPetData(petId);
+  //     setState(() {
+  //       pet_user = petData['user_id'] ?? '';
+  //       pet_id = petId;
+  //       petName = petData['name'] ?? '';
+  //       type = petData['breed_pet'] ?? '';
+  //       petImageBase64 = petData['img_profile'] ?? '';
+  //       color = petData['color'] ?? '';
+  //       weight = petData['weight'] ?? '0.0';
+  //       gender = petData['gender'] ?? '';
+  //       des = petData['description'] ?? '';
+  //       price = petData['price'] ?? '';
+  //       birthdateStr = petData['birthdate'] ?? '';
+  //       pet_type = petData['type_pet'] ?? '';
+  //       DateTime birthdate = DateTime.parse(birthdateStr);
+  //       age = _ageCalculatorService.calculateAge(birthdate);
 
-        isLoading = false;
-      });
-      print(price);
-    } catch (e) {
-      print('Error getting pet user data from Firestore: $e');
-    }
-  }
+  //       isLoading = false;
+  //     });
+  //     print(price);
+  //   } catch (e) {
+  //     print('Error getting pet user data from Firestore: $e');
+  //   }
+  // }
 
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
@@ -175,7 +568,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
       }
     }
   }
-  
+
   // บันทึกข้อมูลประจำเดือน ลง FireStore
   Future<void> _saveReportToFirestore() async {
     try {
@@ -424,7 +817,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                           ),
                                         ),
                                         const SizedBox(height: 10),
-                                        const Row(
+                                        Row(
                                           children: [
                                             Row(
                                               children: [
@@ -445,8 +838,14 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> {
                                                 ),
                                               ],
                                             ),
+                                            Spacer(),
+                                            ElevatedButton(
+                                              onPressed: _showAddImg,
+                                              child: Text('เพิ่มรูปภาพ'),
+                                            ),
                                           ],
                                         ),
+
                                         const SizedBox(height: 10),
 
                                         //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง

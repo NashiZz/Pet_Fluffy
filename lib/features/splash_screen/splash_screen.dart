@@ -22,7 +22,7 @@ class _SplashPageState extends State<Splash_Page> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    _isMounted = true; //วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
+    _isMounted = true; // วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
   }
 
   @override
@@ -43,25 +43,41 @@ class _SplashPageState extends State<Splash_Page> {
       await Future.delayed(const Duration(seconds: 3));
 
       if (_isMounted) {
-        if (user != null && user.emailVerified) {
-          // ตรวจสอบว่าได้ตั้งค่าตำแหน่งหรือยัง
-          final userDocRef =
-              FirebaseFirestore.instance.collection('user').doc(user.uid);
-          final userData = await userDocRef.get();
+        if (user != null) {
+          if (user.isAnonymous) {
+            // ผู้ใช้เป็น Anonymous ให้เข้าสู่หน้า Navigator_Page ทันที
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const Navigator_Page(initialIndex: 0),
+              ),
+            );
+          } else if (user.emailVerified) {
+            // ตรวจสอบว่าได้ตั้งค่าตำแหน่งหรือยัง
+            final userDocRef =
+                FirebaseFirestore.instance.collection('user').doc(user.uid);
+            final userData = await userDocRef.get();
 
-          if (userData.exists) {
-            final lat = userData.data()?['lat'];
-            final lng = userData.data()?['lng'];
+            if (userData.exists) {
+              final lat = userData.data()?['lat'];
+              final lng = userData.data()?['lng'];
 
-            if (lat != null && lng != null) {
-              // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) => const Navigator_Page(initialIndex: 0),
-                ),
-              );
+              if (lat != null && lng != null) {
+                // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const Navigator_Page(initialIndex: 0),
+                  ),
+                );
+              } else {
+                // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const LocationSelectionPage(),
+                  ),
+                );
+              }
             } else {
-              // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
+              // หากผู้ใช้ยังไม่มีข้อมูลใน Firestore นำทางไปยังหน้า LocationSelectionPage
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
                   builder: (_) => const LocationSelectionPage(),
@@ -69,15 +85,15 @@ class _SplashPageState extends State<Splash_Page> {
               );
             }
           } else {
-            // หากผู้ใช้ยังไม่มีข้อมูลใน Firestore นำทางไปยังหน้า LocationSelectionPage
+            // หากผู้ใช้ยังไม่ได้ยืนยันอีเมล นำทางไปยังหน้า Home Page
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => const LocationSelectionPage(),
+                builder: (_) => const Home_Page(),
               ),
             );
           }
         } else {
-          // หากผู้ใช้ยังไม่ได้ล็อกอินหรือยังไม่ได้ยืนยันอีเมล นำทางไปยังหน้า Home Page
+          // หากผู้ใช้ยังไม่ได้ล็อกอิน นำทางไปยังหน้า Home Page
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) => const Home_Page(),
