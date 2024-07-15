@@ -31,46 +31,58 @@ class _Setting_PageState extends State<Setting_Page> {
   late String userName;
   late String userEmail;
   late String userImageBase64;
-  late String? petId;
+  late String petId;
   bool isLoading = true;
+  bool isAnonymous = false;
 
   @override
   void initState() {
     super.initState();
-    // เรียกใช้เมธอดเพื่อดึงข้อมูลของผู้ใช้จาก Firestore
     _getUserDataFromFirestore();
   }
 
-  //ดึงข้อมูลของผู้ใช้จาก Firestore
   Future<void> _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
-      try {
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        petId = prefs.getString(userId);
-
-        print('$petId');
-        // ระบุคอลเลคชันที่จะใช้ใน Firestore
-        DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
-            .collection('user')
-            .doc(userId)
-            .get();
-
-        // ดึงข้อมูลผู้ใช้จาก Snapshot
-        userName = userDocSnapshot['username'];
-        userEmail = userDocSnapshot['email'];
-        userImageBase64 = userDocSnapshot['photoURL'] ?? '';
-
-        // อัปเดตสถานะของ State
+      isAnonymous = userData.isAnonymous;
+      if (isAnonymous) {
         setState(() {
+          userName = 'บัญชีผู้เยี่ยมชม';
+          userEmail = '';
+          userImageBase64 = ''; // หรือคุณอาจจะใช้รูปภาพ default ที่คุณต้องการ
           isLoading = false;
         });
-      } catch (e) {
-        print('Error getting user data from Firestore: $e');
-        setState(() {
-          isLoading = false;
-        });
+      } else {
+        try {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          petId = prefs.getString(userId)!;
+
+          DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
+              .collection('user')
+              .doc(userId)
+              .get();
+
+          userName = userDocSnapshot['username'];
+          userEmail = userDocSnapshot['email'];
+          userImageBase64 = userDocSnapshot['photoURL'] ?? '';
+
+          DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+              .collection('Usage_pet')
+              .doc(userId)
+              .get();
+
+          petId = petDocSnapshot['pet_id'];
+
+          setState(() {
+            isLoading = false;
+          });
+        } catch (e) {
+          print('Error getting user data from Firestore: $e');
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
@@ -116,12 +128,19 @@ class _Setting_PageState extends State<Setting_Page> {
                       radius: 60,
                       backgroundColor: Colors.transparent,
                       child: ClipOval(
-                        child: Image.memory(
-                          base64Decode(userImageBase64),
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        ),
+                        child: isAnonymous
+                            ? Image.asset(
+                                'assets/images/user-286-512.png', // ใส่ภาพ default ของคุณที่นี่
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.memory(
+                                base64Decode(userImageBase64),
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -134,28 +153,34 @@ class _Setting_PageState extends State<Setting_Page> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 10),
-                    SizedBox(
-                      width: 200,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const Profile_user_Page()),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 49, 42, 42),
-                            side: BorderSide.none,
-                            shape: const StadiumBorder()),
-                        child: const Text("ข้อมูลโปรไฟล์เจ้าของ",
-                            style: TextStyle(
-                                color: Color.fromARGB(255, 255, 255, 255))),
+                    if (!isAnonymous)
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: 200,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const Profile_user_Page()),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 49, 42, 42),
+                                  side: BorderSide.none,
+                                  shape: const StadiumBorder()),
+                              child: const Text("ข้อมูลโปรไฟล์เจ้าของ",
+                                  style: TextStyle(
+                                      color:
+                                          Color.fromARGB(255, 255, 255, 255))),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 30),
                     const Divider(),
                     const SizedBox(height: 10),
                     MenuWidget(
@@ -167,19 +192,24 @@ class _Setting_PageState extends State<Setting_Page> {
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
-                                  Profile_pet_Page(petId: petId.toString()),
+                                  Profile_pet_Page(petId: petId),
                             ),
                           );
                         }
                       },
+                      isAnonymous: isAnonymous,
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(
                       title: "สัตว์เลี้ยงของฉัน",
                       icon: LineAwesomeIcons.paw,
                       onPress: () {
-                        Navigator.push(context,MaterialPageRoute(builder: (context) => PetAllTwo()));
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => PetAllTwo()));
                       },
+                      isAnonymous: isAnonymous,
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(
@@ -192,6 +222,7 @@ class _Setting_PageState extends State<Setting_Page> {
                               builder: (context) => const FaveritePage()),
                         );
                       },
+                      isAnonymous: isAnonymous,
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(
@@ -200,6 +231,7 @@ class _Setting_PageState extends State<Setting_Page> {
                       onPress: () {
                         Get.to(() => const EditPassPage());
                       },
+                      isAnonymous: isAnonymous,
                     ),
                     const SizedBox(height: 20),
                     const Divider(color: Colors.grey),
@@ -226,7 +258,20 @@ class _Setting_PageState extends State<Setting_Page> {
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    await GoogleSignIn().signOut();
+                                    User? user =
+                                        FirebaseAuth.instance.currentUser;
+                                    if (user != null && user.isAnonymous) {
+                                      // ลบบัญชี anonymous
+                                      try {
+                                        await user.delete();
+                                        print("Anonymous account deleted");
+                                      } catch (e) {
+                                        print(
+                                            "Error deleting anonymous account: $e");
+                                      }
+                                    } else {
+                                      await GoogleSignIn().signOut();
+                                    }
                                     FirebaseAuth.instance.signOut();
                                     print("Sign Out Success!!");
                                     Navigator.pushAndRemoveUntil(
@@ -262,6 +307,7 @@ class MenuWidget extends StatelessWidget {
     required this.onPress,
     this.endIcon = true,
     this.textColor,
+    this.isAnonymous = false,
   }) : super(key: key);
 
   final String title;
@@ -269,11 +315,33 @@ class MenuWidget extends StatelessWidget {
   final VoidCallback onPress;
   final bool endIcon;
   final Color? textColor;
+  final bool isAnonymous;
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      onTap: onPress,
+      onTap: isAnonymous
+          ? () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text("ต้องสมัครสมาชิกก่อน"),
+                    content:
+                        const Text("กรุณาสมัครสมาชิกก่อนเพื่อเข้าถึงเมนูนี้"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context); // ปิด Popup
+                        },
+                        child: const Text("ตกลง"),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
+          : onPress,
       leading: Container(
         width: 40,
         height: 40,

@@ -41,34 +41,38 @@ class _MapsPageState extends State<Maps_Page> {
   late String userImageBase64;
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
+  bool isAnonymous = false;
 
   // Async func to handle Futures easier; or use Future.then
-      
 
   //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
-      try {
-        Map<String, dynamic>? userMap =
-            await ApiUserService.getUserDataFromFirestore(userId);
+      isAnonymous = userData.isAnonymous;
+      if (isAnonymous) {
+        setState(() {
+          userImageBase64 = ''; // หรือคุณอาจจะใช้รูปภาพ default ที่คุณต้องการ
+          isLoading = false;
+        });
+      } else {
+        try {
+          Map<String, dynamic>? userMap =
+              await ApiUserService.getUserDataFromFirestore(userId);
 
-        if (userMap != null) {
-          userImageBase64 = userMap['photoURL'] ?? '';
+          if (userMap != null) {
+            userImageBase64 = userMap['photoURL'] ?? '';
 
-          getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
-        } else {
-          print("User data does not exist");
+            getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
+          } else {
+            print("User data does not exist");
+          }
+        } catch (e) {
+          print('Error getting user data from Firestore: $e');
         }
-      } catch (e) {
-        print('Error getting user data from Firestore: $e');
       }
     }
-    // shared 
-    // SharedPreferences prefs = await SharedPreferences.getInstance();
-    //   prefs.setString(userId, 'zbMGHhSvWbyAvAEruRv3');
-      
     setState(() {
       isLoading = false;
     });
@@ -216,14 +220,19 @@ class _MapsPageState extends State<Maps_Page> {
                                         const Profile_user_Page()),
                               );
                             },
-                            child: userImageBase64.isNotEmpty
-                                ? Image.memory(
-                                    base64Decode(userImageBase64),
+                            child: isAnonymous || userImageBase64.isEmpty
+                                ? Image.asset(
+                                    'assets/images/user-286-512.png', // ใส่ที่อยู่ของรูปภาพ default ที่คุณต้องการ
                                     width: 40,
                                     height: 40,
                                     fit: BoxFit.cover,
                                   )
-                                : const CircularProgressIndicator(),
+                                : Image.memory(
+                                    base64Decode(userImageBase64),
+                                    width: 40,
+                                    height: 40,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ),
