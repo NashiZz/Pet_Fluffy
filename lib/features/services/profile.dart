@@ -5,7 +5,8 @@ class ProfileService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<Map<String, dynamic>> loadPetData(String petId) async {
-    DocumentSnapshot petDocSnapshot = await _firestore.collection('Pet_User').doc(petId).get();
+    DocumentSnapshot petDocSnapshot =
+        await _firestore.collection('Pet_User').doc(petId).get();
     if (petDocSnapshot.exists) {
       return petDocSnapshot.data() as Map<String, dynamic>;
     }
@@ -13,12 +14,14 @@ class ProfileService {
   }
 
   Future<List<String>> fetchVacData(String collectionName) async {
-    QuerySnapshot querySnapshot = await _firestore.collection(collectionName).get();
+    QuerySnapshot querySnapshot =
+        await _firestore.collection(collectionName).get();
     return querySnapshot.docs.map((doc) => doc['name'] as String).toList();
   }
 
   Future<Map<String, dynamic>?> getUserData(String userId) async {
-    DocumentSnapshot userDoc = await _firestore.collection('user').doc(userId).get();
+    DocumentSnapshot userDoc =
+        await _firestore.collection('user').doc(userId).get();
     if (userDoc.exists) {
       return userDoc.data() as Map<String, dynamic>?;
     }
@@ -33,9 +36,14 @@ class ProfileService {
   }) async {
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted = formatter.format(now.toUtc().add(Duration(hours: 7)));
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-    DocumentReference newData = await _firestore.collection('report_period').doc(userId).collection('pet_user').add({
+    DocumentReference newData = await _firestore
+        .collection('report_period')
+        .doc(userId)
+        .collection('pet_user')
+        .add({
       'pet_id': petId,
       'date': date,
       'des': description,
@@ -44,6 +52,51 @@ class ProfileService {
     });
     String docId = newData.id;
     await newData.update({'id_period': docId});
+  }
+
+  Future<void> saveImgsPetToFirestore({
+    required String petId,
+    required String img1,
+    required String img2,
+    required String img3,
+    required String img4,
+    required String img5,
+    required String img6,
+    required String img7,
+    required String img8,
+    required String img9,
+  }) async {
+    DocumentReference imgData = _firestore.collection('imgs_pet').doc(petId);
+
+    // สร้างข้อมูลสำหรับการอัปเดต
+    Map<String, String> updateData = {
+      'pet_id': petId,
+      'img_1': img1,
+      'img_2': img2,
+      'img_3': img3,
+      'img_4': img4,
+      'img_5': img5,
+      'img_6': img6,
+      'img_7': img7,
+      'img_8': img8,
+      'img_9': img9,
+    };
+
+    try {
+      // เช็คว่ามีข้อมูลใน Firestore หรือไม่
+      DocumentSnapshot doc = await imgData.get();
+      if (doc.exists) {
+        // ถ้ามีข้อมูลให้ทำการอัปเดต
+        await imgData.set(updateData, SetOptions(merge: true));
+        print("Image data updated in Firestore");
+      } else {
+        // ถ้าไม่มีข้อมูลให้เพิ่มข้อมูลใหม่
+        await imgData.set(updateData);
+        print("Image data added to Firestore");
+      }
+    } catch (error) {
+      print("Failed to save image data: $error");
+    }
   }
 
   Future<void> saveVaccineToFirestore({
@@ -57,9 +110,14 @@ class ProfileService {
   }) async {
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted = formatter.format(now.toUtc().add(Duration(hours: 7)));
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-    DocumentReference newData = await _firestore.collection('vac_history').doc(userId).collection('vac_pet').add({
+    DocumentReference newData = await _firestore
+        .collection('vac_history')
+        .doc(userId)
+        .collection('vac_pet')
+        .add({
       'pet_id': petId,
       'vacName': vacName,
       'weight': weight,

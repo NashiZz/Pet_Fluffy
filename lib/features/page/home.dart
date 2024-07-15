@@ -41,7 +41,7 @@ class _HomePageState extends State<Home_Page> {
                     children: [
                       Image.asset(
                         'assets/images/logo.png',
-                        width: 250,
+                        width: 200,
                       )
                     ],
                   ),

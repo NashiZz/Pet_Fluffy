@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
 import 'package:Pet_Fluffy/features/page/home.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
 import 'package:Pet_Fluffy/features/page/sign_up_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
@@ -119,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 30),
+                              vertical: 10, horizontal: 20),
                           backgroundColor:
                               Colors.blue, // ตั้งค่าสีพื้นหลังของปุ่มเป็นสีฟ้า
                           shape: RoundedRectangleBorder(
@@ -178,7 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 30),
+                              vertical: 10, horizontal: 20),
                           backgroundColor:
                               const Color.fromARGB(255, 228, 216, 216),
                           shape: RoundedRectangleBorder(
@@ -213,8 +214,25 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(
-                        height: 60,
+                        height: 40,
                       ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              _signInAnonymously();
+                            },
+                            child: const Text(
+                              "เข้าสู่ระบบโดยบัญชี Guest",
+                              style: TextStyle(
+                                  color: Colors.blue,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -237,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
                               ))
                         ],
                       ),
-                      const SizedBox(height: 30)
+                      const SizedBox(height: 10)
                     ],
                   )
                 ],
@@ -261,6 +279,34 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+
+  void _signInAnonymously() async {
+    setState(() {
+      _isSigning = true;
+    });
+
+    User? user = await _authService.signInAnonymously();
+
+    setState(() {
+      _isSigning = false;
+    });
+
+    if (user != null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => Navigator_Page(initialIndex: 0)),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เข้าสู่ระบบแบบไม่สมัครสมาชิกไม่สำเร็จ'),
+        ),
+      );
+    }
+  }
+
   // เข้าสู่ระบบ และ สมัครสมาชิกด้วย Google
   Future<void> signInwithGoogle() async {
     setState(() {
