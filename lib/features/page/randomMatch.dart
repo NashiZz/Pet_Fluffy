@@ -5,6 +5,7 @@ import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
+import 'package:Pet_Fluffy/features/page/matchSuccess.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -29,7 +30,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
   String? petGender;
   String? petImg;
   String? userImageBase64;
-
+  String? petName;
   bool isLoading = true;
 
   //ดึงข้อมูลของผู้ใช้
@@ -70,6 +71,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
 
           if (petDocSnapshot.exists) {
             setState(() {
+              petName = petDocSnapshot['name'];
               petType = petDocSnapshot['type_pet'];
               petGender = petDocSnapshot['gender'];
               petImg = petDocSnapshot['img_profile'] ?? '';
@@ -369,6 +371,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                               ),
                                               child: IconButton(
                                                 onPressed: () {
+                                                  // log(user.toString());
                                                   add_Faverite(
                                                       petData['pet_id']);
                                                 },
@@ -386,8 +389,11 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                                   MaterialPageRoute(
                                                     builder: (context) =>
                                                         ProfileAllUserPage(
-                                                            userId: petData[
-                                                                'user_id']),
+                                                      userId:
+                                                          petData['user_id'],
+                                                      userId_req:
+                                                          userId.toString(),
+                                                    ),
                                                   ),
                                                 )
                                               },
@@ -436,8 +442,12 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                                               ),
                                               child: IconButton(
                                                 onPressed: () {
-                                                  add_match(petData['pet_id'],
-                                                      petData['user_id']);
+                                                  add_match(
+                                                      petData['pet_id'],
+                                                      petData['user_id'],
+                                                      petData['img_profile'],
+                                                      petData['name']);
+
                                                   // Add your code to handle the "heart" action here
                                                 },
                                                 icon: const Icon(
@@ -556,7 +566,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     }
   }
 
-  void add_match(String petIdd, String userIdd) async {
+  void add_match(String petIdd, String userIdd, String img_profile ,String name_petrep) async {
     log(petIdd);
     setState(() {
       isLoading = true;
@@ -637,23 +647,38 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
 
             await newPetMatch.update({'id_match': docId});
 
-            setState(() {
-              isLoading = false;
-            });
+            // match success จะให้ไปที่หน้า match d
 
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 1), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Success'),
-                  content: Text('Match Success'),
-                );
-              },
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Matchsuccess_Page(
+                    pet_request: petImg.toString(),
+                    pet_respone: img_profile,
+                    idUser_pet: userIdd,
+                    pet_request_name: petName.toString(),
+                    pet_respone_name: name_petrep,
+                    idUser_petReq:userId.toString()),
+              ),
             );
+
+            // setState(() {
+            //   isLoading = false;
+            // });
+
+            // showDialog(
+            //   context: context,
+            //   builder: (BuildContext context) {
+            //     Future.delayed(const Duration(seconds: 1), () {
+            //       Navigator.of(context)
+            //           .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            //     });
+            //     return const AlertDialog(
+            //       title: Text('Success'),
+            //       content: Text('Match Success'),
+            //     );
+            //   },
+            // );
           }
         } catch (error) {
           print("Failed to add pet: $error");
