@@ -37,17 +37,58 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
-    if (searchValue == '') {
+    if (searchValue != '') {
       try {
         QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
             .collection('Pet_User')
             .where('user_id', isEqualTo: user!.uid)
             .get();
 
+        List<Map<String, dynamic>> allPets = petUserQuerySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+
+        List<Map<String, dynamic>> filteredPets = allPets.where((pet) {
+          bool matchesName = pet['name']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+
+          DateTime birthDate = DateTime.parse(pet['birthdate']);
+          DateTime now = DateTime.now();
+  
+          int yearsDifference = now.year - birthDate.year;
+          if (now.month < birthDate.month ||
+              (now.month == birthDate.month && now.day < birthDate.day)) {
+            yearsDifference--;
+          }
+          bool matchesAge = yearsDifference
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+          bool matchesBreed = pet['breed_pet']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+          bool matchesGender = pet['gender']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+
+          bool matchesColor = pet['color']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+
+          return matchesName ||
+              matchesAge ||
+              matchesBreed ||
+              matchesGender ||
+              matchesColor;
+        }).toList();
+
         setState(() {
-          petUserDataList = petUserQuerySnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          petUserDataList = filteredPets;
           isLoading = false;
         });
       } catch (e) {
@@ -56,8 +97,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           isLoading = false;
         });
       }
-    }
-    else {
+    } else {
       try {
         QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
             .collection('Pet_User')
@@ -82,9 +122,8 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
-      // log(searchValue.toString()); 
+      // log(searchValue.toString());
       _getPetUserDataFromFirestore(searchValue);
-      
     });
   }
 
