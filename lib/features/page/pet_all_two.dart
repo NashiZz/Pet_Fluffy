@@ -290,6 +290,7 @@ class _PetAllTwoState extends State<PetAllTwo> {
       ),
     );
   }
+
   void _shufflePet(String petId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(user!.uid, petId);
