@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:math';
-
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -157,7 +156,12 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const Navigator_Page(initialIndex: 0)),
+              (route) => false,
+            );
             },
             icon: const Icon(LineAwesomeIcons.angle_left),
           ),
@@ -359,7 +363,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             await doc.reference
                 .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
           });
-          _getPetUserDataFromMatch_wait(); 
+          _getPetUserDataFromMatch_wait();
           _getPetUserDataFromMatch_paired();
         } else {
           print('No document found with pet_id: $petId_res');
@@ -380,12 +384,29 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             .get();
         if (querySnapshot_req.docs.isNotEmpty) {
           // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
-          querySnapshot_req.docs.forEach((doc) async {
-            await doc.reference
-                .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-          });
-          _getPetUserDataFromMatch_wait(); 
-          _getPetUserDataFromMatch_paired();
+          DocumentSnapshot docSnapshot = querySnapshot_req.docs.first;
+
+          // ดึง id_fav จากเอกสาร
+          String idFav = docSnapshot.get('id_match');
+
+          // อ้างอิงถึงเอกสารที่มี id_fav
+          DocumentReference docRef = petMatchRef_req.doc(idFav);
+
+          // ตรวจสอบเอกสารก่อนที่จะลบ
+          DocumentSnapshot docToCheck = await docRef.get();
+
+          if (docToCheck.exists) {
+            // ลบเอกสารโดยใช้ id_fav
+            await docRef.delete();
+
+            // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
+            _getPetUserDataFromMatch_wait();
+            _getPetUserDataFromMatch_paired();
+
+            print('Document with id_fav $idFav deleted successfully');
+          } else {
+            print('No document found with id_fav: $idFav');
+          }
         }
       }
     } catch (e) {

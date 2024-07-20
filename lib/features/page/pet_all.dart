@@ -1,6 +1,7 @@
 // ignore_for_file: camel_case_types, avoid_print
 
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
@@ -23,36 +24,68 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
   bool isLoading = true;
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      _getPetUserDataFromFirestore();
+      _getPetUserDataFromFirestore('');
     }
   }
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
-  Future<void> _getPetUserDataFromFirestore() async {
-    try {
-      QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-          .collection('Pet_User')
-          .where('user_id', isEqualTo: user!.uid)
-          .get();
+  Future<void> _getPetUserDataFromFirestore(String searchValue) async {
+    if (searchValue == '') {
+      try {
+        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+            .collection('Pet_User')
+            .where('user_id', isEqualTo: user!.uid)
+            .get();
 
-      setState(() {
-        petUserDataList = petUserQuerySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error getting pet user data from Firestore: $e');
-      setState(() {
-        isLoading = false;
-      });
+        setState(() {
+          petUserDataList = petUserQuerySnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+          isLoading = false;
+        });
+      } catch (e) {
+        print('Error getting pet user data from Firestore: $e');
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
+    else {
+      try {
+        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+            .collection('Pet_User')
+            .where('user_id', isEqualTo: user!.uid)
+            .get();
+
+        setState(() {
+          petUserDataList = petUserQuerySnapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+          isLoading = false;
+        });
+      } catch (e) {
+        print('Error getting pet user data from Firestore: $e');
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _logSearchValue() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final searchValue = _controller.text;
+      // log(searchValue.toString()); 
+      _getPetUserDataFromFirestore(searchValue);
+      
+    });
   }
 
   //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว)
@@ -66,50 +99,86 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            "สัตว์เลี้ยงของฉัน",
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          centerTitle: true,
-          automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'สุนัข'),
-              Tab(text: 'แมว'),
-            ],
-          ),
-        ),
-        body: isLoading
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    CircularProgressIndicator(),
-                    SizedBox(
-                        height:
-                            16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
-                    Text('กำลังโหลดข้อมูล'),
-                  ],
-                ),
-              )
-            : TabBarView(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Scaffold(
+          appBar: AppBar(
+            title: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                "สัตว์เลี้ยงของฉัน",
+                style: Theme.of(context).textTheme.headlineMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            centerTitle: true,
+            automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(
+                  kToolbarHeight + 60), // ปรับขนาด preferredSize
+              child: Column(
                 children: [
-                  //สุนัข
-                  _buildPetList(filteredDogPets),
-                  //แมว
-                  _buildPetList(filteredCatPets),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 50.0, vertical: 14.0),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height / 17,
+                      child: TextField(
+                        controller: _controller,
+                        decoration: InputDecoration(
+                          hintText: 'ค้นหา',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: _logSearchValue,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const TabBar(
+                    tabs: [
+                      Tab(text: 'สุนัข'),
+                      Tab(text: 'แมว'),
+                    ],
+                  ),
                 ],
               ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const Pet_Page()),
-            );
-          },
-          child: const Icon(Icons.add),
+            ),
+          ),
+          body: isLoading
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      CircularProgressIndicator(),
+                      SizedBox(
+                          height:
+                              16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                      Text('กำลังโหลดข้อมูล'),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  children: [
+                    //สุนัข
+                    _buildPetList(filteredDogPets),
+                    //แมว
+                    _buildPetList(filteredCatPets),
+                  ],
+                ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Pet_Page()),
+              );
+            },
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
     );
@@ -294,7 +363,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           .doc(petId)
           .delete();
       // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
-      _getPetUserDataFromFirestore();
+      _getPetUserDataFromFirestore('');
     } catch (e) {
       print('Error deleting pet data: $e');
     }
