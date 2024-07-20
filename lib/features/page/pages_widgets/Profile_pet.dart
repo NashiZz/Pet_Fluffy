@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/table_dataVac.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/vac_More.dart';
 import 'package:Pet_Fluffy/features/services/age_calculator_service.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,7 +26,8 @@ class Profile_pet_Page extends StatefulWidget {
   State<Profile_pet_Page> createState() => _Profile_pet_PageState();
 }
 
-class _Profile_pet_PageState extends State<Profile_pet_Page> with SingleTickerProviderStateMixin {
+class _Profile_pet_PageState extends State<Profile_pet_Page>
+    with SingleTickerProviderStateMixin {
   final ProfileService _profileService = ProfileService();
   final AgeCalculatorService _ageCalculatorService = AgeCalculatorService();
 
@@ -95,7 +97,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> with SingleTickerPr
     isLoading = true;
   }
 
-   @override
+  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
@@ -722,7 +724,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> with SingleTickerPr
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -1536,211 +1537,31 @@ class _Profile_pet_PageState extends State<Profile_pet_Page> with SingleTickerPr
                                                 .collection('vac_more')
                                                 .doc(userId)
                                                 .collection('vac_pet')
-                                                .where('pet_id',
-                                                    isEqualTo: widget.petId)
-                                                .orderBy('date',
-                                                    descending: true)
+                                                .where('pet_id', isEqualTo: widget.petId)
+                                                .orderBy('date', descending: true)
                                                 .get(),
                                             builder: (context, snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.waiting) {
+                                              if (snapshot.connectionState == ConnectionState.waiting) {
                                                 return const CircularProgressIndicator();
                                               }
                                               if (snapshot.hasError) {
-                                                return Text(
-                                                    'Error: ${snapshot.error}');
+                                                return Text('Error: ${snapshot.error}');
                                               }
-                                              if (snapshot.hasData &&
-                                                  snapshot
-                                                      .data!.docs.isNotEmpty) {
+                                              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
                                                 return ListView.builder(
                                                   shrinkWrap: true,
-                                                  physics:
-                                                      NeverScrollableScrollPhysics(),
-                                                  itemCount: snapshot
-                                                      .data!.docs.length,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    DocumentSnapshot reportDoc =
-                                                        snapshot
+                                                  physics: NeverScrollableScrollPhysics(),
+                                                  itemCount: snapshot.data!.docs.length,
+                                                  itemBuilder:(context, index) {
+                                                    DocumentSnapshot reportDoc = snapshot
                                                             .data!.docs[index];
                                                     Map<String, dynamic>
-                                                        report =
-                                                        reportDoc.data() as Map<
-                                                            String, dynamic>;
-                                                    final date = DateTime.parse(
-                                                        report['date']);
-                                                    final formattedDate =
-                                                        DateFormat('dd/MM/yyyy')
-                                                            .format(date);
-
-                                                    return Card(
-                                                      shape:
-                                                          RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(10.0),
-                                                      ),
-                                                      elevation: 3,
-                                                      margin:
-                                                          const EdgeInsets.all(
-                                                              8.0),
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .all(12.0),
-                                                        child: Row(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Container(
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: Colors
-                                                                    .blueAccent
-                                                                    .withOpacity(
-                                                                        0.2),
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            10),
-                                                              ),
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .all(8),
-                                                              child: Icon(
-                                                                LineAwesomeIcons
-                                                                    .syringe,
-                                                                color: Colors
-                                                                    .black,
-                                                              ),
-                                                            ),
-                                                            SizedBox(width: 12),
-                                                            Expanded(
-                                                              child: Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  Row(
-                                                                    mainAxisAlignment:
-                                                                        MainAxisAlignment
-                                                                            .spaceBetween,
-                                                                    children: [
-                                                                      Text(
-                                                                        report['vacName'] ??
-                                                                            '',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontSize:
-                                                                              16,
-                                                                          fontWeight:
-                                                                              FontWeight.bold,
-                                                                        ),
-                                                                      ),
-                                                                      Text(
-                                                                        formattedDate,
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontSize:
-                                                                              14,
-                                                                          color:
-                                                                              Colors.grey[600],
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  SizedBox(
-                                                                      height:
-                                                                          4),
-                                                                  Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .monitor_weight,
-                                                                        color: Colors
-                                                                            .black,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                          width:
-                                                                              4),
-                                                                      Row(
-                                                                        children: [
-                                                                          Text(
-                                                                            'น้ำหนัก ${report['weight'] ?? 'N/A'} kg',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              fontSize: 14,
-                                                                              color: Colors.grey[600],
-                                                                            ),
-                                                                          ),
-                                                                          SizedBox(
-                                                                              width: 10), // เพิ่มระยะห่างระหว่างข้อความ
-                                                                          Text(
-                                                                            'ราคา ${report['price'] ?? 'N/A'} บ.',
-                                                                            style:
-                                                                                TextStyle(
-                                                                              fontSize: 14,
-                                                                              color: Colors.grey[600],
-                                                                            ),
-                                                                          ),
-                                                                        ],
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  SizedBox(
-                                                                      height:
-                                                                          4),
-                                                                  Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .location_on,
-                                                                        color: Colors
-                                                                            .black,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                          width:
-                                                                              4),
-                                                                      Text(
-                                                                        'สถานที่ ${report['location'] ?? 'N/A'}',
-                                                                        style:
-                                                                            TextStyle(
-                                                                          fontSize:
-                                                                              14,
-                                                                          color:
-                                                                              Colors.grey[600],
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                            IconButton(
-                                                              icon: Icon(
-                                                                Icons.edit,
-                                                                color: Colors
-                                                                    .blueAccent,
-                                                              ),
-                                                              onPressed: () {
-                                                                // การกระทำเมื่อกดปุ่มแก้ไข
-                                                              },
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                    );
+                                                        report = reportDoc.data() as Map<String, dynamic>;
+                                                    return VaccineCard(report: report);
                                                   },
                                                 );
                                               }
-                                              return Text(
-                                                  'ไม่มีบันทึกการฉัดวัคซีนเพิ่มเติม');
+                                              return Text('ไม่มีบันทึกการฉัดวัคซีนเพิ่มเติม');
                                             },
                                           )
                                         ],
