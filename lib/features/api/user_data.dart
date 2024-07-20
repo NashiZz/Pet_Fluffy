@@ -24,19 +24,20 @@ class ApiUserService {
 
   //ดึงข้อมูลรูปภาพของผู้ใช้ จาก user_id ที่ดึงมาจากสัตว์เลี้ยง
   static Future<DocumentSnapshot> getUserData(String userId) async {
+  if (userId.isNotEmpty) {
     try {
-      if (userId.isNotEmpty) {
-        return await FirebaseFirestore.instance
-            .collection('user')
-            .doc(userId)
-            .get();
-      } else {
-        print("User ID is empty");
-        return Future.error("User ID is empty");
-      }
+      return await FirebaseFirestore.instance
+          .collection('user')
+          .doc(userId)
+          .get();
     } catch (e) {
       print('Error getting user data from Firestore: $e');
-      return Future.error(e);
+      return Future.error('Error getting user data from Firestore: $e');
     }
+  } else {
+    // ignore: null_argument_to_non_null_type
+    return Future.value(null); //
   }
+}
+
 }
