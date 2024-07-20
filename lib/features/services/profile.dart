@@ -105,6 +105,38 @@ class ProfileService {
     required String vacName,
     required String weight,
     required String price,
+    required String date,
+    required String status,
+  }) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    DocumentReference newData = await _firestore
+        .collection('vac_history')
+        .doc(userId)
+        .collection('vac_pet')
+        .add({
+      'pet_id': petId,
+      'vacName': vacName,
+      'weight': weight,
+      'price': price,
+      'date': date,
+      'status': status,
+      'created_at': formatted,
+      'updates_at': formatted,
+    });
+    String docId = newData.id;
+    await newData.update({'id_period': docId});
+  }
+
+  Future<void> saveVaccine_MoreToFirestore({
+    required String userId,
+    required String petId,
+    required String vacName,
+    required String weight,
+    required String price,
     required String location,
     required String date,
   }) async {
@@ -114,7 +146,7 @@ class ProfileService {
         formatter.format(now.toUtc().add(Duration(hours: 7)));
 
     DocumentReference newData = await _firestore
-        .collection('vac_history')
+        .collection('vac_more')
         .doc(userId)
         .collection('vac_pet')
         .add({
