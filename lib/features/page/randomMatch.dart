@@ -342,7 +342,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 List<Map<String, dynamic>> filteredPetData = snapshot.data!
                     .where((pet) =>
                         pet['type_pet'] == petType &&
-                        pet['gender'] == oppositeGender)
+                        pet['gender'] == oppositeGender && 
+                        pet['status'] == 'พร้อมผสมพันธุ์')
                     .toList();
 
                 //การเช็คข้อมูล การตัดข้อมูลที่เคยกด match or Favorite ไปแล้ว   

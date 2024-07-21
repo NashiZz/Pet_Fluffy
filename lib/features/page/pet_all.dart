@@ -25,6 +25,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   late List<Map<String, dynamic>> petUserDataList = [];
   bool isLoading = true;
   final TextEditingController _controller = TextEditingController();
+  String? petId_main ;
 
   @override
   void initState() {
@@ -37,87 +38,81 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
-    if (searchValue != '') {
-      try {
-        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-            .collection('Pet_User')
-            .where('user_id', isEqualTo: user!.uid)
-            .get();
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? petId = prefs.getString(user!.uid.toString());
+  petId_main = petId;
+  try {
+    QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+        .collection('Pet_User')
+        .where('user_id', isEqualTo: user!.uid)
+        .get();
 
-        List<Map<String, dynamic>> allPets = petUserQuerySnapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+    List<Map<String, dynamic>> allPets = petUserQuerySnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
 
-        List<Map<String, dynamic>> filteredPets = allPets.where((pet) {
-          bool matchesName = pet['name']
-              .toString()
-              .toLowerCase()
-              .contains(searchValue.toLowerCase());
+    List<Map<String, dynamic>> nonDeletedPets = allPets
+        .where((pet) => pet['status'] != 'ถูกลบ')
+        .toList();
 
-          DateTime birthDate = DateTime.parse(pet['birthdate']);
-          DateTime now = DateTime.now();
-  
-          int yearsDifference = now.year - birthDate.year;
-          if (now.month < birthDate.month ||
-              (now.month == birthDate.month && now.day < birthDate.day)) {
-            yearsDifference--;
-          }
-          bool matchesAge = yearsDifference
-              .toString()
-              .toLowerCase()
-              .contains(searchValue.toLowerCase());
-          bool matchesBreed = pet['breed_pet']
-              .toString()
-              .toLowerCase()
-              .contains(searchValue.toLowerCase());
-          bool matchesGender = pet['gender']
-              .toString()
-              .toLowerCase()
-              .contains(searchValue.toLowerCase());
+    if (searchValue.isNotEmpty) {
+      List<Map<String, dynamic>> filteredPets = nonDeletedPets.where((pet) {
+        bool matchesName = pet['name']
+            .toString()
+            .toLowerCase()
+            .contains(searchValue.toLowerCase());
 
-          bool matchesColor = pet['color']
-              .toString()
-              .toLowerCase()
-              .contains(searchValue.toLowerCase());
+        DateTime birthDate = DateTime.parse(pet['birthdate']);
+        DateTime now = DateTime.now();
+        int yearsDifference = now.year - birthDate.year;
+        if (now.month < birthDate.month ||
+            (now.month == birthDate.month && now.day < birthDate.day)) {
+          yearsDifference--;
+        }
+        bool matchesAge = yearsDifference
+            .toString()
+            .toLowerCase()
+            .contains(searchValue.toLowerCase());
 
-          return matchesName ||
-              matchesAge ||
-              matchesBreed ||
-              matchesGender ||
-              matchesColor;
-        }).toList();
+        bool matchesBreed = pet['breed_pet']
+            .toString()
+            .toLowerCase()
+            .contains(searchValue.toLowerCase());
 
-        setState(() {
-          petUserDataList = filteredPets;
-          isLoading = false;
-        });
-      } catch (e) {
-        print('Error getting pet user data from Firestore: $e');
-        setState(() {
-          isLoading = false;
-        });
-      }
+        bool matchesGender = pet['gender']
+            .toString()
+            .toLowerCase()
+            .contains(searchValue.toLowerCase());
+
+        bool matchesColor = pet['color']
+            .toString()
+            .toLowerCase()
+            .contains(searchValue.toLowerCase());
+
+        return matchesName ||
+            matchesAge ||
+            matchesBreed ||
+            matchesGender ||
+            matchesColor;
+      }).toList();
+
+      setState(() {
+        petUserDataList = filteredPets;
+        isLoading = false;
+      });
     } else {
-      try {
-        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-            .collection('Pet_User')
-            .where('user_id', isEqualTo: user!.uid)
-            .get();
-
-        setState(() {
-          petUserDataList = petUserQuerySnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
-          isLoading = false;
-        });
-      } catch (e) {
-        print('Error getting pet user data from Firestore: $e');
-        setState(() {
-          isLoading = false;
-        });
-      }
+      setState(() {
+        petUserDataList = nonDeletedPets;
+        isLoading = false;
+      });
     }
+  } catch (e) {
+    print('Error getting pet user data from Firestore: $e');
+    setState(() {
+      isLoading = false;
+    });
   }
+}
 
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -294,7 +289,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
+            children: petId_main == petUserData['pet_id'] ? [] :[
               IconButton(
                 onPressed: () {
                   showDialog(
@@ -378,6 +373,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         await usagePet.doc(user!.uid).update({
           'pet_id': petId,
         });
+        _getPetUserDataFromFirestore('');
       } catch (e) {
         print('Error updating pet data: $e');
       }
@@ -388,6 +384,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           'pet_id': petId,
           'user_id': user!.uid, // เพิ่มข้อมูล user_id เพื่อสร้างเอกสารใหม่
         });
+        _getPetUserDataFromFirestore('');
       } catch (e) {
         print('Error creating new pet data: $e');
       }
@@ -396,11 +393,12 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ปุ่มลบข้อมูลสัตว์เลี้ยง
   void _deletePetData(String petId) async {
+    
     try {
-      await FirebaseFirestore.instance
-          .collection('Pet_User')
-          .doc(petId)
-          .delete();
+       await FirebaseFirestore.instance
+        .collection('Pet_User')
+        .doc(petId)
+        .update({'status': 'ถูกลบ'});
       // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
       _getPetUserDataFromFirestore('');
     } catch (e) {
