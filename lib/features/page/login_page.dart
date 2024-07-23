@@ -264,7 +264,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.white, // สีพื้นหลังสีดำทึบ
+              color: Colors.white,
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -353,9 +353,23 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    //ดึงค่าอีเมลและรหัสผ่านจากตัวควบคุม
-    String email = _emailController.text;
-    String password = _passwordController.text;
+    // ดึงค่าอีเมลและรหัสผ่านจากตัวควบคุม
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    // ตรวจสอบว่าผู้ใช้กรอกข้อมูลทั้งสองช่องหรือไม่
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        _isSigning = false;
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกอีเมลและรหัสผ่าน'),
+        ),
+      );
+      return;
+    }
 
     // เช็ครูปแบบของอีเมล
     RegExp emailRegex = RegExp(
@@ -368,6 +382,7 @@ class _LoginPageState extends State<LoginPage> {
       // หากรูปแบบของอีเมลไม่ถูกต้อง
       setState(() {
         _isSigning = false;
+        _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -420,6 +435,7 @@ class _LoginPageState extends State<LoginPage> {
       print("Error signing in: $error");
       setState(() {
         _isSigning = false;
+        _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -1,7 +1,4 @@
-// ignore_for_file: avoid_print, camel_case_types
-
 import 'dart:convert';
-
 import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
 import 'package:Pet_Fluffy/features/page/faverite_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
@@ -9,7 +6,6 @@ import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
-// import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +14,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-//หน้า Menu Setting ใน App
 class Setting_Page extends StatefulWidget {
   const Setting_Page({super.key});
 
@@ -89,35 +84,35 @@ class _Setting_PageState extends State<Setting_Page> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-            onPressed: () {}, icon: const Icon(LineAwesomeIcons.cog)),
-        title: Text("การตั้งค่า",
-            style: Theme.of(context).textTheme.headlineMedium),
+          onPressed: () {},
+          icon: const Icon(LineAwesomeIcons.cog),
+        ),
+        title: Text("การตั้งค่า", style: Theme.of(context).textTheme.headlineMedium),
         actions: [
           IconButton(
-              onPressed: () {
-                // ส่งไปยังหน้า Navigator Page พร้อมกับ index ที่ 0 เพื่อไปยังหน้าแรกของ Navigator Page ที่ Set ไว้
-                Navigator.of(context).pushReplacement(MaterialPageRoute(
-                    builder: (context) =>
-                        const Navigator_Page(initialIndex: 0)));
-              },
-              icon: const Icon(LineAwesomeIcons.times))
+            onPressed: () {
+              Navigator.of(context).pushReplacement(MaterialPageRoute(
+                  builder: (context) => const Navigator_Page(initialIndex: 0)));
+            },
+            icon: const Icon(LineAwesomeIcons.times),
+          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Container(
-          padding: const EdgeInsets.all(50),
-          child: isLoading // ตรวจสอบสถานะการโหลดเพื่อแสดง UI ขณะโหลด
+          padding: const EdgeInsets.all(35),
+          child: isLoading
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
                       CircularProgressIndicator(),
-                      SizedBox(
-                          height:
-                              16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                      SizedBox(height: 16),
                       Text('กำลังโหลดข้อมูล'),
                     ],
                   ),
@@ -125,20 +120,20 @@ class _Setting_PageState extends State<Setting_Page> {
               : Column(
                   children: [
                     CircleAvatar(
-                      radius: 60,
+                      radius: size.width * 0.15,
                       backgroundColor: Colors.transparent,
                       child: ClipOval(
                         child: isAnonymous
                             ? Image.asset(
-                                'assets/images/user-286-512.png', // ใส่ภาพ default ของคุณที่นี่
-                                width: 120,
-                                height: 120,
+                                'assets/images/user-286-512.png',
+                                width: size.width * 0.3,
+                                height: size.width * 0.3,
                                 fit: BoxFit.cover,
                               )
                             : Image.memory(
                                 base64Decode(userImageBase64),
-                                width: 120,
-                                height: 120,
+                                width: size.width * 0.3,
+                                height: size.width * 0.3,
                                 fit: BoxFit.cover,
                               ),
                       ),
@@ -157,28 +152,26 @@ class _Setting_PageState extends State<Setting_Page> {
                       Column(
                         children: [
                           SizedBox(
-                            width: 200,
+                            width: size.width * 0.5,
                             child: ElevatedButton(
                               onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          const Profile_user_Page()),
+                                      builder: (context) => const Profile_user_Page()),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 49, 42, 42),
+                                  backgroundColor: const Color.fromARGB(255, 49, 42, 42),
                                   side: BorderSide.none,
                                   shape: const StadiumBorder()),
-                              child: const Text("ข้อมูลโปรไฟล์เจ้าของ",
-                                  style: TextStyle(
-                                      color:
-                                          Color.fromARGB(255, 255, 255, 255))),
+                              child: const Text(
+                                "ข้อมูลโปรไฟล์เจ้าของ",
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 30),
+                          const SizedBox(height: 10),
                         ],
                       ),
                     const Divider(),
@@ -191,8 +184,7 @@ class _Setting_PageState extends State<Setting_Page> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  Profile_pet_Page(petId: petId),
+                              builder: (context) => Profile_pet_Page(petId: petId),
                             ),
                           );
                         }
@@ -205,9 +197,7 @@ class _Setting_PageState extends State<Setting_Page> {
                       icon: LineAwesomeIcons.paw,
                       onPress: () {
                         Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => PetAllTwo()));
+                            context, MaterialPageRoute(builder: (context) => PetAllTwo()));
                       },
                       isAnonymous: isAnonymous,
                     ),
@@ -218,8 +208,7 @@ class _Setting_PageState extends State<Setting_Page> {
                       onPress: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => const FaveritePage()),
+                          MaterialPageRoute(builder: (context) => const FaveritePage()),
                         );
                       },
                       isAnonymous: isAnonymous,
@@ -233,9 +222,9 @@ class _Setting_PageState extends State<Setting_Page> {
                       },
                       isAnonymous: isAnonymous,
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     const Divider(color: Colors.grey),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 10),
                     MenuWidget(
                       title: "ออกจากระบบ",
                       icon: LineAwesomeIcons.alternate_sign_out,
@@ -247,8 +236,7 @@ class _Setting_PageState extends State<Setting_Page> {
                           builder: (BuildContext context) {
                             return AlertDialog(
                               title: const Text("ออกจากระบบ"),
-                              content:
-                                  const Text("คุณต้องการออกจากระบบหรือไม่?"),
+                              content: const Text("คุณต้องการออกจากระบบหรือไม่?"),
                               actions: [
                                 TextButton(
                                   onPressed: () {
@@ -258,16 +246,14 @@ class _Setting_PageState extends State<Setting_Page> {
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    User? user =
-                                        FirebaseAuth.instance.currentUser;
+                                    User? user = FirebaseAuth.instance.currentUser;
                                     if (user != null && user.isAnonymous) {
                                       // ลบบัญชี anonymous
                                       try {
                                         await user.delete();
                                         print("Anonymous account deleted");
                                       } catch (e) {
-                                        print(
-                                            "Error deleting anonymous account: $e");
+                                        print("Error deleting anonymous account: $e");
                                       }
                                     } else {
                                       await GoogleSignIn().signOut();
@@ -278,8 +264,7 @@ class _Setting_PageState extends State<Setting_Page> {
                                       // ignore: use_build_context_synchronously
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LoginPage()),
+                                          builder: (context) => const LoginPage()),
                                       (Route<dynamic> route) => false,
                                     );
                                   },
@@ -327,8 +312,7 @@ class MenuWidget extends StatelessWidget {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text("ต้องสมัครสมาชิกก่อน"),
-                    content:
-                        const Text("กรุณาสมัครสมาชิกก่อนเพื่อเข้าถึงเมนูนี้"),
+                    content: const Text("กรุณาสมัครสมาชิกก่อนเพื่อเข้าถึงเมนูนี้"),
                     actions: [
                       TextButton(
                         onPressed: () {

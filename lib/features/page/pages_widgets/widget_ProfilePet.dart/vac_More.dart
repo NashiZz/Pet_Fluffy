@@ -4,13 +4,15 @@ import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 class VaccineCard extends StatelessWidget {
   final Map<String, dynamic> report;
-  
+
   const VaccineCard({Key? key, required this.report}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final date = DateTime.parse(report['date']);
-    final formattedDate = DateFormat('dd/MM/yyyy').format(date);
+
+    // Create a DateFormat with the Thai locale
+    final formattedDate = DateFormat('d MMM yyyy', 'th_TH').format(date);
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -42,19 +44,24 @@ class VaccineCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        report['vacName'] ?? '',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          report['vacName'] ?? 'N/A',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      SizedBox(width: 8),
                       Text(
                         formattedDate,
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -67,24 +74,26 @@ class VaccineCard extends StatelessWidget {
                         size: 16,
                       ),
                       SizedBox(width: 4),
-                      Row(
-                        children: [
-                          Text(
-                            'น้ำหนัก ${report['weight'] ?? 'N/A'} kg',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                      Expanded(
+                        child: Text(
+                          'น้ำหนัก ${report['weight'] ?? 'N/A'} kg',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
                           ),
-                          SizedBox(width: 10),
-                          Text(
-                            'ราคา ${report['price'] ?? 'N/A'} บ.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'ราคา ${report['price'] ?? 'N/A'} บ.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
                           ),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
@@ -97,26 +106,20 @@ class VaccineCard extends StatelessWidget {
                         size: 16,
                       ),
                       SizedBox(width: 4),
-                      Text(
-                        'สถานที่ ${report['location'] ?? 'N/A'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                      Expanded(
+                        child: Text(
+                          'สถานที่ ${report['location'] ?? 'N/A'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.edit,
-                color: Colors.blueAccent,
-              ),
-              onPressed: () {
-                // การกระทำเมื่อกดปุ่มแก้ไข
-              },
             ),
           ],
         ),

@@ -42,7 +42,7 @@ class ProfileService {
     DocumentReference newData = await _firestore
         .collection('report_period')
         .doc(userId)
-        .collection('pet_user')
+        .collection('period_pet')
         .add({
       'pet_id': petId,
       'date': date,
@@ -52,6 +52,31 @@ class ProfileService {
     });
     String docId = newData.id;
     await newData.update({'id_period': docId});
+  }
+
+  Future<void> updatePeriod_ToFirestore({
+    required String docId,
+    required String userId,
+    required String petId,
+    required String description,
+    required String date,
+  }) async {
+    
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    await FirebaseFirestore.instance
+        .collection('report_period')
+        .doc(userId)
+        .collection('period_pet')
+        .doc(docId)
+        .update({
+      'des': description,
+      'date': date,
+      'updates_at': formatted,
+    });
   }
 
   Future<void> saveImgsPetToFirestore({
@@ -113,22 +138,52 @@ class ProfileService {
     final String formatted =
         formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-    DocumentReference newData = await _firestore
+    // ตรวจสอบว่ามีเอกสารที่ตรงกันใน Firestore หรือไม่
+    final QuerySnapshot querySnapshot = await _firestore
         .collection('vac_history')
         .doc(userId)
         .collection('vac_pet')
-        .add({
-      'pet_id': petId,
-      'vacName': vacName,
-      'weight': weight,
-      'price': price,
-      'date': date,
-      'status': status,
-      'created_at': formatted,
-      'updates_at': formatted,
-    });
-    String docId = newData.id;
-    await newData.update({'id_period': docId});
+        .where('pet_id', isEqualTo: petId)
+        .where('vacName', isEqualTo: vacName)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      // ถ้ามีเอกสารที่ตรงกัน
+      final DocumentSnapshot existingDoc = querySnapshot.docs.first;
+      final String docId = existingDoc.id;
+
+      // อัปเดตเอกสารที่มีอยู่
+      await _firestore
+          .collection('vac_history')
+          .doc(userId)
+          .collection('vac_pet')
+          .doc(docId)
+          .update({
+        'weight': weight,
+        'price': price,
+        'date': date,
+        'status': status,
+        'updates_at': formatted,
+      });
+    } else {
+      // ถ้าไม่มีเอกสารที่ตรงกัน
+      DocumentReference newData = await _firestore
+          .collection('vac_history')
+          .doc(userId)
+          .collection('vac_pet')
+          .add({
+        'pet_id': petId,
+        'vacName': vacName,
+        'weight': weight,
+        'price': price,
+        'date': date,
+        'status': status,
+        'created_at': formatted,
+        'updates_at': formatted,
+      });
+      String docId = newData.id;
+      await newData.update({'id_period': docId});
+    }
   }
 
   Future<void> saveVaccine_MoreToFirestore({
@@ -161,5 +216,36 @@ class ProfileService {
     });
     String docId = newData.id;
     await newData.update({'id_period': docId});
+  }
+
+  Future<void> updateVaccine_MoreToFirestore({
+    required String docId,
+    required String userId,
+    required String petId,
+    required String vacName,
+    required String weight,
+    required String price,
+    required String location,
+    required String date,
+  }) async {
+    
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    await FirebaseFirestore.instance
+        .collection('vac_more')
+        .doc(userId)
+        .collection('vac_pet')
+        .doc(docId)
+        .update({
+      'vacName': vacName,
+      'weight': weight,
+      'price': price,
+      'location': location,
+      'date': date,
+      'updates_at': formatted,
+    });
   }
 }
