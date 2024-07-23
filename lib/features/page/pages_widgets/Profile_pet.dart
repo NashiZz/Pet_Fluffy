@@ -1,20 +1,19 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
-
+import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:Pet_Fluffy/features/api/user_data.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/table_dataVac.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/Add_Img_ProfilePet.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/periodDetail_Page.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/vacDetail_Page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/vac_More.dart';
 import 'package:Pet_Fluffy/features/services/age_calculator_service.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้า Profile ของ สัตว์เลี้ยง
@@ -67,6 +66,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   List<Map<String, dynamic>> vaccinationSchedule = [];
   List<Map<String, dynamic>> vaccination_Table = [];
   List<Map<String, dynamic>> vaccinationDataFromFirestore = [];
+  List<String> _selectedVaccines = []; // เก็บวัคซีนที่ถูกเลือกแล้ว
+  List<Map<String, String>> _availableVaccinations = [];
 
   String? _vacStatus_Table;
   String? _selectedVac;
@@ -77,29 +78,28 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   final double coverHeight = 180;
   final double profileHeight = 90;
 
-  List<XFile?> _images = [];
   List<String> _firestoreImages = [];
-  late TabController _tabController;
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      _tabController = TabController(length: 3, vsync: this);
       _refreshHomePage();
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
       _fetchVaccinationData();
       _fetchVacDataDog();
       _fetchVacDataCat();
+      _updateVaccinationList();
     }
     isLoading = true;
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -111,6 +111,22 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     setState(() {
       isLoading = false;
     });
+  }
+
+  // ดึงข้อมูล User
+  void _getUserDataFromFirestore() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      Map<String, dynamic>? userDataFromFirestore =
+          await _profileService.getUserData(userId!);
+      if (userDataFromFirestore != null) {
+        userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   Future<List<String>> _fetchImgsFromFirestore(String petId) async {
@@ -132,54 +148,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     } else {
       print('No images found for petId $petId');
       return [];
-    }
-  }
-
-  //ใช้สำหรับการบีบอัดรูปภาพ
-  Future<Uint8List?> compressImage(Uint8List image) async {
-    try {
-      // ลดความสูงเป็น 480 pixel และลดความกว้างเป็น 640 pixel เพื่อลดขนาดของรูปภาพให้เล็กลง
-      List<int> compressedImage = await FlutterImageCompress.compressWithList(
-        image,
-        minHeight: 480, // ลดความสูงเป็น 480 pixel
-        minWidth: 640, // ลดความกว้างเป็น 640 pixel
-        quality: 70, // ลดคุณภาพรูปภาพเป็น 70%
-      );
-      return Uint8List.fromList(compressedImage);
-    } catch (e) {
-      print('Error compressing image: $e');
-      return null;
-    }
-  }
-
-  Future<Uint8List?> _pickAndCompressImage(ImageSource source) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
-      final File file = File(pickedFile.path);
-      Uint8List? imageBytes = await file.readAsBytes();
-      if (imageBytes != null) {
-        return await compressImage(imageBytes);
-      } else {
-        print('Failed to read image bytes');
-        return null;
-      }
-    } else {
-      print('No image selected');
-      return null;
-    }
-  }
-
-  String uint8ListToBase64(Uint8List data) {
-    return base64Encode(data);
-  }
-
-  Uint8List? base64ToUint8List(String base64String) {
-    try {
-      return base64Decode(base64String);
-    } catch (e) {
-      print('Error decoding base64: $e');
-      return null;
     }
   }
 
@@ -221,229 +189,56 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }
   }
 
-  void _showAddImg() async {
-    final List<Uint8List?> compressedImages = [];
-    final List<String?> base64Images = [];
+  void showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20.0),
+                  topRight: Radius.circular(20.0),
+                ),
+                child: Image.memory(
+                  base64Decode(imageUrl),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('ปิด'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
+  void _showAddImg() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('เพิ่มรูปภาพ'),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 350, // กำหนดความสูงของ Dialog Content
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // แสดงรูปภาพที่ถูกเลือกใน Dialog
-                    if (_firestoreImages.isNotEmpty ||
-                        compressedImages.isNotEmpty)
-                      Container(
-                        height: 250, // กำหนดความสูงของ GridView
-                        child: GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
-                          itemCount:
-                              _firestoreImages.length + compressedImages.length,
-                          itemBuilder: (context, index) {
-                            if (index < _firestoreImages.length) {
-                              Uint8List? imageData =
-                                  base64ToUint8List(_firestoreImages[index]);
-                              if (imageData == null) {
-                                return Container(
-                                  color: Colors.grey,
-                                  child: Center(
-                                    child: Text(
-                                      'Invalid image',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                );
-                              }
-                              return Stack(
-                                children: [
-                                  Image.memory(
-                                    imageData,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                  Positioned(
-                                    top: 0,
-                                    right: 0,
-                                    child: IconButton(
-                                      icon:
-                                          Icon(Icons.close, color: Colors.red),
-                                      onPressed: () {
-                                        print(
-                                            'Requesting confirmation for deleting image at index: $index');
-                                        // Show confirmation dialog
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) {
-                                            return AlertDialog(
-                                              title: Text('ยืนยันการลบ'),
-                                              content: Text(
-                                                  'คุณต้องการลบรูปภาพนี้ออกจากระบบหรือไม่?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context)
-                                                        .pop(); // ปิด Dialog
-                                                  },
-                                                  child: Text('ยกเลิก'),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.of(context)
-                                                        .pop(); // ปิด Dialog
-                                                    _deleteImageFromFirestore(
-                                                            index)
-                                                        .then((_) {
-                                                      setState(() {
-                                                        _firestoreImages
-                                                            .removeAt(index);
-                                                        print(
-                                                            'Image removed from list at index: $index');
-                                                      });
-                                                    }).catchError((e) {
-                                                      print(
-                                                          'Error deleting image: $e');
-                                                    });
-                                                  },
-                                                  child: Text('ยืนยัน'),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
-                            } else {
-                              return Stack(
-                                children: [
-                                  Image.memory(
-                                    compressedImages[
-                                        index - _firestoreImages.length]!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                  Positioned(
-                                    top: 0,
-                                    right: 0,
-                                    child: IconButton(
-                                      icon:
-                                          Icon(Icons.close, color: Colors.red),
-                                      onPressed: () {
-                                        print(
-                                            'Removing compressed image at index: ${index - _firestoreImages.length}');
-                                        setState(() {
-                                          compressedImages.removeAt(
-                                              index - _firestoreImages.length);
-                                          base64Images.removeAt(
-                                              index - _firestoreImages.length);
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    TextButton(
-                      onPressed: () async {
-                        final compressedImage =
-                            await _pickAndCompressImage(ImageSource.gallery);
-                        if (compressedImage != null) {
-                          final base64Image =
-                              uint8ListToBase64(compressedImage);
-                          print('Picked image from gallery: $base64Image');
-                          setState(() {
-                            if (_firestoreImages.length +
-                                    compressedImages.length <
-                                9) {
-                              _images.add(XFile.fromData(compressedImage));
-                              compressedImages.add(compressedImage);
-                              base64Images.add(base64Image);
-                              print(
-                                  'Added compressed image from gallery: $base64Image');
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'คุณสามารถเพิ่มรูปภาพได้สูงสุด 9 รูป')),
-                              );
-                            }
-                          });
-                        }
-                      },
-                      child: Text('เลือกรูปจาก Gallery'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final compressedImage =
-                            await _pickAndCompressImage(ImageSource.camera);
-                        if (compressedImage != null) {
-                          final base64Image =
-                              uint8ListToBase64(compressedImage);
-                          print('Picked image from camera: $base64Image');
-                          setState(() {
-                            if (_firestoreImages.length +
-                                    compressedImages.length <
-                                9) {
-                              _images.add(XFile.fromData(compressedImage));
-                              compressedImages.add(compressedImage);
-                              base64Images.add(base64Image);
-                              print(
-                                  'Added compressed image from camera: $base64Image');
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'คุณสามารถเพิ่มรูปภาพได้สูงสุด 9 รูป')),
-                              );
-                            }
-                          });
-                        }
-                      },
-                      child: Text('ถ่ายรูปจาก Camera'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('ยกเลิก'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    print('Saving images to Firestore: $base64Images');
-                    await _saveImgsPetToFirestore(
-                        petId: pet_id, base64Images: base64Images);
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('ยืนยันการเพิ่ม'),
-                ),
-              ],
+        return ImagePickerDialog(
+          firestoreImages: _firestoreImages,
+          onSaveImages: (compressedImages, base64Images) async {
+            await _saveImgsPetToFirestore(
+              petId: pet_id,
+              base64Images: base64Images,
             );
           },
+          petId: pet_id,
+          deleteImageFromFirestore:
+              _deleteImageFromFirestore, // Pass the delete function
         );
       },
     );
@@ -460,10 +255,9 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
   Future<void> _deleteImageFromFirestore(int index) async {
     DocumentReference docRef =
-        FirebaseFirestore.instance.collection('imgs_pet').doc(pet_id);
+        FirebaseFirestore.instance.collection('imgs_pet').doc(widget.petId);
 
-    // เพิ่มการตรวจสอบ index ว่ามีอยู่ในช่วงที่ถูกต้อง (1-9)
-    if (index >= 0 && index <= 8) {
+    if (index >= 0 && index < _firestoreImages.length) {
       String fieldName = 'img_${index + 1}';
       Map<String, dynamic> updateData = {
         fieldName: FieldValue.delete(),
@@ -473,6 +267,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             'Deleting image at index: $index (field: $fieldName) from Firestore');
         await docRef.update(updateData);
         print('Deleted image from Firestore (field: $fieldName)');
+
+        // Update the UI by removing the image
+        setState(() {
+          _firestoreImages.removeAt(index);
+        });
       } catch (error) {
         print('Error deleting image: $error');
       }
@@ -558,34 +357,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     return ageString;
   }
 
-  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
-  // Future<void> _loadAllPet(String petId) async {
-  //   try {
-  //     Map<String, dynamic> petData = await _profileService.loadPetData(petId);
-  //     setState(() {
-  //       pet_user = petData['user_id'] ?? '';
-  //       pet_id = petId;
-  //       petName = petData['name'] ?? '';
-  //       type = petData['breed_pet'] ?? '';
-  //       petImageBase64 = petData['img_profile'] ?? '';
-  //       color = petData['color'] ?? '';
-  //       weight = petData['weight'] ?? '0.0';
-  //       gender = petData['gender'] ?? '';
-  //       des = petData['description'] ?? '';
-  //       price = petData['price'] ?? '';
-  //       birthdateStr = petData['birthdate'] ?? '';
-  //       pet_type = petData['type_pet'] ?? '';
-  //       DateTime birthdate = DateTime.parse(birthdateStr);
-  //       age = _ageCalculatorService.calculateAge(birthdate);
-
-  //       isLoading = false;
-  //     });
-  //     print(price);
-  //   } catch (e) {
-  //     print('Error getting pet user data from Firestore: $e');
-  //   }
-  // }
-
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
     try {
@@ -610,6 +381,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }
   }
 
+  // ดึงข้อมูล Vac_table ที่บันทึกลงไป
   Future<void> _fetchVaccinationData() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -629,50 +401,15 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             'price': doc['price'] ?? 'ไม่ระบุ',
           };
         }).toList();
+        // อัปเดตลิสต์วัคซีนที่ถูกเลือก
+        _updateVaccinationList();
       });
     } catch (e) {
       print('Error fetching vaccination data: $e');
     }
   }
 
-  // ดึงข้อมูล User
-  void _getUserDataFromFirestore() async {
-    User? userData = FirebaseAuth.instance.currentUser;
-    if (userData != null) {
-      userId = userData.uid;
-      Map<String, dynamic>? userDataFromFirestore =
-          await _profileService.getUserData(userId!);
-      if (userDataFromFirestore != null) {
-        userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
-        setState(() {
-          isLoading = false;
-        });
-      }
-    }
-  }
-
-  // บันทึกข้อมูลประจำเดือน ลง FireStore
-  Future<void> _saveReportToFirestore() async {
-    try {
-      await _profileService.saveReportToFirestore(
-        userId: userId!,
-        petId: pet_id,
-        date: _dateController.text,
-        description: _infoController.text,
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
-      );
-      _refreshHomePage();
-    } catch (e) {
-      print('Error saving report: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
-      );
-    }
-  }
-
-  // บันทึกข้อมูล Vac ลง FireStore
+  // บันทึกข้อมูล Vac_table ลง FireStore
   Future<void> _saveVaccineToFirestore() async {
     try {
       await _profileService.saveVaccineToFirestore(
@@ -698,7 +435,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }
   }
 
-  // บันทึกข้อมูล Vac ลง FireStore
+  // บันทึกข้อมูล Vac_more ลง FireStore
   Future<void> _saveVaccineTo_MoreFirestore() async {
     try {
       await _profileService.saveVaccine_MoreToFirestore(
@@ -725,8 +462,62 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }
   }
 
+  // บันทึกข้อมูลประจำเดือน ลง FireStore
+  Future<void> _saveReportToFirestore() async {
+    try {
+      await _profileService.saveReportToFirestore(
+        userId: userId!,
+        petId: pet_id,
+        date: _dateController.text,
+        description: _infoController.text,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
+      );
+      _refreshHomePage();
+    } catch (e) {
+      print('Error saving report: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<Tab> myTabs = [];
+    List<Widget> myTabViews = [];
+
+    if (gender == 'ตัวผู้') {
+      myTabs = [
+        Tab(text: 'ข้อมูลทั่วไป'),
+        Tab(text: 'ประวัติสุขภาพ'),
+      ];
+      myTabViews = [
+        _buildGeneralInfoTab(),
+        _buildHealthHistoryTab(),
+      ];
+    } else {
+      myTabs = [
+        Tab(text: 'ข้อมูลทั่วไป'),
+        Tab(text: 'ประจำเดือน'),
+        Tab(text: 'ประวัติสุขภาพ'),
+      ];
+      myTabViews = [
+        _buildGeneralInfoTab(),
+        _buildMonthlyInfoTab(),
+        _buildHealthHistoryTab(),
+      ];
+    }
+
+    if (_tabController == null) {
+      if (gender == 'ตัวเมีย') {
+        _tabController = TabController(length: 3, vsync: this);
+      } else if (gender == 'ตัวผู้') {
+        _tabController = TabController(length: 2, vsync: this);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -735,10 +526,54 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(LineAwesomeIcons.info_circle),
-          )
+          PopupMenuButton(
+            itemBuilder: (BuildContext context) {
+              return [
+                const PopupMenuItem(
+                  value: 'menu1',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('แก้ไขข้อมูลส่วนตัว'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'menu2',
+                  child: Row(
+                    children: [
+                      Icon(Icons.report_problem),
+                      SizedBox(width: 8),
+                      Text('รายงานปัญหา'),
+                    ],
+                  ),
+                ),
+              ];
+            },
+            onSelected: (value) {
+              // เมื่อเลือกเมนู
+              if (value == 'menu1') {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Edit_Pet_Page(petUserData: {
+                        'pet_id': pet_id,
+                        'name': petName,
+                        'breed_pet': type,
+                        'img_profile': petImageBase64,
+                        'color': color,
+                        'weight': weight,
+                        'gender': gender,
+                        'description': des,
+                        'price': price,
+                        'birthdate': birthdateStr,
+                        'type_pet': pet_type
+                      }),
+                    ));
+              } else if (value == 'menu2') {}
+            },
+          ),
         ],
       ),
       body: isLoading
@@ -789,787 +624,19 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 const SizedBox(height: 10),
                 Expanded(
                   child: DefaultTabController(
-                    length: 3,
+                    length: myTabs.length,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20.0),
                       child: Column(
                         children: [
                           TabBar(
                             controller: _tabController,
-                            tabs: const [
-                              Tab(text: 'ข้อมูลทั่วไป'),
-                              Tab(text: 'ประจำเดือน'),
-                              Tab(text: 'ประวัติสุขภาพ'),
-                            ],
+                            tabs: myTabs,
                           ),
                           Expanded(
                             child: TabBarView(
                               controller: _tabController,
-                              children: [
-                                SingleChildScrollView(
-                                  child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        const SizedBox(height: 15),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 40.0),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text(
-                                                'สี',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text(color),
-                                              const Text(
-                                                'น้ำหนัก',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text('$weight Kg')
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 5),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 40.0),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              const Text(
-                                                'เพศ',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Center(
-                                                child: gender == 'ตัวผู้'
-                                                    ? const Icon(Icons.male,
-                                                        size: 30,
-                                                        color: Colors.purple)
-                                                    : gender == 'ตัวเมีย'
-                                                        ? const Icon(
-                                                            Icons.female,
-                                                            size: 30,
-                                                            color: Colors.pink)
-                                                        : const Icon(
-                                                            Icons.help_outline,
-                                                            size: 30,
-                                                            color:
-                                                                Colors.black),
-                                              ),
-                                              const Text(
-                                                'อายุ',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text(age)
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 20.0),
-                                          child: Column(
-                                            children: [
-                                              MenuPetWidget(
-                                                title: "ประวัติการจับคู่",
-                                                icon: LineAwesomeIcons.history,
-                                                onPress: () {},
-                                              ),
-                                              MenuPetWidget(
-                                                title: "การประกวด",
-                                                icon: LineAwesomeIcons
-                                                    .certificate,
-                                                onPress: _showContestDialog,
-                                              ),
-                                              MenuPetWidget(
-                                                title: "ใบเพ็ดดีกรี",
-                                                icon: LineAwesomeIcons.dna,
-                                                onPress: () {},
-                                              ),
-                                              MenuPetWidget(
-                                                title: "ค่าการผสมพันธุ์",
-                                                icon: LineAwesomeIcons.coins,
-                                                trailingText: price.isNotEmpty
-                                                    ? '$price บาท'
-                                                    : 'ไม่มีค่าใช้จ่าย',
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                      EdgeInsets.only(right: 5),
-                                                  child: Icon(
-                                                      LineAwesomeIcons.image),
-                                                ),
-                                                Text(
-                                                  'รูปภาพ',
-                                                  style: TextStyle(
-                                                    color: Colors.black,
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                  textAlign: TextAlign.start,
-                                                ),
-                                              ],
-                                            ),
-                                            Spacer(),
-                                            ElevatedButton(
-                                              onPressed: _showAddImg,
-                                              child: Text('เพิ่มรูปภาพ'),
-                                            ),
-                                          ],
-                                        ),
-
-                                        const SizedBox(height: 10),
-
-                                        //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง
-                                        FutureBuilder<QuerySnapshot>(
-                                          future: FirebaseFirestore.instance
-                                              .collection('imgs_pet')
-                                              .where('pet_id',
-                                                  isEqualTo: widget.petId)
-                                              .get(),
-                                          builder: (context, snapshot) {
-                                            if (snapshot.connectionState ==
-                                                ConnectionState.waiting) {
-                                              return const CircularProgressIndicator();
-                                            }
-                                            if (snapshot.hasError) {
-                                              return Text(
-                                                  'Error: ${snapshot.error}');
-                                            }
-
-                                            if (snapshot.hasData &&
-                                                snapshot
-                                                    .data!.docs.isNotEmpty) {
-                                              List<String> imageUrls = [];
-
-                                              // รวมรูปภาพทั้งหมดที่มีในเอกสารที่เกี่ยวข้องกับ pet_id
-                                              for (var imgDoc
-                                                  in snapshot.data!.docs) {
-                                                Map<String, dynamic>? data =
-                                                    imgDoc.data() as Map<String,
-                                                        dynamic>?;
-                                                if (data != null &&
-                                                    data.isNotEmpty) {
-                                                  for (int i = 1; i <= 9; i++) {
-                                                    String? imageUrl =
-                                                        data['img_$i']
-                                                            as String?;
-                                                    if (imageUrl != null &&
-                                                        imageUrl.isNotEmpty) {
-                                                      imageUrls.add(imageUrl);
-                                                    }
-                                                  }
-                                                }
-                                              }
-
-                                              if (imageUrls.isNotEmpty) {
-                                                return GridView.builder(
-                                                  shrinkWrap: true,
-                                                  physics:
-                                                      const NeverScrollableScrollPhysics(),
-                                                  gridDelegate:
-                                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                                    crossAxisCount: 3,
-                                                    crossAxisSpacing: 8.0,
-                                                    mainAxisSpacing: 8.0,
-                                                  ),
-                                                  itemCount: imageUrls.length,
-                                                  itemBuilder:
-                                                      (context, index) {
-                                                    return GestureDetector(
-                                                      onTap: () {
-                                                        showDialog(
-                                                          context: context,
-                                                          builder: (BuildContext
-                                                              context) {
-                                                            return Dialog(
-                                                              shape:
-                                                                  RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            20.0),
-                                                              ),
-                                                              child: Column(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: [
-                                                                  ClipRRect(
-                                                                    borderRadius:
-                                                                        BorderRadius
-                                                                            .only(
-                                                                      topLeft: Radius
-                                                                          .circular(
-                                                                              20.0),
-                                                                      topRight:
-                                                                          Radius.circular(
-                                                                              20.0),
-                                                                    ),
-                                                                    child: Image
-                                                                        .memory(
-                                                                      base64Decode(
-                                                                          imageUrls[
-                                                                              index]),
-                                                                      fit: BoxFit
-                                                                          .cover,
-                                                                    ),
-                                                                  ),
-                                                                  TextButton(
-                                                                    onPressed:
-                                                                        () {
-                                                                      Navigator.of(
-                                                                              context)
-                                                                          .pop();
-                                                                    },
-                                                                    child: const Text(
-                                                                        'ปิด'),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            );
-                                                          },
-                                                        );
-                                                      },
-                                                      child: ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(20.0),
-                                                        child: Image.memory(
-                                                          base64Decode(
-                                                              imageUrls[index]),
-                                                          fit: BoxFit.cover,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-                                              } else {
-                                                return const Text(
-                                                    'ไม่มีรูปภาพ');
-                                              }
-                                            }
-
-                                            // กรณีไม่มีเอกสารที่ตรงกับ pet_id
-                                            return const Text('ไม่มีรูปภาพ');
-                                          },
-                                        ),
-
-                                        const SizedBox(height: 5),
-                                      ]),
-                                ),
-                                SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    EdgeInsets.only(right: 5),
-                                                child: Icon(LineAwesomeIcons
-                                                    .calendar_with_day_focus),
-                                              ),
-                                              Text(
-                                                'บันทึกประจำเดือน',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.start,
-                                              ),
-                                            ],
-                                          ),
-                                          Spacer(),
-                                          ElevatedButton(
-                                            onPressed: _showInputDialog,
-                                            child: Text('บันทึกข้อมูล'),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 10),
-                                      // แสดงข้อมูลบันทึกประจำเดือน
-                                      FutureBuilder<QuerySnapshot>(
-                                        future: FirebaseFirestore.instance
-                                            .collection('report_period')
-                                            .doc(userId)
-                                            .collection('pet_user')
-                                            .where('pet_id',
-                                                isEqualTo: widget.petId)
-                                            .orderBy('date',
-                                                descending:
-                                                    true) // เรียงลำดับจากวันที่ใหม่สุด
-                                            .get(),
-                                        builder: (context, snapshot) {
-                                          if (snapshot.connectionState ==
-                                              ConnectionState.waiting) {
-                                            return const CircularProgressIndicator();
-                                          }
-                                          if (snapshot.hasError) {
-                                            return Text(
-                                                'Error: ${snapshot.error}');
-                                          }
-                                          if (snapshot.hasData &&
-                                              snapshot.data!.docs.isNotEmpty) {
-                                            return ListView.builder(
-                                              shrinkWrap: true,
-                                              physics:
-                                                  NeverScrollableScrollPhysics(),
-                                              itemCount:
-                                                  snapshot.data!.docs.length,
-                                              itemBuilder: (context, index) {
-                                                DocumentSnapshot reportDoc =
-                                                    snapshot.data!.docs[index];
-                                                Map<String, dynamic> report =
-                                                    reportDoc.data()
-                                                        as Map<String, dynamic>;
-                                                final date = DateTime.parse(
-                                                    report['date']);
-                                                final formattedDate =
-                                                    DateFormat('dd/MM/yyyy')
-                                                        .format(date);
-                                                final idPeriod = reportDoc.id;
-
-                                                return GestureDetector(
-                                                  onTap: () {
-                                                    // แสดงข้อมูลทั้งหมดใน BottomSheet เมื่อคลิกที่ Card
-                                                    showModalBottomSheet(
-                                                      context: context,
-                                                      builder: (context) {
-                                                        return Padding(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(16.0),
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              Text(
-                                                                'รายละเอียดการบันทึกประจำเดือน',
-                                                                style: TextStyle(
-                                                                    fontSize:
-                                                                        18,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold),
-                                                              ),
-                                                              SizedBox(
-                                                                  height: 8),
-                                                              Text(
-                                                                'วันที่: $formattedDate',
-                                                                style: TextStyle(
-                                                                    fontSize:
-                                                                        16),
-                                                              ),
-                                                              SizedBox(
-                                                                  height: 8),
-                                                              Text(
-                                                                'รายละเอียด: ${report['des']?.isNotEmpty == true ? report['des'] : 'ไม่มีรายละเอียด'}',
-                                                                style: TextStyle(
-                                                                    fontSize:
-                                                                        16),
-                                                              ),
-                                                              SizedBox(
-                                                                  height: 16),
-                                                              ElevatedButton(
-                                                                onPressed: () {
-                                                                  Navigator.of(
-                                                                          context)
-                                                                      .pop(); // ปิด BottomSheet ก่อน
-                                                                  _showEditDialog(
-                                                                      idPeriod,
-                                                                      report); // เปิด Dialog เพื่อแก้ไขข้อมูล
-                                                                },
-                                                                child: Text(
-                                                                    'แก้ไข'),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                    );
-                                                  },
-                                                  child: Card(
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10.0),
-                                                    ),
-                                                    elevation: 3,
-                                                    margin:
-                                                        const EdgeInsets.all(
-                                                            8.0),
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              12.0),
-                                                      child: Row(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Container(
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: Colors
-                                                                  .pinkAccent
-                                                                  .withOpacity(
-                                                                      0.2),
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          10),
-                                                            ),
-                                                            padding:
-                                                                EdgeInsets.all(
-                                                                    8),
-                                                            child: Icon(
-                                                              LineAwesomeIcons
-                                                                  .calendar_with_day_focus,
-                                                              color: Colors
-                                                                  .pinkAccent,
-                                                            ),
-                                                          ),
-                                                          SizedBox(width: 12),
-                                                          Expanded(
-                                                            child: Column(
-                                                              crossAxisAlignment:
-                                                                  CrossAxisAlignment
-                                                                      .start,
-                                                              children: [
-                                                                Text(
-                                                                  'รายละเอียดการบันทึกประจำเดือน',
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        14,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                  ),
-                                                                ),
-                                                                SizedBox(
-                                                                    height: 4),
-                                                                Text(
-                                                                  report['des'] ??
-                                                                      '',
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        14,
-                                                                    color: Colors
-                                                                            .grey[
-                                                                        600],
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .end,
-                                                            children: [
-                                                              Text(
-                                                                formattedDate,
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize: 14,
-                                                                  color: Colors
-                                                                          .grey[
-                                                                      600],
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            );
-                                          }
-                                          return Text('ไม่มีบันทึกประจำเดือน');
-                                        },
-                                      )
-                                    ],
-                                  ),
-                                ),
-                                SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    EdgeInsets.only(right: 5),
-                                                child: Icon(
-                                                    LineAwesomeIcons.syringe),
-                                              ),
-                                              Text(
-                                                'การฉีดวัคซีน (ตามเกณฑ์)',
-                                                style: TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.start,
-                                              ),
-                                            ],
-                                          ),
-                                          Spacer(),
-                                          ElevatedButton(
-                                            onPressed: _showVaccineTableDialog,
-                                            child: Text('บันทึกข้อมูล'),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 10),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 20.0),
-                                        child: Column(
-                                          children: [
-                                            MenuPetWidget(
-                                              title: "ดูตารางการฉีดวัคซีน",
-                                              icon: LineAwesomeIcons.table,
-                                              onPress: () {
-                                                _showVaccinationScheduleDialog(
-                                                    context, pet_type);
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.95,
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.33,
-                                        padding: EdgeInsets.all(20.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: SingleChildScrollView(
-                                                scrollDirection:
-                                                    Axis.horizontal,
-                                                child: SingleChildScrollView(
-                                                  scrollDirection:
-                                                      Axis.vertical,
-                                                  child: Table(
-                                                    border: TableBorder.all(),
-                                                    columnWidths: const <int,
-                                                        TableColumnWidth>{
-                                                      0: FixedColumnWidth(80),
-                                                      1: FixedColumnWidth(180),
-                                                      2: FixedColumnWidth(100),
-                                                      3: FixedColumnWidth(80),
-                                                      4: FixedColumnWidth(80),
-                                                    },
-                                                    defaultVerticalAlignment:
-                                                        TableCellVerticalAlignment
-                                                            .middle,
-                                                    children: <TableRow>[
-                                                      TableRow(
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color:
-                                                              Colors.grey[300],
-                                                        ),
-                                                        children: <Widget>[
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child: Text(
-                                                              'สถานะ',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                          ),
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child: Text(
-                                                              'วัคซีน (เข็มที่)',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                          ),
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child: Text(
-                                                              'วัน/เดือน/ปี',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                          ),
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child: Text(
-                                                              'น้ำหนัก',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                          ),
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(8.0),
-                                                            child: Text(
-                                                              'ราคา',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      ..._buildTableRows(
-                                                          vaccination_Table),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          Row(
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Padding(
-                                                    padding: EdgeInsets.only(
-                                                        right: 5),
-                                                    child: Icon(LineAwesomeIcons
-                                                        .syringe),
-                                                  ),
-                                                  Text(
-                                                    'การฉีดวัคซีน (เพิ่มเติม)',
-                                                    style: TextStyle(
-                                                      color: Colors.black,
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                    textAlign: TextAlign.start,
-                                                  ),
-                                                ],
-                                              ),
-                                              Spacer(),
-                                              ElevatedButton(
-                                                onPressed: _showVaccineDialog,
-                                                child: Text('บันทึกข้อมูล'),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 5),
-                                          // แสดงข้อมูลบันทึกวัคซีน
-                                          FutureBuilder<QuerySnapshot>(
-                                            future: FirebaseFirestore.instance
-                                                .collection('vac_more')
-                                                .doc(userId)
-                                                .collection('vac_pet')
-                                                .where('pet_id', isEqualTo: widget.petId)
-                                                .orderBy('date', descending: true)
-                                                .get(),
-                                            builder: (context, snapshot) {
-                                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                                return const CircularProgressIndicator();
-                                              }
-                                              if (snapshot.hasError) {
-                                                return Text('Error: ${snapshot.error}');
-                                              }
-                                              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                                                return ListView.builder(
-                                                  shrinkWrap: true,
-                                                  physics: NeverScrollableScrollPhysics(),
-                                                  itemCount: snapshot.data!.docs.length,
-                                                  itemBuilder:(context, index) {
-                                                    DocumentSnapshot reportDoc = snapshot
-                                                            .data!.docs[index];
-                                                    Map<String, dynamic>
-                                                        report = reportDoc.data() as Map<String, dynamic>;
-                                                    return VaccineCard(report: report);
-                                                  },
-                                                );
-                                              }
-                                              return Text('ไม่มีบันทึกการฉัดวัคซีนเพิ่มเติม');
-                                            },
-                                          )
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              children: myTabViews,
                             ),
                           ),
                         ],
@@ -1579,6 +646,600 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 ),
               ],
             ),
+    );
+  }
+
+  // Tab ข้อมูลทั่วไป
+  Widget _buildGeneralInfoTab() {
+    return SingleChildScrollView(
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const SizedBox(height: 15),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'สี',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(color),
+                  const Text(
+                    'น้ำหนัก',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text('$weight Kg')
+                ],
+              ),
+            ),
+            const SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'เพศ',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Center(
+                    child: gender == 'ตัวผู้'
+                        ? const Icon(Icons.male, size: 30, color: Colors.purple)
+                        : gender == 'ตัวเมีย'
+                            ? const Icon(Icons.female,
+                                size: 30, color: Colors.pink)
+                            : const Icon(Icons.help_outline,
+                                size: 30, color: Colors.black),
+                  ),
+                  const Text(
+                    'อายุ',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(age)
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                children: [
+                  MenuPetWidget(
+                    title: "ประวัติการจับคู่",
+                    icon: LineAwesomeIcons.history,
+                    onPress: () {},
+                  ),
+                  MenuPetWidget(
+                    title: "การประกวด",
+                    icon: LineAwesomeIcons.certificate,
+                    onPress: _showContestDialog,
+                  ),
+                  MenuPetWidget(
+                    title: "ใบเพ็ดดีกรี",
+                    icon: LineAwesomeIcons.dna,
+                    onPress: () {},
+                  ),
+                  MenuPetWidget(
+                    title: "ค่าการผสมพันธุ์",
+                    icon: LineAwesomeIcons.coins,
+                    trailingText:
+                        price.isNotEmpty ? '$price บาท' : 'ไม่มีค่าใช้จ่าย',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Row(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(right: 5),
+                      child: Icon(LineAwesomeIcons.image),
+                    ),
+                    Text(
+                      'รูปภาพ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                  ],
+                ),
+                Spacer(),
+                ElevatedButton(
+                  onPressed: _showAddImg,
+                  child: Text('เพิ่มรูปภาพ'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง
+            FutureBuilder<QuerySnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('imgs_pet')
+                  .where('pet_id', isEqualTo: widget.petId)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                }
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                }
+
+                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                  List<String> imageUrls = [];
+
+                  // รวมรูปภาพทั้งหมดที่มีในเอกสารที่เกี่ยวข้องกับ pet_id
+                  for (var imgDoc in snapshot.data!.docs) {
+                    Map<String, dynamic>? data =
+                        imgDoc.data() as Map<String, dynamic>?;
+                    if (data != null && data.isNotEmpty) {
+                      for (int i = 1; i <= 9; i++) {
+                        String? imageUrl = data['img_$i'] as String?;
+                        if (imageUrl != null && imageUrl.isNotEmpty) {
+                          imageUrls.add(imageUrl);
+                        }
+                      }
+                    }
+                  }
+
+                  if (imageUrls.isNotEmpty) {
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 8.0,
+                        mainAxisSpacing: 8.0,
+                      ),
+                      itemCount: imageUrls.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            showImageDialog(context, imageUrls[index]);
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20.0),
+                            child: Image.memory(
+                              base64Decode(imageUrls[index]),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  } else {
+                    return const Text('ไม่มีรูปภาพ');
+                  }
+                }
+
+                // กรณีไม่มีเอกสารที่ตรงกับ pet_id
+                return const Text('ไม่มีรูปภาพ');
+              },
+            ),
+
+            const SizedBox(height: 5),
+          ]),
+    );
+  }
+
+  // Tab ข้อมูลประจำเดือน เฉพาะตัวเมีย
+  Widget _buildMonthlyInfoTab() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Row(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(right: 5),
+                    child: Icon(LineAwesomeIcons.calendar_with_day_focus),
+                  ),
+                  Text(
+                    'บันทึกประจำเดือน',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                ],
+              ),
+              Spacer(),
+              ElevatedButton(
+                onPressed: _showInputDialog,
+                child: Text('บันทึกข้อมูล'),
+              ),
+            ],
+          ),
+          SizedBox(height: 10),
+          // แสดงข้อมูลบันทึกประจำเดือน
+          FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('report_period')
+                .doc(userId)
+                .collection('period_pet')
+                .where('pet_id', isEqualTo: widget.petId)
+                .orderBy('date', descending: true) // เรียงลำดับจากวันที่ใหม่สุด
+                .get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const CircularProgressIndicator();
+              }
+              if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              }
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    DocumentSnapshot reportDoc = snapshot.data!.docs[index];
+                    Map<String, dynamic> report =
+                        reportDoc.data() as Map<String, dynamic>;
+                    final date = DateTime.parse(report['date']);
+
+                    // Create a DateFormat with the Thai locale
+                    final formattedDate =
+                        DateFormat('d MMM yyyy', 'th_TH').format(date);
+                    final idPeriod = reportDoc.id;
+
+                    return GestureDetector(
+                      onTap: () {
+                        // แสดงข้อมูลทั้งหมดใน BottomSheet เมื่อคลิกที่ Card
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    PeriodDetailPage(
+                              report: report,
+                              userId: userId ?? '',
+                              idPeriod: idPeriod,
+                            ),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        elevation: 3,
+                        margin: const EdgeInsets.all(8.0),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.pinkAccent.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: EdgeInsets.all(8),
+                                child: Icon(
+                                  LineAwesomeIcons.calendar_with_day_focus,
+                                  color: Colors.pinkAccent,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'รายละเอียดการบันทึกประจำเดือน',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      report['des'] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    formattedDate,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+              return Text('ไม่มีบันทึกประจำเดือน');
+            },
+          )
+        ],
+      ),
+    );
+  }
+
+  // Tab ข้อมูลประวัติสุขภาพ
+  Widget _buildHealthHistoryTab() {
+    bool isVaccinationAvailable = _availableVaccinations.isNotEmpty;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Row(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(right: 5),
+                    child: Icon(LineAwesomeIcons.syringe),
+                  ),
+                  Text(
+                    'การฉีดวัคซีน (ตามเกณฑ์)',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                ],
+              ),
+              Spacer(),
+              ElevatedButton(
+                onPressed:
+                    isVaccinationAvailable ? _showVaccineTableDialog : null,
+                child: Text('บันทึกข้อมูล'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                MenuPetWidget(
+                  title: "ดูตารางการฉีดวัคซีน",
+                  icon: LineAwesomeIcons.table,
+                  onPress: () {
+                    _showVaccinationScheduleDialog(context, pet_type);
+                  },
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width * 0.95,
+            height: MediaQuery.of(context).size.height * 0.33,
+            padding: EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: Table(
+                        border: TableBorder.all(),
+                        columnWidths: const <int, TableColumnWidth>{
+                          0: FixedColumnWidth(80),
+                          1: FixedColumnWidth(180),
+                          2: FixedColumnWidth(100),
+                          3: FixedColumnWidth(80),
+                          4: FixedColumnWidth(80),
+                        },
+                        defaultVerticalAlignment:
+                            TableCellVerticalAlignment.middle,
+                        children: <TableRow>[
+                          TableRow(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                            ),
+                            children: <Widget>[
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'สถานะ',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'วัคซีน (เข็มที่)',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'วัน/เดือน/ปี',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'น้ำหนัก',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  'ราคา',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          ..._buildTableRows(vaccination_Table),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: [
+                  Row(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(right: 5),
+                        child: Icon(LineAwesomeIcons.syringe),
+                      ),
+                      Text(
+                        'การฉีดวัคซีน (เพิ่มเติม)',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.start,
+                      ),
+                    ],
+                  ),
+                  Spacer(),
+                  ElevatedButton(
+                    onPressed: _showVaccineDialog,
+                    child: Text('บันทึกข้อมูล'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              // แสดงข้อมูลบันทึกวัคซีน
+              FutureBuilder<QuerySnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('vac_more')
+                    .doc(userId)
+                    .collection('vac_pet')
+                    .where('pet_id', isEqualTo: widget.petId)
+                    .orderBy('date', descending: true)
+                    .get(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  }
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  }
+                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: snapshot.data!.docs.length,
+                      itemBuilder: (context, index) {
+                        DocumentSnapshot reportDoc = snapshot.data!.docs[index];
+                        Map<String, dynamic> report =
+                            reportDoc.data() as Map<String, dynamic>;
+
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) =>
+                                        VaccineDetailPage(
+                                  report: report,
+                                  userId: userId ?? '',
+                                  pet_type: pet_type,
+                                ),
+                                transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) {
+                                  const begin = Offset(1.0, 0.0);
+                                  const end = Offset.zero;
+                                  const curve = Curves.ease;
+
+                                  var tween = Tween(begin: begin, end: end)
+                                      .chain(CurveTween(curve: curve));
+
+                                  return SlideTransition(
+                                    position: animation.drive(tween),
+                                    child: child,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          child: VaccineCard(report: report),
+                        );
+                      },
+                    );
+                  }
+                  return Text('ไม่มีบันทึกการฉีดวัคซีนเพิ่มเติม');
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1732,6 +1393,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         ),
       );
 
+  // การประกวด
   void _showContestDialog() {
     showDialog(
       context: context,
@@ -1796,161 +1458,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
-  void _showEditDialog(String idPeriod, Map<String, dynamic> report) {
-    _dateController.text = report['date'];
-    _infoController.text = report['des'];
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Container(
-            width:
-                MediaQuery.of(context).size.width * 0.8, // ปรับขนาดของ Dialog
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'แก้ไขบันทึกประจำเดือน',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      icon: Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
-                    child: Text(
-                      'วันที่เริ่มเป็นประจำเดือน',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ),
-                TextField(
-                  controller: _dateController,
-                  decoration: InputDecoration(
-                    suffixIcon: Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                  onTap: () async {
-                    DateTime? pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2101),
-                    );
-
-                    if (pickedDate != null) {
-                      setState(() {
-                        _dateController.text =
-                            pickedDate.toString().split(' ')[0];
-                      });
-                    }
-                  },
-                ),
-                SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
-                    child: Text(
-                      'ข้อมูลเพิ่มเติม',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ),
-                TextField(
-                  controller: _infoController,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    hintText: 'อาการ, พฤติกรรมของสัตว์เลี้ยง',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    // การกระทำเมื่อกดปุ่มบันทึก
-                    _updateReportInFirestore(idPeriod);
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                  ),
-                  child: Text('บันทึกข้อมูล'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _updateReportInFirestore(String idPeriod) async {
-    try {
-      // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน report_period
-      DocumentReference userReportRef =
-          FirebaseFirestore.instance.collection('report_period').doc(userId);
-
-      // อ้างอิงถึงคอลเลกชันย่อย pet_user ในเอกสาร userId
-      CollectionReference petUserRef = userReportRef.collection('pet_user');
-
-      // อ้างอิงถึงเอกสารที่มี id_period
-      DocumentReference docRef = petUserRef.doc(idPeriod);
-
-      // ตรวจสอบเอกสารก่อนที่จะอัปเดต
-      DocumentSnapshot docToCheck = await docRef.get();
-
-      if (docToCheck.exists) {
-        // อัปเดตเอกสารโดยใช้ id_period
-        await docRef.update({
-          'date': _dateController.text,
-          'des': _infoController.text,
-          'updates_at': DateTime.now().toIso8601String(),
-        });
-
-        _refreshHomePage();
-
-        print('Document with id_period $idPeriod updated successfully');
-      } else {
-        print('No document found with id_period: $idPeriod');
-      }
-    } catch (e) {
-      print('Error updating pet data: $e');
-    }
-  }
-
+  // บันทึกข้อมูลประจำเดือน
   void _showInputDialog() {
     _dateController.clear();
     _infoController.clear();
@@ -2083,6 +1591,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
+  // บันทึกการฉีดวัคซีนเพิ่มเติม
   void _showVaccineDialog() {
     _dateVacController.clear();
     _vacWeight.clear();
@@ -2293,8 +1802,21 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () {
-                            _saveVaccineTo_MoreFirestore();
-                            Navigator.of(context).pop();
+                            if (_selectedVac == null ||
+                                _vacWeight.text.isEmpty ||
+                                _vacPrice.text.isEmpty ||
+                                _vacLocation.text.isEmpty ||
+                                _dateVacController.text.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('กรุณากรอกข้อมูลให้ครบถ้วน'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            } else {
+                              _saveVaccineTo_MoreFirestore();
+                              Navigator.of(context).pop();
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             shape: RoundedRectangleBorder(
@@ -2317,13 +1839,37 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
-  void _showVaccineTableDialog() {
-    _dateVacTable.clear();
-    _vacWeightTable.clear();
-    _vacPriceTable.clear();
-    // Determine the list of vaccines based on the pet type
-    List<Map<String, String>> addVaccination =
+  void _resetForm() {
+    setState(() {
+      _selectedVac_Table = null;
+      _vacWeightTable.clear();
+      _vacPriceTable.clear();
+      _dateVacTable.clear();
+      _vacStatus_Table = null;
+    });
+  }
+
+  // ฟังก์ชันสำหรับอัปเดตลิสต์วัคซีนที่มีอยู่
+  void _updateVaccinationList() {
+    List<Map<String, String>> currentVaccination =
         (pet_type == 'สุนัข') ? vac_Dog : vac_Cat;
+
+    // สร้างชุดข้อมูลวัคซีนที่มีสถานะเป็น "ฉีดแล้ว" เพื่อกรองรายการที่แสดง
+    Set<String> vaccinatedVaccines = Set.from(vaccinationDataFromFirestore
+        .where((data) => data['status'] == 'ฉีดแล้ว')
+        .map((data) => data['vaccine']));
+
+    setState(() {
+      _availableVaccinations = currentVaccination
+          .where((vac) => !vaccinatedVaccines.contains(vac['vaccine']))
+          .toList();
+    });
+  }
+
+  // ฟังก์ชันสำหรับแสดง Dialog เพื่อบันทึกข้อมูลวัคซีน
+  void _showVaccineTableDialog() {
+    // เรียกใช้ฟังก์ชันเพื่ออัปเดตลิสต์วัคซีนก่อนแสดง Dialog
+    _fetchVaccinationData();
 
     showDialog(
       context: context,
@@ -2337,7 +1883,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             height: MediaQuery.of(context).size.height * 0.78,
             child: Column(
               children: [
-                // Header with text and close button
                 Container(
                   padding: const EdgeInsets.all(20.0),
                   child: Row(
@@ -2368,6 +1913,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                       IconButton(
                         onPressed: () {
                           Navigator.of(context).pop();
+                          _resetForm();
                         },
                         icon: Icon(Icons.close),
                       ),
@@ -2397,19 +1943,24 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         DropdownButtonFormField<String>(
                           value: _selectedVac_Table,
                           hint: Text('เลือกชื่อวัคซีน'),
-                          items: addVaccination
-                              .map((Map<String, String> value) {
-                                return DropdownMenuItem<String>(
-                                  value: value['vaccine'],
-                                  child: Text(value['vaccine'] ?? '',
-                                      style: TextStyle(fontSize: 14)),
-                                );
-                              })
-                              .toSet()
-                              .toList(), // ใช้ toSet() เพื่อหลีกเลี่ยงค่าซ้ำ
+                          items: _availableVaccinations.isNotEmpty
+                              ? _availableVaccinations
+                                  .map((Map<String, String> value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value['vaccine'],
+                                    child: Text(value['vaccine'] ?? '',
+                                        style: TextStyle(fontSize: 14)),
+                                  );
+                                }).toList()
+                              : [], // ให้ค่าเริ่มต้นเป็นลิสต์ว่างหากไม่มีวัคซีนให้เลือก
                           onChanged: (newValue) {
                             setState(() {
                               _selectedVac_Table = newValue;
+                              if (newValue != null &&
+                                  !_selectedVaccines.contains(newValue)) {
+                                _selectedVaccines.add(newValue);
+                                _fetchVaccinationData(); // อัปเดตข้อมูลวัคซีน
+                              }
                             });
                           },
                           decoration: InputDecoration(
@@ -2554,20 +2105,30 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () {
-                            // Validate input fields before saving
+                            String errorMessage = '';
+
                             if (_selectedVac_Table == null ||
-                                _vacWeightTable.text.isEmpty ||
-                                _vacPriceTable.text.isEmpty ||
-                                _dateVacTable.text.isEmpty ||
                                 _vacStatus_Table == null) {
-                              // Show a warning dialog if any field is empty
+                              errorMessage =
+                                  'กรุณากรอกข้อมูลวัคซีนและสถานะก่อนทำการบันทึก';
+                            } else if (_vacStatus_Table == 'ฉีดแล้ว' &&
+                                (_vacWeightTable.text.isEmpty ||
+                                    _vacPriceTable.text.isEmpty ||
+                                    _dateVacTable.text.isEmpty)) {
+                              errorMessage =
+                                  'กรุณากรอกข้อมูลให้ครบทุกช่องสำหรับสถานะฉีดแล้ว';
+                            }
+
+                            if (errorMessage.isNotEmpty) {
                               showDialog(
                                 context: context,
                                 builder: (BuildContext context) {
                                   return AlertDialog(
-                                    title: Text('กรุณากรอกข้อมูลให้ครบถ้วน'),
+                                    title: Text('กรุณากรอกข้อมูลให้ครบ'),
                                     content: Text(
-                                        'กรุณากรอกข้อมูลทั้งหมดก่อนทำการบันทึก'),
+                                      errorMessage,
+                                      style: TextStyle(fontSize: 14),
+                                    ),
                                     actions: <Widget>[
                                       TextButton(
                                         onPressed: () {
@@ -2581,7 +2142,14 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                               );
                             } else {
                               _saveVaccineToFirestore();
+                              setState(() {
+                                // เพิ่มวัคซีนที่ถูกเลือกไปในลิสต์วัคซีนที่ถูกเลือก
+                                _selectedVaccines.add(_selectedVac_Table!);
+                                // อัปเดตลิสต์วัคซีนใหม่
+                                _updateVaccinationList();
+                              });
                               Navigator.of(context).pop();
+                              _resetForm();
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -2592,7 +2160,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                 horizontal: 30, vertical: 10),
                           ),
                           child: Text('บันทึกข้อมูล'),
-                        ),
+                        )
                       ],
                     ),
                   ),
@@ -2605,6 +2173,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
+  // แสดงตารางการฉีดวัคซีนตามเกณฑ์
   void _showVaccinationScheduleDialog(BuildContext context, String petType) {
     List<Map<String, String>> vaccinationSchedule =
         (petType == 'สุนัข') ? vaccinationDog : vaccinationCat;
@@ -2698,6 +2267,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
+  // ดึงข้อมูลที่บันทึกมาใส่ตารางการฉีดวัคซีนตามเกณฑ์
   List<TableRow> _buildTableRows(List<Map<String, dynamic>> vaccination_Table) {
     return vaccination_Table.map((schedule_table) {
       // รวม vaccine และ dose เป็นค่าเดียวเพื่อใช้ในการค้นหา
@@ -2739,6 +2309,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }).toList();
   }
 
+  // ดึงข้อมูลตารางการฉีดวัคซีนตามเกณฑ์
   List<TableRow> _buildTableVac(List<Map<String, String>> vaccinationSchedule) {
     return vaccinationSchedule.map((schedule) {
       return TableRow(
