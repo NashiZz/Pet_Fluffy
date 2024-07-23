@@ -1,7 +1,7 @@
 // ignore_for_file: camel_case_types, file_names
 
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:math';
 
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -23,7 +23,8 @@ class randomMathch_Page extends StatefulWidget {
   State<randomMathch_Page> createState() => _randomMathch_PageState();
 }
 
-class _randomMathch_PageState extends State<randomMathch_Page> {
+class _randomMathch_PageState extends State<randomMathch_Page>
+    with SingleTickerProviderStateMixin {
   User? user = FirebaseAuth.instance.currentUser;
   String? userId;
   String? petId;
@@ -35,6 +36,14 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
   bool isLoading = true;
   late List<Map<String, dynamic>> petDataMatchList = [];
   late List<Map<String, dynamic>> petDataFavoriteList = [];
+  late List<Map<String, dynamic>> petUserDataList = [];
+  String? search;
+  late AnimationController _animationController;
+  late Animation<double> _opacityAnimation;
+  late List<Offset> _randomOffsets;
+  bool _offsetsInitialized = false;
+  late Future<List<Map<String, dynamic>>> _petsFuture;
+  bool _isAnimating = false;
 
   final TextEditingController _controller = TextEditingController();
   //ดึงข้อมูลของผู้ใช้
@@ -53,7 +62,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
     }
   }
 
-  Future<void> _getUsage_pet() async {
+  Future<void> _getUsage_pet(String searchValue) async {
     if (user != null) {
       userId = user!.uid;
       try {
@@ -210,7 +219,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
-      log('Search button pressed with value: $searchValue');
+      search = searchValue.toString();
+      _getUsage_pet(searchValue);
     });
   }
 
@@ -232,11 +242,61 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
   void initState() {
     super.initState();
     _getUserDataFromFirestore();
-    _getUsage_pet();
+    _getUsage_pet('');
+    _petsFuture = ApiPetService.loadAllPet();
+    // กำหนด AnimationController
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    // กำหนด Animation สำหรับ opacity
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController
+        .dispose(); // Dispose controller เพื่อหลีกเลี่ยง memory leaks
+    super.dispose();
+  }
+
+  void _showHeartAnimation() {
+    setState(() {
+      _isAnimating = true;
+      _animationController.forward().then((_) {
+        Future.delayed(const Duration(seconds: 1), () {
+          _animationController.reverse();
+          setState(() {
+            _isAnimating = false;
+          });
+        });
+      });
+    });
+  }
+
+  void _initializeOffsets(BuildContext context) {
+    if (!_offsetsInitialized) {
+      final Random _random = Random();
+      final double screenWidth = MediaQuery.of(context).size.width;
+      final double screenHeight = MediaQuery.of(context).size.height;
+      final double iconSize = 100.0; // ขนาดของไอคอน
+      _randomOffsets = List.generate(30, (index) {
+        return Offset(
+          _random.nextDouble() *
+              (screenWidth - iconSize), // ปรับตำแหน่งให้อยู่ภายในหน้าจอ
+          _random.nextDouble() * (screenHeight - iconSize),
+        );
+      });
+      _offsetsInitialized = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    _initializeOffsets(context);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -310,8 +370,8 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
               ),
             ),
             // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Stream.fromFuture(ApiPetService.loadAllPet()),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _petsFuture, // ใช้ Future ที่คงที่
               builder: (BuildContext context,
                   AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -342,10 +402,10 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 List<Map<String, dynamic>> filteredPetData = snapshot.data!
                     .where((pet) =>
                         pet['type_pet'] == petType &&
-                        pet['gender'] == oppositeGender)
+                        pet['gender'] == oppositeGender &&
+                        pet['status'] == 'พร้อมผสมพันธุ์')
                     .toList();
 
-                //การเช็คข้อมูล การตัดข้อมูลที่เคยกด match or Favorite ไปแล้ว   
                 return FutureBuilder<List<Map<String, dynamic>>>(
                     future: () async {
                   List<Map<String, dynamic>> uniquePetDataMatch =
@@ -356,6 +416,7 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                 }(), builder: (context,
                         AsyncSnapshot<List<Map<String, dynamic>>>
                             filteredSnapshot) {
+
                   if (filteredSnapshot.connectionState ==
                       ConnectionState.waiting) {
                     return const Center(
@@ -375,13 +436,67 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
                   List<Map<String, dynamic>> filteredData =
                       filteredSnapshot.data!;
 
+                   if (search.toString() != 'null') {
+                      List<Map<String, dynamic>> filteredPets = filteredData.where((pet) {
+                      // log(search.toString().toLowerCase());
+                      bool matchesName = pet['name']
+                          .toString()
+                          .toLowerCase()
+                          .contains(search.toString().toLowerCase());
+
+                      DateTime birthDate = DateTime.parse(pet['birthdate']);
+                      DateTime now = DateTime.now();
+                      int yearsDifference = now.year - birthDate.year;
+                      int monthsDifference = now.month - birthDate.month;
+
+                      if (now.day < birthDate.day) {
+                        monthsDifference--;
+                      }
+
+                      if (monthsDifference < 0) {
+                        yearsDifference--;
+                        monthsDifference += 12;
+                      }
+
+                      String ageDifference =
+                          '$yearsDifference ปี $monthsDifference เดือน';
+
+                      bool matchesAge = ageDifference
+                          .toLowerCase()
+                          .contains(search.toString().toLowerCase());
+
+                      bool matchesBreed = pet['breed_pet']
+                          .toString()
+                          .toLowerCase()
+                          .contains(search.toString().toLowerCase());
+
+                      bool matchesGender = pet['gender']
+                          .toString()
+                          .toLowerCase()
+                          .contains(search.toString().toLowerCase());
+
+                      bool matchesColor = pet['color']
+                          .toString()
+                          .toLowerCase()
+                          .contains(search.toString().toLowerCase());
+
+                      return matchesName ||
+                          matchesAge ||
+                          matchesBreed ||
+                          matchesGender ||
+                          matchesColor;
+                    }).toList();
+                    petUserDataList = filteredPets;
+                    } else {
+                      petUserDataList = filteredData;
+                    }
 
                   return Expanded(
                     //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
                     child: ListView.builder(
-                      itemCount: filteredData.length,
+                      itemCount: petUserDataList.length,
                       itemBuilder: (context, index) {
-                        Map<String, dynamic> petData = filteredData[index];
+                        Map<String, dynamic> petData = petUserDataList[index];
                         DateTime birthDate =
                             DateTime.parse(petData['birthdate']);
                         final now = DateTime.now();
@@ -644,6 +759,32 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
           ],
         ),
       ),
+      floatingActionButton: _isAnimating
+          ? AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Stack(
+                  children: List.generate(30, (index) {
+                    return Positioned(
+                      top: _randomOffsets[index].dy,
+                      right: _randomOffsets[index].dx,
+                      child: Opacity(
+                        opacity: _opacityAnimation.value,
+                        child: Transform.translate(
+                          offset: Offset(0, -50 * _opacityAnimation.value),
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
+            )
+          : null,
     );
   }
 
@@ -653,9 +794,23 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => Historymatch_Page(
-            idPet: petId.toString(), idUser: userId.toString()),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            Historymatch_Page(
+                idPet: petId.toString(), idUser: userId.toString()),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+
+          var tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
       ),
     );
   }
@@ -733,7 +888,6 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
             );
           },
         );
-       
       }
     } catch (error) {
       print("Failed to add pet: $error");
@@ -743,15 +897,11 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
       });
     }
     _getUserDataFromFirestore();
-    _getUsage_pet();
+    _getUsage_pet(search.toString());
   }
 
   void add_match(String petIdd, String userIdd, String img_profile,
       String name_petrep) async {
-    log(petIdd);
-    setState(() {
-      isLoading = true;
-    });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? petId = prefs.getString(userId.toString());
     String pet_request = petId.toString();
@@ -902,23 +1052,11 @@ class _randomMathch_PageState extends State<randomMathch_Page> {
             setState(() {
               isLoading = false;
             });
-
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 1), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Success'),
-                  content: Text('Match Success'),
-                );
-              },
-            );
+            _showHeartAnimation();
           }
+
           _getUserDataFromFirestore();
-          _getUsage_pet();
+          _getUsage_pet(search.toString());
         } catch (error) {
           print("Failed to add pet: $error");
 

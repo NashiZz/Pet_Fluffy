@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:math';
-
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -77,9 +76,58 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
               .toList());
         }
 
+        // ส่วนที่ถูกนำไปแสดง
+        List<Map<String, dynamic>> nonDeletedPets = allPetDataList_wait
+            .where((pet) => pet['status'] != 'ถูกลบ')
+            .toList();
+
+        // ส่วนที่ถูกนำไปลบใน favorites
+        List<Map<String, dynamic>> pet_Deleted = allPetDataList_wait
+            .where((pet) => pet['status'] == 'ถูกลบ')
+            .toList();
+        for (var idpet_res in pet_Deleted) {
+          String petResId = idpet_res['pet_id'];
+
+          DocumentReference userFavoritesRef =
+              FirebaseFirestore.instance.collection('match').doc(userId);
+          CollectionReference petFavoriteRef =
+              userFavoritesRef.collection('match_pet');
+          // ดึงเอกสารที่มี pet_respone ตรงกับ petId
+          QuerySnapshot querySnapshot = await petFavoriteRef
+              .where('pet_respone', isEqualTo: petResId)
+              .get();
+          if (querySnapshot.docs.isNotEmpty) {
+            // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
+            DocumentSnapshot docSnapshot = querySnapshot.docs.first;
+
+            // ดึง id_fav จากเอกสาร
+            String id_match = docSnapshot.get('id_match');
+
+            // อ้างอิงถึงเอกสารที่มี id_fav
+            DocumentReference docRef = petFavoriteRef.doc(id_match);
+
+            // ตรวจสอบเอกสารก่อนที่จะลบ
+            DocumentSnapshot docToCheck = await docRef.get();
+
+            if (docToCheck.exists) {
+              // ลบเอกสารโดยใช้ id_fav
+              await docRef.delete();
+
+              // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
+              _getPetUserDataFromMatch_wait(); // รอ
+              _getPetUserDataFromMatch_paired();
+
+              print('Document with id_match $id_match deleted successfully');
+            } else {
+              print('No document found with id_match: $id_match');
+            }
+          } else {
+            print('No document found with pet_id: $petId');
+          }
+        }
         // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
-          petUserDataList_wait = allPetDataList_wait;
+          petUserDataList_wait = nonDeletedPets;
           isLoading = false;
         });
       } catch (e) {
@@ -132,9 +180,58 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
               .toList());
         }
 
+        // ส่วนที่ถูกนำไปแสดง
+        List<Map<String, dynamic>> nonDeletedPets = allPetDataList_pair
+            .where((pet) => pet['status'] != 'ถูกลบ')
+            .toList();
+
+        // ส่วนที่ถูกนำไปลบใน favorites
+        List<Map<String, dynamic>> pet_Deleted = allPetDataList_pair
+            .where((pet) => pet['status'] == 'ถูกลบ')
+            .toList();
+        for (var idpet_res in pet_Deleted) {
+          String petResId = idpet_res['pet_id'];
+
+          DocumentReference userFavoritesRef =
+              FirebaseFirestore.instance.collection('match').doc(userId);
+          CollectionReference petFavoriteRef =
+              userFavoritesRef.collection('match_pet');
+          // ดึงเอกสารที่มี pet_respone ตรงกับ petId
+          QuerySnapshot querySnapshot = await petFavoriteRef
+              .where('pet_respone', isEqualTo: petResId)
+              .get();
+          if (querySnapshot.docs.isNotEmpty) {
+            // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
+            DocumentSnapshot docSnapshot = querySnapshot.docs.first;
+
+            // ดึง id_fav จากเอกสาร
+            String id_match = docSnapshot.get('id_match');
+
+            // อ้างอิงถึงเอกสารที่มี id_fav
+            DocumentReference docRef = petFavoriteRef.doc(id_match);
+
+            // ตรวจสอบเอกสารก่อนที่จะลบ
+            DocumentSnapshot docToCheck = await docRef.get();
+
+            if (docToCheck.exists) {
+              // ลบเอกสารโดยใช้ id_fav
+              await docRef.delete();
+
+              // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
+              _getPetUserDataFromMatch_wait(); // รอ
+              _getPetUserDataFromMatch_paired();
+
+              print('Document with id_fav $id_match deleted successfully');
+            } else {
+              print('No document found with id_fav: $id_match');
+            }
+          } else {
+            print('No document found with pet_id: $petId');
+          }
+        }
         // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
-          petUserDataList_pair = allPetDataList_pair;
+          petUserDataList_pair = nonDeletedPets;
           isLoading = false;
         });
       } catch (e) {
@@ -157,7 +254,28 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      Navigator_Page(initialIndex: 0),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    const begin = Offset(-1.0, 0.0); // เริ่มต้นจากขวา
+                    const end = Offset.zero; // สิ้นสุดที่ศูนย์กลาง (0.0, 0.0)
+                    const curve = Curves.ease;
+
+                    var tween = Tween(begin: begin, end: end)
+                        .chain(CurveTween(curve: curve));
+
+                    return SlideTransition(
+                      position: animation.drive(tween),
+                      child: child,
+                    );
+                  },
+                ),
+                (route) => false, // ลบทุกเส้นทางก่อนหน้าออก
+              );
             },
             icon: const Icon(LineAwesomeIcons.angle_left),
           ),
@@ -359,7 +477,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             await doc.reference
                 .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
           });
-          _getPetUserDataFromMatch_wait(); 
+          _getPetUserDataFromMatch_wait();
           _getPetUserDataFromMatch_paired();
         } else {
           print('No document found with pet_id: $petId_res');
@@ -380,12 +498,29 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             .get();
         if (querySnapshot_req.docs.isNotEmpty) {
           // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
-          querySnapshot_req.docs.forEach((doc) async {
-            await doc.reference
-                .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-          });
-          _getPetUserDataFromMatch_wait(); 
-          _getPetUserDataFromMatch_paired();
+          DocumentSnapshot docSnapshot = querySnapshot_req.docs.first;
+
+          // ดึง id_fav จากเอกสาร
+          String idFav = docSnapshot.get('id_match');
+
+          // อ้างอิงถึงเอกสารที่มี id_fav
+          DocumentReference docRef = petMatchRef_req.doc(idFav);
+
+          // ตรวจสอบเอกสารก่อนที่จะลบ
+          DocumentSnapshot docToCheck = await docRef.get();
+
+          if (docToCheck.exists) {
+            // ลบเอกสารโดยใช้ id_fav
+            await docRef.delete();
+
+            // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
+            _getPetUserDataFromMatch_wait();
+            _getPetUserDataFromMatch_paired();
+
+            print('Document with id_fav $idFav deleted successfully');
+          } else {
+            print('No document found with id_fav: $idFav');
+          }
         }
       }
     } catch (e) {
