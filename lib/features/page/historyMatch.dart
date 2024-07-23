@@ -180,7 +180,6 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
               .toList());
         }
 
-        
         // ส่วนที่ถูกนำไปแสดง
         List<Map<String, dynamic>> nonDeletedPets = allPetDataList_pair
             .where((pet) => pet['status'] != 'ถูกลบ')
@@ -257,10 +256,25 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             onPressed: () {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        const Navigator_Page(initialIndex: 0)),
-                (route) => false,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      Navigator_Page(initialIndex: 0),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    const begin = Offset(-1.0, 0.0); // เริ่มต้นจากขวา
+                    const end = Offset.zero; // สิ้นสุดที่ศูนย์กลาง (0.0, 0.0)
+                    const curve = Curves.ease;
+
+                    var tween = Tween(begin: begin, end: end)
+                        .chain(CurveTween(curve: curve));
+
+                    return SlideTransition(
+                      position: animation.drive(tween),
+                      child: child,
+                    );
+                  },
+                ),
+                (route) => false, // ลบทุกเส้นทางก่อนหน้าออก
               );
             },
             icon: const Icon(LineAwesomeIcons.angle_left),
