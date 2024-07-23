@@ -223,8 +223,8 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                       labelText: 'ชื่อสัตว์เลี้ยง',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30.0)),
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 15),
                     ),
                   ),
                   const SizedBox(
@@ -239,7 +239,8 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                           items: _types.map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
-                              child: Text(value),
+                              child:
+                                  Text(value, style: TextStyle(fontSize: 14)),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
@@ -267,7 +268,8 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                                 .map((String value) {
                               return DropdownMenuItem<String>(
                                 value: value,
-                                child: Text(value),
+                                child:
+                                    Text(value, style: TextStyle(fontSize: 14)),
                               );
                             }).toList(),
                             onChanged: (String? newValue) {
@@ -298,7 +300,8 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                           items: _genders.map((String value) {
                             return DropdownMenuItem<String>(
                               value: value,
-                              child: Text(value),
+                              child:
+                                  Text(value, style: TextStyle(fontSize: 14)),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
@@ -459,7 +462,8 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                         updatePetInFirestore(widget.petUserData['pet_id']);
                       },
                       // ignore: sort_child_properties_last
-                      child: const Text('บันทึก', style: TextStyle(fontSize: 16)),
+                      child:
+                          const Text('บันทึก', style: TextStyle(fontSize: 16)),
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
