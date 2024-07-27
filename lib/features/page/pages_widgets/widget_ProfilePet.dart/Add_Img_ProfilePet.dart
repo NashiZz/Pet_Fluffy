@@ -9,7 +9,7 @@ class ImagePickerDialog extends StatefulWidget {
   final List<String> firestoreImages;
   final Function(List<Uint8List?>, List<String?>) onSaveImages;
   final String petId;
-  final Future<void> Function(int) deleteImageFromFirestore;
+  final Future<void> Function(String) deleteImageFromFirestore;
 
   ImagePickerDialog({
     required this.firestoreImages,
@@ -26,6 +26,7 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
   List<XFile?> _images = [];
   List<Uint8List?> compressedImages = [];
   List<String?> base64Images = [];
+  List<String> imagesToDelete = [];
 
   Future<Uint8List?> compressImage(Uint8List image) async {
     try {
@@ -115,35 +116,11 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
                             child: IconButton(
                               icon: Icon(Icons.close, color: Colors.red),
                               onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text('ยืนยันการลบ'),
-                                      content: Text(
-                                          'คุณต้องการลบรูปภาพนี้ออกจากระบบหรือไม่?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop();
-                                          },
-                                          child: Text('ยกเลิก'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () async {
-                                            await widget
-                                                .deleteImageFromFirestore(
-                                                    index);
-                                            Navigator.of(context).pop();
-                                            setState(
-                                                () {}); // Refresh the dialog UI
-                                          },
-                                          child: Text('ยืนยัน'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
+                                setState(() {
+                                  imagesToDelete
+                                      .add(widget.firestoreImages[index]);
+                                  widget.firestoreImages.removeAt(index);
+                                });
                               },
                             ),
                           ),
@@ -241,7 +218,10 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
           child: Text('ยกเลิก'),
         ),
         TextButton(
-          onPressed: () {
+          onPressed: () async {
+            for (String imageBase64 in imagesToDelete) {
+              await widget.deleteImageFromFirestore(imageBase64);
+            }
             widget.onSaveImages(compressedImages, base64Images);
             Navigator.of(context).pop();
           },

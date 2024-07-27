@@ -529,7 +529,7 @@ class _Pet_PageState extends State<Pet_Page> {
         'description': description,
         'type_pet': type,
         'breed_pet': breed,
-        'status': 'พร้อมผสมพันธุ์',
+        'status': 'มีชีวิต',
         'gender': gender,
       });
 
