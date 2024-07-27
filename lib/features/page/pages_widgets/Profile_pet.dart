@@ -1,4 +1,10 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
+import 'dart:typed_data';
+
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/AddContest_Page.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/ContestDetail_Page.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/History_Math.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 
@@ -48,6 +54,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   String petName = '';
   String type = '';
   String petImageBase64 = '';
+  String petImageBanner = '';
   String weight = '';
   String color = '';
   String gender = '';
@@ -57,6 +64,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   String price = '';
   String userPhotoURL = '';
   String pet_type = '';
+  String status = '';
 
   String? userId;
   String? userImageBase64;
@@ -161,6 +169,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         petName = petData['name'] ?? '';
         type = petData['breed_pet'] ?? '';
         petImageBase64 = petData['img_profile'] ?? '';
+        petImageBanner = petData['img_Banner'] ?? '';
         color = petData['color'] ?? '';
         weight = petData['weight'] ?? '0.0';
         gender = petData['gender'] ?? '';
@@ -170,6 +179,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         pet_type = petData['type_pet'] ?? '';
         DateTime birthdate = DateTime.parse(birthdateStr);
         age = _ageCalculatorService.calculateAge(birthdate);
+        status = petData['status'] ?? 'มีชีวิต';
         _firestoreImages = firestoreImages;
 
         vaccinationSchedule =
@@ -229,14 +239,14 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       barrierDismissible: false,
       builder: (context) {
         return ImagePickerDialog(
-          firestoreImages: _firestoreImages,
+          firestoreImages: List.from(_firestoreImages), // ส่ง copy ของรายการ
           onSaveImages: (compressedImages, base64Images) async {
             await _saveImgsPetToFirestore(
-              petId: pet_id,
+              petId: widget.petId,
               base64Images: base64Images,
             );
           },
-          petId: pet_id,
+          petId: widget.petId,
           deleteImageFromFirestore:
               _deleteImageFromFirestore, // Pass the delete function
         );
@@ -253,30 +263,44 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     return 10; // หมายความว่าไม่มีตำแหน่งที่ว่าง
   }
 
-  Future<void> _deleteImageFromFirestore(int index) async {
+  Future<void> _deleteImageFromFirestore(String imageBase64) async {
     DocumentReference docRef =
         FirebaseFirestore.instance.collection('imgs_pet').doc(widget.petId);
 
-    if (index >= 0 && index < _firestoreImages.length) {
-      String fieldName = 'img_${index + 1}';
-      Map<String, dynamic> updateData = {
-        fieldName: FieldValue.delete(),
-      };
-      try {
-        print(
-            'Deleting image at index: $index (field: $fieldName) from Firestore');
-        await docRef.update(updateData);
-        print('Deleted image from Firestore (field: $fieldName)');
+    // ดึงข้อมูลที่มีอยู่จาก Firestore
+    DocumentSnapshot docSnapshot = await docRef.get();
+    if (docSnapshot.exists) {
+      Map<String, dynamic> data = docSnapshot.data() as Map<String, dynamic>;
 
-        // Update the UI by removing the image
-        setState(() {
-          _firestoreImages.removeAt(index);
-        });
-      } catch (error) {
-        print('Error deleting image: $error');
+      // หา field ที่มีค่า base64 ตรงกับรูปภาพที่จะลบ
+      String? fieldName;
+      data.forEach((key, value) {
+        if (value == imageBase64) {
+          fieldName = key;
+        }
+      });
+
+      if (fieldName != null) {
+        Map<String, dynamic> updateData = {
+          fieldName!: FieldValue.delete(),
+        };
+        try {
+          print('Deleting image with field: $fieldName from Firestore');
+          await docRef.update(updateData);
+          print('Deleted image from Firestore (field: $fieldName)');
+
+          // อัปเดต UI โดยการลบรูปภาพ
+          setState(() {
+            _firestoreImages.remove(imageBase64);
+          });
+        } catch (error) {
+          print('Error deleting image: $error');
+        }
+      } else {
+        print('Image not found in Firestore fields');
       }
     } else {
-      print('Index $index is out of bounds for image deletion');
+      print('Document does not exist');
     }
   }
 
@@ -725,13 +749,66 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                   MenuPetWidget(
                     title: "ประวัติการจับคู่",
                     icon: LineAwesomeIcons.history,
-                    onPress: () {},
+                    onPress: () {
+                      Navigator.push(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  HistoryMathPage(
+                            userId: userId ?? '',
+                            pet_type: pet_type,
+                          ),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(1.0, 0.0);
+                            const end = Offset.zero;
+                            const curve = Curves.ease;
+
+                            var tween = Tween(begin: begin, end: end)
+                                .chain(CurveTween(curve: curve));
+
+                            return SlideTransition(
+                              position: animation.drive(tween),
+                              child: child,
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
                   MenuPetWidget(
-                    title: "การประกวด",
-                    icon: LineAwesomeIcons.certificate,
-                    onPress: _showContestDialog,
-                  ),
+                      title: "การประกวด",
+                      icon: LineAwesomeIcons.certificate,
+                      onPress: (_showContestDialog)
+                      //  {
+                      //   Navigator.push(
+                      //     context,
+                      //     PageRouteBuilder(
+                      //       pageBuilder:
+                      //           (context, animation, secondaryAnimation) =>
+                      //               ContestPage(
+                      //         userId: userId ?? '',
+                      //         petId: pet_id,
+                      //       ),
+                      //       transitionsBuilder:
+                      //           (context, animation, secondaryAnimation, child) {
+                      //         const begin = Offset(1.0, 0.0);
+                      //         const end = Offset.zero;
+                      //         const curve = Curves.ease;
+
+                      //         var tween = Tween(begin: begin, end: end)
+                      //             .chain(CurveTween(curve: curve));
+
+                      //         return SlideTransition(
+                      //           position: animation.drive(tween),
+                      //           child: child,
+                      //         );
+                      //       },
+                      //     ),
+                      //   );
+                      // },
+                      ),
                   MenuPetWidget(
                     title: "ใบเพ็ดดีกรี",
                     icon: LineAwesomeIcons.dna,
@@ -1247,6 +1324,21 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     final top = coverHeight - profileHeight / 2;
     final bottom = profileHeight / 2;
 
+    Color getStatusColor(String status) {
+      switch (status) {
+        case 'มีชีวิต':
+          return Colors.green;
+        case 'เสียชีวิต':
+          return Colors.red;
+        case 'พร้อมผสมพันธ์':
+          return Colors.pinkAccent;
+        case 'ไม่พร้อมผสมพันธ์':
+          return Colors.grey;
+        default:
+          return Colors.green;
+      }
+    }
+
     return FutureBuilder<DocumentSnapshot>(
       future: ApiUserService.getUserData(pet_user),
       builder:
@@ -1280,7 +1372,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     padding: const EdgeInsets.fromLTRB(15, 0, 0, 0),
                     child: Stack(
                       children: [
-                        buildProfileImage(),
+                        buildProfileImage(context, status),
                         Positioned(
                           top: 80,
                           right: 5,
@@ -1289,7 +1381,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                             height: 20,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.green,
+                              color: getStatusColor(status),
                               border: Border.all(color: Colors.white, width: 2),
                             ),
                           ),
@@ -1298,17 +1390,29 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 50, 0, 0),
+                    padding: const EdgeInsets.fromLTRB(20, 55, 0, 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          petName,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              petName,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              ' ($status)',
+                              style: TextStyle(
+                                color: getStatusColor(status),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         Text(
                           type,
@@ -1357,20 +1461,124 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
   // รูป Banner
-  Widget buildCoverImage() => Container(
-        color: Colors.grey,
-        child: petImageBase64.isNotEmpty
-            ? Image.memory(
-                base64Decode(petImageBase64),
-                width: double.infinity,
-                height: coverHeight,
-                fit: BoxFit.cover,
-              )
-            : const CircularProgressIndicator(), // กรณีที่ไม่มีข้อมูลภาพ
+  Widget buildCoverImage() => Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            height: coverHeight,
+            color: Colors.grey,
+            child: petImageBanner.isNotEmpty
+                ? Image.memory(
+                    base64Decode(petImageBanner),
+                    width: double.infinity,
+                    height: coverHeight,
+                    fit: BoxFit.cover,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          petImageBanner.isNotEmpty
+              ? Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: SizedBox(
+                    width: 35,
+                    height: 35,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.black, width: 1),
+                        color: Colors.grey[800],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          _showBannerOptions(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: const CircleBorder(),
+                          padding: const EdgeInsets.all(0),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : Positioned(
+                  bottom: 70,
+                  right: 170,
+                  child: Container(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _showBannerOptions(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.all(0),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          Text('เพิ่มรูปภาพ',
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+        ],
       );
 
+  Future<void> _changeBannerImage() async {
+    final Uint8List? image =
+        await _profileService.pickImage(ImageSource.gallery);
+    if (image != null) {
+      final Uint8List? compressedImage =
+          await _profileService.compressImage(image);
+      if (compressedImage != null) {
+        setState(() {});
+        // อัปเดตรูปภาพใน Firestore
+        await FirebaseFirestore.instance
+            .collection('Pet_User')
+            .doc(pet_id)
+            .update({'img_Banner': base64Encode(compressedImage)});
+        _refreshHomePage(); // รีเฟรชหน้าเพื่อแสดงข้อมูลล่าสุด
+      }
+    }
+  }
+
+  Future<void> _changeProfileImage() async {
+    final Uint8List? image =
+        await _profileService.pickImage(ImageSource.gallery);
+    if (image != null) {
+      final Uint8List? compressedImage =
+          await _profileService.compressImage(image);
+      if (compressedImage != null) {
+        setState(() {});
+        // อัปเดตรูปภาพใน Firestore
+        await FirebaseFirestore.instance
+            .collection('Pet_User')
+            .doc(pet_id)
+            .update({'img_profile': base64Encode(compressedImage)});
+        _refreshHomePage(); // รีเฟรชหน้าเพื่อแสดงข้อมูลล่าสุด
+      }
+    }
+  }
+
   // รูป Profile
-  Widget buildProfileImage() => Container(
+  Widget buildProfileImage(BuildContext context, String status) {
+    return GestureDetector(
+      onTap: () => _showEditOptions(context, status),
+      child: Container(
         width: 110,
         height: 110,
         decoration: BoxDecoration(
@@ -1391,7 +1599,121 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 : const CircularProgressIndicator(),
           ),
         ),
-      );
+      ),
+    );
+  }
+
+  void _showBannerOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.image),
+                title: Text('ดูรูปภาพ'),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
+                  _changeProfileImage();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.upload_rounded),
+                title: Text('เปลี่ยนรูปภาพ'),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
+                  _changeBannerImage();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditOptions(BuildContext context, String status) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.image),
+                title: Text('ดูรูปภาพ'),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
+                  _changeProfileImage();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.upload_rounded),
+                title: Text('เปลี่ยนรูปภาพ'),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
+                  _changeProfileImage();
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.edit),
+                title: Text('เปลี่ยนสถานะ'),
+                onTap: () {
+                  Navigator.of(context).pop(); // ปิด BottomSheet ก่อน
+                  _showStatusOptions(context, status);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showStatusOptions(BuildContext context, String currentStatus) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildStatusOption(context, 'มีชีวิต', currentStatus),
+              _buildStatusOption(context, 'เสียชีวิต', currentStatus),
+              _buildStatusOption(context, 'พร้อมผสมพันธ์', currentStatus),
+              _buildStatusOption(context, 'ไม่พร้อมผสมพันธ์', currentStatus),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusOption(
+      BuildContext context, String status, String currentStatus) {
+    return RadioListTile<String>(
+      title: Text(status),
+      value: status,
+      groupValue: currentStatus,
+      onChanged: (String? value) {
+        if (value != null) {
+          // อัปเดตสถานะใน Firestore
+          FirebaseFirestore.instance
+              .collection('Pet_User')
+              .doc(pet_id)
+              .update({'status': value});
+          Navigator.of(context).pop(); // ปิด BottomSheet เปลี่ยนสถานะ
+          _refreshHomePage();
+        }
+      },
+    );
+  }
 
   // การประกวด
   void _showContestDialog() {
@@ -1403,22 +1725,15 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             borderRadius: BorderRadius.circular(20.0),
           ),
           child: Container(
-            width:
-                MediaQuery.of(context).size.width * 0.8, // ปรับขนาดของ Dialog
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.height * 0.65,
             padding: EdgeInsets.all(20),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'ประวัติการประกวด',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Spacer(),
                     IconButton(
                       onPressed: () {
                         Navigator.of(context).pop();
@@ -1427,28 +1742,223 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                Center(
+                  child: Text(
+                    'ประวัติการประกวด',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 15),
                 Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'การประกวด',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.start,
-                        ),
-                      ],
+                    Text(
+                      'การประกวด',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 16,
+                      ),
+                      textAlign: TextAlign.start,
                     ),
                     Spacer(),
-                    ElevatedButton(
-                      onPressed: _showAddImg,
-                      child: Text('เพิ่ม'),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    AddContestPage(
+                              userId: userId ?? '',
+                              petId: pet_id,
+                            ),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'เพิ่ม',
+                        style:
+                            TextStyle(color: Colors.blueAccent, fontSize: 16),
+                      ),
                     ),
                   ],
+                ),
+                Expanded(
+                  child: FutureBuilder<QuerySnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('contest_pet')
+                        .doc(userId)
+                        .collection('pet_contest')
+                        .where('pet_id', isEqualTo: widget.petId)
+                        .get(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: const CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      }
+                      if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            DocumentSnapshot reportDoc =
+                                snapshot.data!.docs[index];
+                            Map<String, dynamic> report =
+                                reportDoc.data() as Map<String, dynamic>;
+
+                            final base64String = report['img_1'];
+
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  PageRouteBuilder(
+                                    pageBuilder: (context, animation,
+                                            secondaryAnimation) =>
+                                        ContestDetailPage(
+                                      report: report,
+                                      userId: userId ?? '',
+                                    ),
+                                    transitionsBuilder: (context, animation,
+                                        secondaryAnimation, child) {
+                                      const begin = Offset(1.0, 0.0);
+                                      const end = Offset.zero;
+                                      const curve = Curves.ease;
+
+                                      var tween = Tween(begin: begin, end: end)
+                                          .chain(CurveTween(curve: curve));
+
+                                      return SlideTransition(
+                                        position: animation.drive(tween),
+                                        child: child,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                              child: Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                                elevation: 3,
+                                margin: const EdgeInsets.all(8.0),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        padding: EdgeInsets.all(2),
+                                        child: base64String != null
+                                            ? ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: Image.memory(
+                                                  base64Decode(base64String),
+                                                  width: 55,
+                                                  height: 55,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error,
+                                                      stackTrace) {
+                                                    return Icon(
+                                                      LineAwesomeIcons
+                                                          .certificate,
+                                                      color: Colors.grey[600],
+                                                    );
+                                                  },
+                                                ),
+                                              )
+                                            : Icon(
+                                                LineAwesomeIcons.certificate,
+                                                color: Colors.grey[600],
+                                              ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    'การประกวด',
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  report['date'],
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                            Text(
+                                              report['award'] ?? 'N/A',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      return Column(
+                        children: [
+                          SizedBox(height: 15),
+                          Text('ไม่มีบันทึกการประกวด'),
+                          SizedBox(height: 15),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -1481,13 +1991,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'บันทึกประจำเดือน',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
                     IconButton(
                       onPressed: () {
                         Navigator.of(context).pop();
@@ -1496,7 +2000,16 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                Center(
+                  child: Text(
+                    'บันทึกประจำเดือน',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 30),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
@@ -1613,31 +2126,30 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           child: Container(
             height: MediaQuery.of(context).size.height * 0.75,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header with text and close button
-                Container(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'บันทึกการฉีดวัคซีน',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        icon: Icon(Icons.close),
-                      ),
-                    ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                Center(
+                  child: Text(
+                    'บันทึกการฉีดวัคซีน',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                SizedBox(height: 30),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -1868,7 +2380,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
   // ฟังก์ชันสำหรับแสดง Dialog เพื่อบันทึกข้อมูลวัคซีน
   void _showVaccineTableDialog() {
-    // เรียกใช้ฟังก์ชันเพื่ออัปเดตลิสต์วัคซีนก่อนแสดง Dialog
     _fetchVaccinationData();
 
     showDialog(
@@ -1880,46 +2391,31 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             borderRadius: BorderRadius.circular(20.0),
           ),
           child: Container(
-            height: MediaQuery.of(context).size.height * 0.78,
+            height: MediaQuery.of(context).size.height * 0.7,
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'บันทึกการฉีดวัคซีน',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            Text(
-                              '(ตามเกณฑ์)',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _resetForm();
-                        },
-                        icon: Icon(Icons.close),
-                      ),
-                    ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
+                    IconButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                Center(
+                  child: Text(
+                    'บันทึกการฉีดวัคซีนตามเกณฑ์',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                SizedBox(height: 10),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20.0),
@@ -2143,9 +2639,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                             } else {
                               _saveVaccineToFirestore();
                               setState(() {
-                                // เพิ่มวัคซีนที่ถูกเลือกไปในลิสต์วัคซีนที่ถูกเลือก
                                 _selectedVaccines.add(_selectedVac_Table!);
-                                // อัปเดตลิสต์วัคซีนใหม่
                                 _updateVaccinationList();
                               });
                               Navigator.of(context).pop();
@@ -2160,7 +2654,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                 horizontal: 30, vertical: 10),
                           ),
                           child: Text('บันทึกข้อมูล'),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -2195,20 +2689,25 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'ตารางการฉีดวัคซีน',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
+                    Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
                     IconButton(
-                      icon: Icon(Icons.close),
                       onPressed: () {
                         Navigator.of(context).pop();
                       },
+                      icon: Icon(Icons.close),
                     ),
                   ],
                 ),
-                SizedBox(height: 10),
+                Center(
+                  child: Text(
+                    'ตารางการฉีดวัคซีน',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 30),
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -2217,8 +2716,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                       child: Table(
                         border: TableBorder.all(),
                         columnWidths: const <int, TableColumnWidth>{
-                          0: FixedColumnWidth(60),
-                          1: FixedColumnWidth(140),
+                          0: FixedColumnWidth(70),
+                          1: FixedColumnWidth(160),
                           2: FixedColumnWidth(70),
                         },
                         defaultVerticalAlignment:

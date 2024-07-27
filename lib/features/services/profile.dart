@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 class ProfileService {
@@ -26,6 +31,90 @@ class ProfileService {
       return userDoc.data() as Map<String, dynamic>?;
     }
     return null;
+  }
+
+  Future<Uint8List?> pickImage(ImageSource source) async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
+      final File file = File(pickedFile.path);
+      return await file.readAsBytes();
+    } else {
+      return null;
+    }
+  }
+
+  Future<Uint8List?> compressImage(Uint8List image) async {
+    try {
+      List<int> compressedImage = await FlutterImageCompress.compressWithList(
+        image,
+        minHeight: 720, // ลดความสูงเป็น 720 pixel
+        minWidth: 1280, // ลดความกว้างเป็น 1280 pixel
+        quality: 85, // ลดคุณภาพรูปภาพเป็น 85%
+      );
+      return Uint8List.fromList(compressedImage);
+    } catch (e) {
+      print('Error compressing image: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveAwardToFirestore({
+    required String userId,
+    required String petId,
+    required String nameAward,
+    required String date,
+    required String description,
+    required String img1,
+    required String img2,
+  }) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    DocumentReference newData = await _firestore
+        .collection('contest_pet')
+        .doc(userId)
+        .collection('pet_contest')
+        .add({
+      'pet_id': petId,
+      'award': nameAward,
+      'date': date,
+      'des': description,
+      'img_1': img1,
+      'img_2': img2,
+      'created_at': formatted,
+      'updates_at': formatted,
+    });
+    String docId = newData.id;
+    await newData.update({'id_period': docId});
+  }
+
+  Future<void> updateAward_ToFirestore({
+    required String docId,
+    required String userId,
+    required String petId,
+    required String nameAward,
+    required String description,
+    required String date,
+  }) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    await FirebaseFirestore.instance
+        .collection('contest_pet')
+        .doc(userId)
+        .collection('pet_contest')
+        .doc(docId)
+        .update({
+      'award': nameAward,
+      'des': description,
+      'date': date,
+      'updates_at': formatted,
+    });
   }
 
   Future<void> saveReportToFirestore({
@@ -61,7 +150,6 @@ class ProfileService {
     required String description,
     required String date,
   }) async {
-    
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     final String formatted =
@@ -228,7 +316,6 @@ class ProfileService {
     required String location,
     required String date,
   }) async {
-    
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     final String formatted =

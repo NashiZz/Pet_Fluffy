@@ -1,13 +1,13 @@
 // ignore_for_file: file_names, camel_case_types, avoid_print, no_leading_underscores_for_local_identifiers
 
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
 import 'dart:convert';
 
 //หน้า แก้ไขข้อมูลสัตว์เลี้ยง
@@ -21,6 +21,7 @@ class Edit_Pet_Page extends StatefulWidget {
 }
 
 class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
+  final ProfileService _profileService = ProfileService();
   User? user = FirebaseAuth.instance.currentUser;
 
   static const String tempPetImageUrl =
@@ -97,14 +98,14 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
 
   // เพื่อเข้าถึงตัวเลือกรูปภาพของอุปกรณ์
   void selectImage() async {
-    Uint8List? img = await pickImage(ImageSource.gallery);
+    Uint8List? img = await _profileService.pickImage(ImageSource.gallery);
     setState(() {
       _profileImage = img;
     });
   }
 
   void selectNormalImage() async {
-    Uint8List? img = await pickImage(ImageSource.gallery);
+    Uint8List? img = await _profileService.pickImage(ImageSource.gallery);
     setState(() {
       _normalImage = img;
       _imageFileController.text = _normalImage != null
@@ -545,17 +546,6 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
         return _breedsOfType2;
       default:
         return [];
-    }
-  }
-
-  Future<Uint8List?> pickImage(ImageSource source) async {
-    final ImagePicker _picker = ImagePicker();
-    final XFile? pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
-      final File file = File(pickedFile.path);
-      return await file.readAsBytes();
-    } else {
-      return null;
     }
   }
 }

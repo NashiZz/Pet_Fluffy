@@ -1,13 +1,11 @@
 // ignore_for_file: camel_case_types, avoid_print
 
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,7 +23,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   late List<Map<String, dynamic>> petUserDataList = [];
   bool isLoading = true;
   final TextEditingController _controller = TextEditingController();
-  String? petId_main ;
+  String? petId_main;
 
   @override
   void initState() {
@@ -38,81 +36,80 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  String? petId = prefs.getString(user!.uid.toString());
-  petId_main = petId;
-  try {
-    QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
-        .collection('Pet_User')
-        .where('user_id', isEqualTo: user!.uid)
-        .get();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? petId = prefs.getString(user!.uid.toString());
+    petId_main = petId;
+    try {
+      QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+          .collection('Pet_User')
+          .where('user_id', isEqualTo: user!.uid)
+          .get();
 
-    List<Map<String, dynamic>> allPets = petUserQuerySnapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
+      List<Map<String, dynamic>> allPets = petUserQuerySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
 
-    List<Map<String, dynamic>> nonDeletedPets = allPets
-        .where((pet) => pet['status'] != 'ถูกลบ')
-        .toList();
+      List<Map<String, dynamic>> nonDeletedPets =
+          allPets.where((pet) => pet['status'] != 'ถูกลบ').toList();
 
-    if (searchValue.isNotEmpty) {
-      List<Map<String, dynamic>> filteredPets = nonDeletedPets.where((pet) {
-        bool matchesName = pet['name']
-            .toString()
-            .toLowerCase()
-            .contains(searchValue.toLowerCase());
+      if (searchValue.isNotEmpty) {
+        List<Map<String, dynamic>> filteredPets = nonDeletedPets.where((pet) {
+          bool matchesName = pet['name']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
 
-        DateTime birthDate = DateTime.parse(pet['birthdate']);
-        DateTime now = DateTime.now();
-        int yearsDifference = now.year - birthDate.year;
-        if (now.month < birthDate.month ||
-            (now.month == birthDate.month && now.day < birthDate.day)) {
-          yearsDifference--;
-        }
-        bool matchesAge = yearsDifference
-            .toString()
-            .toLowerCase()
-            .contains(searchValue.toLowerCase());
+          DateTime birthDate = DateTime.parse(pet['birthdate']);
+          DateTime now = DateTime.now();
+          int yearsDifference = now.year - birthDate.year;
+          if (now.month < birthDate.month ||
+              (now.month == birthDate.month && now.day < birthDate.day)) {
+            yearsDifference--;
+          }
+          bool matchesAge = yearsDifference
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
 
-        bool matchesBreed = pet['breed_pet']
-            .toString()
-            .toLowerCase()
-            .contains(searchValue.toLowerCase());
+          bool matchesBreed = pet['breed_pet']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
 
-        bool matchesGender = pet['gender']
-            .toString()
-            .toLowerCase()
-            .contains(searchValue.toLowerCase());
+          bool matchesGender = pet['gender']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
 
-        bool matchesColor = pet['color']
-            .toString()
-            .toLowerCase()
-            .contains(searchValue.toLowerCase());
+          bool matchesColor = pet['color']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
 
-        return matchesName ||
-            matchesAge ||
-            matchesBreed ||
-            matchesGender ||
-            matchesColor;
-      }).toList();
+          return matchesName ||
+              matchesAge ||
+              matchesBreed ||
+              matchesGender ||
+              matchesColor;
+        }).toList();
 
+        setState(() {
+          petUserDataList = filteredPets;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          petUserDataList = nonDeletedPets;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error getting pet user data from Firestore: $e');
       setState(() {
-        petUserDataList = filteredPets;
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        petUserDataList = nonDeletedPets;
         isLoading = false;
       });
     }
-  } catch (e) {
-    print('Error getting pet user data from Firestore: $e');
-    setState(() {
-      isLoading = false;
-    });
   }
-}
 
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,68 +286,70 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
-            children: petId_main == petUserData['pet_id'] ? [] :[
-              IconButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text("ยืนยันการลบ"),
-                        content:
-                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _deletePetData(petUserData['pet_id']);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยืนยัน"),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-                icon: const Icon(LineAwesomeIcons.minus),
-              ),
-              IconButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text("ยืนยันการเปลี่ยนตัวหลัก"),
-                        content: const Text(
-                            "คุณแน่ใจหรือไม่ที่ต้องเปลี่ยนตัวหลักเป็นตัวนี้?"),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _shufflePet(petUserData['pet_id']);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยืนยัน"),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-                icon: const Icon(LineAwesomeIcons.alternate_exchange),
-              ),
-            ],
+            children: petId_main == petUserData['pet_id']
+                ? []
+                : [
+                    IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("ยืนยันการลบ"),
+                              content: const Text(
+                                  "คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    _deletePetData(petUserData['pet_id']);
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยืนยัน"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      icon: const Icon(LineAwesomeIcons.minus),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("ยืนยันการเปลี่ยนตัวหลัก"),
+                              content: const Text(
+                                  "คุณแน่ใจหรือไม่ที่ต้องเปลี่ยนตัวหลักเป็นตัวนี้?"),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    _shufflePet(petUserData['pet_id']);
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยืนยัน"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      icon: const Icon(LineAwesomeIcons.alternate_exchange),
+                    ),
+                  ],
           ),
         ),
       ),
@@ -364,41 +363,46 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     CollectionReference usagePet =
         FirebaseFirestore.instance.collection('Usage_pet');
 
-    // ตรวจสอบว่าเอกสารที่ต้องการมีอยู่หรือไม่
-    DocumentSnapshot docSnapshot = await usagePet.doc(user!.uid).get();
+    try {
+      DocumentSnapshot docSnapshot = await usagePet.doc(user!.uid).get();
 
-    if (docSnapshot.exists) {
-      // ถ้ามีเอกสารอยู่แล้ว ให้ทำการอัปเดต
-      try {
-        await usagePet.doc(user!.uid).update({
-          'pet_id': petId,
-        });
-        _getPetUserDataFromFirestore('');
-      } catch (e) {
-        print('Error updating pet data: $e');
-      }
-    } else {
-      // ถ้าไม่มีเอกสารอยู่ ให้สร้างเอกสารใหม่
-      try {
+      if (docSnapshot.exists) {
+        await usagePet.doc(user!.uid).update({'pet_id': petId});
+      } else {
         await usagePet.doc(user!.uid).set({
           'pet_id': petId,
-          'user_id': user!.uid, // เพิ่มข้อมูล user_id เพื่อสร้างเอกสารใหม่
+          'user_id': user!.uid,
         });
-        _getPetUserDataFromFirestore('');
-      } catch (e) {
-        print('Error creating new pet data: $e');
       }
+
+      _getPetUserDataFromFirestore('');
+
+      // แสดงแจ้งเตือนเมื่อสำเร็จ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เปลี่ยนสัตว์เลี้ยงตัวหลักแล้ว'),
+          duration: Duration(seconds: 2), // กำหนดระยะเวลาแสดง
+        ),
+      );
+    } catch (e) {
+      print('Error updating or creating pet data: $e');
+      // แสดงแจ้งเตือนเมื่อเกิดข้อผิดพลาด (ถ้าต้องการ)
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการเปลี่ยนสัตว์เลี้ยง'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
   //ปุ่มลบข้อมูลสัตว์เลี้ยง
   void _deletePetData(String petId) async {
-    
     try {
-       await FirebaseFirestore.instance
-        .collection('Pet_User')
-        .doc(petId)
-        .update({'status': 'ถูกลบ'});
+      await FirebaseFirestore.instance
+          .collection('Pet_User')
+          .doc(petId)
+          .update({'status': 'ถูกลบ'});
       // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
       _getPetUserDataFromFirestore('');
     } catch (e) {

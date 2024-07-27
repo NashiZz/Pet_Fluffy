@@ -21,7 +21,7 @@ class VaccineCard extends StatelessWidget {
       elevation: 3,
       margin: const EdgeInsets.all(8.0),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(18.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
