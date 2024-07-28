@@ -3,7 +3,6 @@ import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
 import 'package:Pet_Fluffy/features/page/faverite_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
-import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -88,16 +87,16 @@ class _Setting_PageState extends State<Setting_Page> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {},
-          icon: const Icon(LineAwesomeIcons.cog),
+        leading: Icon(
+          LineAwesomeIcons.cog,
+          color: Colors.black, // ตั้งสีของไอคอนได้ที่นี่
         ),
-        title: Text("การตั้งค่า", style: Theme.of(context).textTheme.headlineMedium),
+        title: Text("การตั้งค่า",
+            style: Theme.of(context).textTheme.headlineMedium),
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).pushReplacement(MaterialPageRoute(
-                  builder: (context) => const Navigator_Page(initialIndex: 0)));
+              Navigator.of(context).pop();
             },
             icon: const Icon(LineAwesomeIcons.times),
           ),
@@ -158,11 +157,13 @@ class _Setting_PageState extends State<Setting_Page> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) => const Profile_user_Page()),
+                                      builder: (context) =>
+                                          const Profile_user_Page()),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255, 49, 42, 42),
+                                  backgroundColor:
+                                      const Color.fromARGB(255, 49, 42, 42),
                                   side: BorderSide.none,
                                   shape: const StadiumBorder()),
                               child: const Text(
@@ -184,7 +185,8 @@ class _Setting_PageState extends State<Setting_Page> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => Profile_pet_Page(petId: petId),
+                              builder: (context) =>
+                                  Profile_pet_Page(petId: petId),
                             ),
                           );
                         }
@@ -197,7 +199,9 @@ class _Setting_PageState extends State<Setting_Page> {
                       icon: LineAwesomeIcons.paw,
                       onPress: () {
                         Navigator.push(
-                            context, MaterialPageRoute(builder: (context) => PetAllTwo()));
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => PetAllTwo()));
                       },
                       isAnonymous: isAnonymous,
                     ),
@@ -208,7 +212,8 @@ class _Setting_PageState extends State<Setting_Page> {
                       onPress: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const FaveritePage()),
+                          MaterialPageRoute(
+                              builder: (context) => const FaveritePage()),
                         );
                       },
                       isAnonymous: isAnonymous,
@@ -236,7 +241,8 @@ class _Setting_PageState extends State<Setting_Page> {
                           builder: (BuildContext context) {
                             return AlertDialog(
                               title: const Text("ออกจากระบบ"),
-                              content: const Text("คุณต้องการออกจากระบบหรือไม่?"),
+                              content:
+                                  const Text("คุณต้องการออกจากระบบหรือไม่?"),
                               actions: [
                                 TextButton(
                                   onPressed: () {
@@ -246,14 +252,16 @@ class _Setting_PageState extends State<Setting_Page> {
                                 ),
                                 TextButton(
                                   onPressed: () async {
-                                    User? user = FirebaseAuth.instance.currentUser;
+                                    User? user =
+                                        FirebaseAuth.instance.currentUser;
                                     if (user != null && user.isAnonymous) {
                                       // ลบบัญชี anonymous
                                       try {
                                         await user.delete();
                                         print("Anonymous account deleted");
                                       } catch (e) {
-                                        print("Error deleting anonymous account: $e");
+                                        print(
+                                            "Error deleting anonymous account: $e");
                                       }
                                     } else {
                                       await GoogleSignIn().signOut();
@@ -264,7 +272,8 @@ class _Setting_PageState extends State<Setting_Page> {
                                       // ignore: use_build_context_synchronously
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => const LoginPage()),
+                                          builder: (context) =>
+                                              const LoginPage()),
                                       (Route<dynamic> route) => false,
                                     );
                                   },
@@ -312,7 +321,8 @@ class MenuWidget extends StatelessWidget {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text("ต้องสมัครสมาชิกก่อน"),
-                    content: const Text("กรุณาสมัครสมาชิกก่อนเพื่อเข้าถึงเมนูนี้"),
+                    content:
+                        const Text("กรุณาสมัครสมาชิกก่อนเพื่อเข้าถึงเมนูนี้"),
                     actions: [
                       TextButton(
                         onPressed: () {
