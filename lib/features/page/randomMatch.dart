@@ -403,7 +403,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     .where((pet) =>
                         pet['type_pet'] == petType &&
                         pet['gender'] == oppositeGender &&
-                        pet['status'] == 'พร้อมผสมพันธุ์')
+                        pet['status'] == 'พร้อมผสมพันธุ์' || pet['status'] == 'มีชีวิต') 
                     .toList();
 
                 return FutureBuilder<List<Map<String, dynamic>>>(

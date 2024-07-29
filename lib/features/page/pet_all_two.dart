@@ -175,7 +175,7 @@ class _PetAllTwoState extends State<PetAllTwo> {
                   left: 0,
                   child: SizedBox(
                     height: MediaQuery.of(context).size.height / 2.55,
-                    width: MediaQuery.of(context).size.width,
+                    width: MediaQuery.of(context).size.width ,
                     child: Container(
                       decoration: BoxDecoration(
                           gradient: LinearGradient(

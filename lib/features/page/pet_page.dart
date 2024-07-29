@@ -1,5 +1,7 @@
 // ignore_for_file: camel_case_types, avoid_print, use_build_context_synchronously, no_leading_underscores_for_local_identifiers
 
+import 'dart:developer';
+
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -39,14 +41,23 @@ class _Pet_PageState extends State<Pet_Page> {
   String? _selectedType;
   String? _selectedBreed;
   String? _selectedGender;
+  String? _selectedStatus;
 
   DateTime? _selectedDate;
   final TextEditingController _dateController = TextEditingController();
 
   final List<String> _genders = ['ตัวผู้', 'ตัวเมีย'];
+  final List<String> _status = [
+    'มีชีวิต',
+    'เสียชีวิต',
+    'พร้อมผสมพันธุ์',
+    'ไม่พร้อมผสมพันธุ์'
+  ];
   List<String> _types = [];
   List<String> _breedsOfType1 = [];
   List<String> _breedsOfType2 = [];
+  final TextEditingController _otherBreedController = TextEditingController();
+  bool _isOtherBreed = false;
 
   bool _isLoading = false;
 
@@ -68,8 +79,11 @@ class _Pet_PageState extends State<Pet_Page> {
   //พันธ์สุนัข
   void _fetchBreadDataDog() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('pet_bread').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc("Qy38o0xCXKQlIngPz9jb")
+          .collection('gene_pet')
+          .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
       setState(() {
@@ -83,8 +97,11 @@ class _Pet_PageState extends State<Pet_Page> {
   //พันธ์แมว
   void _fetchBreadDataCat() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('pet_bread_1').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc("5yWv1hawXz6Gh15gEed1")
+          .collection('gene_pet')
+          .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
       setState(() {
@@ -256,6 +273,7 @@ class _Pet_PageState extends State<Pet_Page> {
                                   setState(() {
                                     _selectedType = newValue;
                                     _selectedBreed = null;
+                                    _isOtherBreed = false; // รีเซ็ตค่าอื่นๆ
                                   });
                                 },
                                 decoration: InputDecoration(
@@ -270,28 +288,59 @@ class _Pet_PageState extends State<Pet_Page> {
                             ),
                             const Padding(padding: EdgeInsets.all(5)),
                             if (_selectedType != null)
+                              // ตรวจสอบว่า `_isOtherBreed` เป็น `true` หรือไม่
+                              if (!_isOtherBreed)
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedBreed,
+                                    items: [
+                                      ..._getBreedsByType(_selectedType!)
+                                          .map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      }).toList(),
+                                      DropdownMenuItem<String>(
+                                        value: 'อื่นๆ',
+                                        child: Text('อื่นๆ'),
+                                      ),
+                                    ],
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        if (newValue == 'อื่นๆ') {
+                                          _isOtherBreed = true;
+                                          _selectedBreed = null;
+                                        } else {
+                                          _isOtherBreed = false;
+                                          _selectedBreed = newValue;
+                                        }
+                                      });
+                                    },
+                                    decoration: InputDecoration(
+                                      labelText: 'พันธุ์สัตว์เลี้ยง',
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(30.0),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 10, horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                            if (_isOtherBreed)
                               Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  value: _selectedBreed,
-                                  items: _getBreedsByType(_selectedType!)
-                                      .map((String value) {
-                                    return DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(value),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    setState(() {
-                                      _selectedBreed = newValue;
-                                    });
-                                  },
+                                child: TextField(
+                                  style: const TextStyle(fontSize: 14),
+                                  controller: _otherBreedController,
                                   decoration: InputDecoration(
-                                    labelText: 'พันธุ์สัตว์เลี้ยง',
+                                    labelText: 'ป้อนพันธุ์สัตว์เลี้ยงเอง',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30.0),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 8),
+                                        vertical: 5, horizontal: 8),
                                   ),
                                 ),
                               ),
@@ -453,6 +502,35 @@ class _Pet_PageState extends State<Pet_Page> {
                           ],
                         ),
                         const SizedBox(height: 15),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedStatus,
+                                items: _status.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedStatus = newValue;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'สถานะ',
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(30.0)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 15),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
                         TextField(
                           style: const TextStyle(
                             fontSize: 18,
@@ -510,8 +588,16 @@ class _Pet_PageState extends State<Pet_Page> {
         _normalImage != null ? base64Encode(_normalImage!) : '';
     String description = _desController.text;
     String type = _selectedType ?? '';
-    String breed = _selectedBreed ?? '';
+    String breed ;
     String gender = _selectedGender ?? '';
+    String status = _selectedStatus ?? '';
+    
+    if(_isOtherBreed){
+      breed = _otherBreedController.text;
+    }
+    else {
+      breed = _selectedBreed ?? '';
+    }
 
     CollectionReference pets =
         FirebaseFirestore.instance.collection('Pet_User');
@@ -529,7 +615,7 @@ class _Pet_PageState extends State<Pet_Page> {
         'description': description,
         'type_pet': type,
         'breed_pet': breed,
-        'status': 'มีชีวิต',
+        'status': status,
         'gender': gender,
       });
 
