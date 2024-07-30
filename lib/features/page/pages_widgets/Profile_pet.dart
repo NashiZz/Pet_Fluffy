@@ -1,9 +1,8 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
 import 'dart:typed_data';
-
-import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/AddContest_Page.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/ContestDetail_Page.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/History_Math.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogHistory_Match.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
@@ -747,17 +746,31 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
               child: Column(
                 children: [
                   MenuPetWidget(
-                    title: "ประวัติการจับคู่",
-                    icon: LineAwesomeIcons.history,
+                      title: "ประวัติการจับคู่",
+                      icon: LineAwesomeIcons.history,
+                      onPress: () => showHistoryDialog(
+                          context: context,
+                          userId: userId ?? '',
+                          petId: pet_id)),
+                  MenuPetWidget(
+                      title: "การประกวด",
+                      icon: LineAwesomeIcons.certificate,
+                      onPress: () => showContestDialog(
+                          context: context,
+                          userId: userId ?? '',
+                          petId: pet_id)),
+                  MenuPetWidget(
+                    title: "ใบเพ็ดดีกรี",
+                    icon: LineAwesomeIcons.dna,
                     onPress: () {
                       Navigator.push(
                         context,
                         PageRouteBuilder(
                           pageBuilder:
                               (context, animation, secondaryAnimation) =>
-                                  HistoryMathPage(
+                                  PetdigreeDetailPage(
                             userId: userId ?? '',
-                            pet_type: pet_type,
+                            petId: pet_id,
                           ),
                           transitionsBuilder:
                               (context, animation, secondaryAnimation, child) {
@@ -776,43 +789,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         ),
                       );
                     },
-                  ),
-                  MenuPetWidget(
-                      title: "การประกวด",
-                      icon: LineAwesomeIcons.certificate,
-                      onPress: (_showContestDialog)
-                      //  {
-                      //   Navigator.push(
-                      //     context,
-                      //     PageRouteBuilder(
-                      //       pageBuilder:
-                      //           (context, animation, secondaryAnimation) =>
-                      //               ContestPage(
-                      //         userId: userId ?? '',
-                      //         petId: pet_id,
-                      //       ),
-                      //       transitionsBuilder:
-                      //           (context, animation, secondaryAnimation, child) {
-                      //         const begin = Offset(1.0, 0.0);
-                      //         const end = Offset.zero;
-                      //         const curve = Curves.ease;
-
-                      //         var tween = Tween(begin: begin, end: end)
-                      //             .chain(CurveTween(curve: curve));
-
-                      //         return SlideTransition(
-                      //           position: animation.drive(tween),
-                      //           child: child,
-                      //         );
-                      //       },
-                      //     ),
-                      //   );
-                      // },
-                      ),
-                  MenuPetWidget(
-                    title: "ใบเพ็ดดีกรี",
-                    icon: LineAwesomeIcons.dna,
-                    onPress: () {},
                   ),
                   MenuPetWidget(
                     title: "ค่าการผสมพันธุ์",
@@ -1711,259 +1687,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           Navigator.of(context).pop(); // ปิด BottomSheet เปลี่ยนสถานะ
           _refreshHomePage();
         }
-      },
-    );
-  }
-
-  // การประกวด
-  void _showContestDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.65,
-            padding: EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      icon: Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                Center(
-                  child: Text(
-                    'ประวัติการประกวด',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 15),
-                Row(
-                  children: [
-                    Text(
-                      'การประกวด',
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.start,
-                    ),
-                    Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                            pageBuilder:
-                                (context, animation, secondaryAnimation) =>
-                                    AddContestPage(
-                              userId: userId ?? '',
-                              petId: pet_id,
-                            ),
-                            transitionsBuilder: (context, animation,
-                                secondaryAnimation, child) {
-                              const begin = Offset(1.0, 0.0);
-                              const end = Offset.zero;
-                              const curve = Curves.ease;
-
-                              var tween = Tween(begin: begin, end: end)
-                                  .chain(CurveTween(curve: curve));
-
-                              return SlideTransition(
-                                position: animation.drive(tween),
-                                child: child,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'เพิ่ม',
-                        style:
-                            TextStyle(color: Colors.blueAccent, fontSize: 16),
-                      ),
-                    ),
-                  ],
-                ),
-                Expanded(
-                  child: FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance
-                        .collection('contest_pet')
-                        .doc(userId)
-                        .collection('pet_contest')
-                        .where('pet_id', isEqualTo: widget.petId)
-                        .get(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: const CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      }
-                      if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: snapshot.data!.docs.length,
-                          itemBuilder: (context, index) {
-                            DocumentSnapshot reportDoc =
-                                snapshot.data!.docs[index];
-                            Map<String, dynamic> report =
-                                reportDoc.data() as Map<String, dynamic>;
-
-                            final base64String = report['img_1'];
-
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  PageRouteBuilder(
-                                    pageBuilder: (context, animation,
-                                            secondaryAnimation) =>
-                                        ContestDetailPage(
-                                      report: report,
-                                      userId: userId ?? '',
-                                    ),
-                                    transitionsBuilder: (context, animation,
-                                        secondaryAnimation, child) {
-                                      const begin = Offset(1.0, 0.0);
-                                      const end = Offset.zero;
-                                      const curve = Curves.ease;
-
-                                      var tween = Tween(begin: begin, end: end)
-                                          .chain(CurveTween(curve: curve));
-
-                                      return SlideTransition(
-                                        position: animation.drive(tween),
-                                        child: child,
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                              child: Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.0),
-                                ),
-                                elevation: 3,
-                                margin: const EdgeInsets.all(8.0),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(18.0),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey[200],
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        padding: EdgeInsets.all(2),
-                                        child: base64String != null
-                                            ? ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: Image.memory(
-                                                  base64Decode(base64String),
-                                                  width: 55,
-                                                  height: 55,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
-                                                    return Icon(
-                                                      LineAwesomeIcons
-                                                          .certificate,
-                                                      color: Colors.grey[600],
-                                                    );
-                                                  },
-                                                ),
-                                              )
-                                            : Icon(
-                                                LineAwesomeIcons.certificate,
-                                                color: Colors.grey[600],
-                                              ),
-                                      ),
-                                      SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    'การประกวด',
-                                                    style: TextStyle(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text(
-                                                  report['date'],
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                            Text(
-                                              report['award'] ?? 'N/A',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }
-                      return Column(
-                        children: [
-                          SizedBox(height: 15),
-                          Text('ไม่มีบันทึกการประกวด'),
-                          SizedBox(height: 15),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
       },
     );
   }

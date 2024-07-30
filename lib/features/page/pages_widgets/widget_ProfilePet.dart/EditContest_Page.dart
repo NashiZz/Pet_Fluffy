@@ -7,32 +7,54 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-class AddContestPage extends StatefulWidget {
+class EditContestPage extends StatefulWidget {
   final String userId;
-  final String petId;
+  final Map<String, dynamic> report;
 
-  const AddContestPage({
+  const EditContestPage({
     Key? key,
     required this.userId,
-    required this.petId,
+    required this.report,
   }) : super(key: key);
 
   @override
-  _AddContestPageState createState() => _AddContestPageState();
+  _EditContestPageState createState() => _EditContestPageState();
 }
 
-class _AddContestPageState extends State<AddContestPage> {
-  final _formKey = GlobalKey<FormState>();
+class _EditContestPageState extends State<EditContestPage> {
   final ProfileService profileService = ProfileService();
   final TextEditingController _nameAwardController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
 
   DateTime? _selectedDate;
-  List<String> base64Images = [];
+  List<Uint8List> images = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    // หากมีข้อมูลการประกวดให้ตั้งค่าฟอร์ม
+    _nameAwardController.text = widget.report['award'] ?? '';
+    _desController.text = widget.report['des'] ?? '';
+    _dateController.text = widget.report['date'] ?? '';
+
+    images.clear();
+    // ดึงรูปภาพจาก base64
+    if (widget.report['img_1'] != null)
+      images.add(base64Decode(widget.report['img_1']));
+    if (widget.report['img_2'] != null)
+      images.add(base64Decode(widget.report['img_2']));
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      images.removeAt(index); // ลบรูปภาพจาก List
+    });
+  }
 
   Future<void> _pickAndCompressImage(ImageSource source) async {
-    if (base64Images.length >= 2) {
+    if (images.length >= 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('สามารถเพิ่มรูปภาพได้สูงสุด 2 รูป')),
       );
@@ -49,7 +71,7 @@ class _AddContestPageState extends State<AddContestPage> {
             await profileService.compressImage(imageBytes);
         if (compressedBytes != null) {
           setState(() {
-            base64Images.add(uint8ListToBase64(compressedBytes));
+            images.add(compressedBytes);
           });
         } else {
           print('Failed to compress image');
@@ -92,40 +114,39 @@ class _AddContestPageState extends State<AddContestPage> {
     );
   }
 
-  Future<void> _saveAward() async {
-    if (_formKey.currentState!.validate()) {
-      _showLoadingDialog();
+  void _saveOrUpdateContest() {
+    _showLoadingDialog(); // แสดง Dialog โหลดข้อมูล
 
-      try {
-        await profileService.saveAwardToFirestore(
-          userId: widget.userId,
-          petId: widget.petId,
-          nameAward: _nameAwardController.text,
-          date: _dateController.text,
-          description: _desController.text,
-          img1: base64Images.isNotEmpty ? base64Images[0] : '',
-          img2: base64Images.length > 1 ? base64Images[1] : '',
-        );
-
-        Navigator.of(context).pop(); // Close loading dialog
-        Navigator.of(context).pop(); // Close the page
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
-        );
-      } catch (e) {
-        Navigator.of(context).pop(); // Close loading dialog in case of error
-        print("Error updating award data: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
-        );
-      }
-    }
+    profileService
+        .updateAward_ToFirestore(
+      userId: widget.userId,
+      docId: widget.report['id_contest'],
+      nameAward: _nameAwardController.text,
+      date: _dateController.text,
+      description: _desController.text,
+      img1: images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
+      img2: images.length > 1 ? uint8ListToBase64(images[1]) : '',
+    )
+        .then((_) {
+      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
+      Navigator.of(context).pop({
+        'id_contest': widget.report['id_contest'] ?? '',
+        'award': _nameAwardController.text,
+        'des': _desController.text,
+        'date': _dateController.text,
+        'img_1': images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
+        'img_2': images.length > 1 ? uint8ListToBase64(images[1]) : '',
+      });
+    }).catchError((error) {
+      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+      print("Error updating Contest data: $error");
+    });
   }
 
   void selectDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
@@ -149,14 +170,13 @@ class _AddContestPageState extends State<AddContestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('เพิ่มข้อมูลการประกวด'),
+        title: Text('แก้ไขข้อมูลการประกวด'),
         centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Form(
-            key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,12 +195,6 @@ class _AddContestPageState extends State<AddContestPage> {
                       horizontal: 15,
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'กรุณากรอกชื่อการประกวด';
-                    }
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
@@ -234,55 +248,65 @@ class _AddContestPageState extends State<AddContestPage> {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () =>
-                          _pickAndCompressImage(ImageSource.gallery),
+                      onPressed: images.length < 2
+                          ? () => _pickAndCompressImage(ImageSource.gallery)
+                          : null,
                       child: const Text('เพิ่มรูปภาพ'),
                     ),
                   ],
                 ),
                 SizedBox(height: 15),
-                if (base64Images.isNotEmpty)
+                if (images.isNotEmpty)
                   Wrap(
                     spacing: 10.0,
                     runSpacing: 8.0,
-                    children: List.generate(base64Images.length, (index) {
+                    children: List.generate(images.length, (index) {
+                      final image = images[index];
                       return Stack(
                         children: [
                           Image.memory(
-                            base64Decode(base64Images[index]),
+                            image,
                             width: 100,
                             height: 100,
                             fit: BoxFit.cover,
                           ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: IconButton(
-                              icon:
-                                  Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  base64Images.removeAt(index);
-                                });
-                              },
+                          if (images.length >
+                              0) // แสดงปุ่มลบเฉพาะเมื่อมีมากกว่าหนึ่งรูป
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: IconButton(
+                                icon: Icon(Icons.remove_circle,
+                                    color: Colors.red),
+                                onPressed: () => _removeImage(index),
+                              ),
                             ),
-                          ),
                         ],
                       );
                     }),
+                  )
+                else
+                  Center(
+                    child: Text(
+                      'ไม่มีรูปภาพ',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
                   ),
                 const SizedBox(height: 30),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton(
-                      onPressed: _saveAward,
+                      onPressed: _saveOrUpdateContest,
                       child: Row(
                         children: [
                           Icon(
                             LineAwesomeIcons.save,
                           ),
-                          Text('บันทึก', style: TextStyle(fontSize: 16)),
+                          Text(
+                            widget.report == null ? 'บันทึก' : 'อัปเดต',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ],
                       ),
                     ),
