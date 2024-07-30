@@ -1,3 +1,4 @@
+import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/EditContest_Page.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
@@ -6,11 +7,13 @@ import 'dart:convert';
 class ContestDetailPage extends StatefulWidget {
   final Map<String, dynamic> report;
   final String userId;
+  final String idContest;
 
   const ContestDetailPage({
     Key? key,
     required this.report,
     required this.userId,
+    required this.idContest,
   }) : super(key: key);
 
   @override
@@ -38,6 +41,43 @@ class _ContestDetailPageState extends State<ContestDetailPage> {
     return imageBase64Strings;
   }
 
+  Future<void> _navigateToEditContestPage() async {
+    // กรอง field ที่มีค่า
+    final reportWithValues = Map.fromEntries(_report.entries.where(
+        (entry) => entry.value != null && entry.value.toString().isNotEmpty));
+
+    final updatedReport = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            EditContestPage(
+          report: reportWithValues, // ส่งข้อมูลที่มีค่า
+          userId: widget.userId,
+        ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+
+          var tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+    );
+
+    if (updatedReport != null) {
+      setState(() {
+        _report = updatedReport;
+        _imageBase64Strings = _extractImageBase64Strings(_report);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final date = DateTime.parse(_report['date']);
@@ -50,7 +90,7 @@ class _ContestDetailPageState extends State<ContestDetailPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => _navigateToEditContestPage(),
             icon: const Icon(LineAwesomeIcons.edit),
           ),
         ],
@@ -119,7 +159,7 @@ class _ContestDetailPageState extends State<ContestDetailPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                flex: 2,
+                                flex: 3,
                                 child: Text(
                                   'รายละเอียด ',
                                   style: TextStyle(
@@ -172,9 +212,12 @@ class _ContestDetailPageState extends State<ContestDetailPage> {
                                         base64 != null && base64.isNotEmpty)
                                     .toList()[index];
                                 final bytes = base64Decode(base64String);
-                                return Image.memory(
-                                  bytes,
-                                  fit: BoxFit.cover,
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(20.0),
+                                  child: Image.memory(
+                                    bytes,
+                                    fit: BoxFit.cover,
+                                  ),
                                 );
                               },
                             )

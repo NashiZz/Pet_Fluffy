@@ -18,6 +18,24 @@ class ProfileService {
     throw Exception('Document does not exist');
   }
 
+  Future<Map<String, dynamic>> loadPetdigreeData(
+      String petId, String userId) async {
+    QuerySnapshot petQuerySnapshot = await _firestore
+        .collection('petdigree')
+        .doc(userId)
+        .collection('Data_Petdigree')
+        .where('pet_id', isEqualTo: petId)
+        .get();
+
+    if (petQuerySnapshot.docs.isNotEmpty) {
+      // Assuming you expect only one document with the given petId
+      DocumentSnapshot petDocSnapshot = petQuerySnapshot.docs.first;
+      return petDocSnapshot.data() as Map<String, dynamic>;
+    }
+
+    throw Exception('Document does not exist');
+  }
+
   Future<List<String>> fetchVacData(String collectionName) async {
     QuerySnapshot querySnapshot =
         await _firestore.collection(collectionName).get();
@@ -88,16 +106,17 @@ class ProfileService {
       'updates_at': formatted,
     });
     String docId = newData.id;
-    await newData.update({'id_period': docId});
+    await newData.update({'id_contest': docId});
   }
 
   Future<void> updateAward_ToFirestore({
     required String docId,
     required String userId,
-    required String petId,
     required String nameAward,
     required String description,
     required String date,
+    required String img1,
+    required String img2,
   }) async {
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
@@ -111,8 +130,68 @@ class ProfileService {
         .doc(docId)
         .update({
       'award': nameAward,
-      'des': description,
       'date': date,
+      'des': description,
+      'img_1': img1,
+      'img_2': img2,
+      'updates_at': formatted,
+    });
+  }
+
+  Future<void> savePetDigreeToFirestore({
+    required String userId,
+    required String petId,
+    required String numPet,
+    required String numPetF,
+    required String numPetM,
+    required String img_PetDigree,
+  }) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    DocumentReference newData = await _firestore
+        .collection('petdigree')
+        .doc(userId)
+        .collection('Data_Petdigree')
+        .add({
+      'pet_id': petId,
+      'num_pet': numPet,
+      'num_pet_f': numPetF,
+      'num_pet_m': numPetM,
+      'img_pet': img_PetDigree,
+      'created_at': formatted,
+      'updates_at': formatted,
+    });
+    String docId = newData.id;
+    await newData.update({'id_petdigree': docId});
+  }
+
+  Future<void> updatePetdigree_ToFirestore({
+    required String id_petdigree,
+    required String userId,
+    required String petId,
+    required String numPet,
+    required String numPetF,
+    required String numPetM,
+    required String img_PetDigree,
+  }) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    await FirebaseFirestore.instance
+        .collection('petdigree')
+        .doc(userId)
+        .collection('Data_Petdigree')
+        .doc(id_petdigree)
+        .update({
+      'num_pet': numPet,
+      'num_pet_f': numPetF,
+      'num_pet_m': numPetM,
+      'img_pet': img_PetDigree,
       'updates_at': formatted,
     });
   }
