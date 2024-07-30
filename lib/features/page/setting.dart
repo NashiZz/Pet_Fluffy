@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
 import 'package:Pet_Fluffy/features/page/faverite_page.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
@@ -96,7 +97,12 @@ class _Setting_PageState extends State<Setting_Page> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Navigator_Page(initialIndex: 0)),
+                (route) => false,
+              );
             },
             icon: const Icon(LineAwesomeIcons.times),
           ),

@@ -1,10 +1,14 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
+import 'dart:developer';
+
+import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
 import 'package:Pet_Fluffy/features/page/sign_up_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -322,11 +326,31 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => const LocationSelectionPage()),
-        );
+        try {
+          QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
+              .collection('user')
+              .where('uid', isEqualTo: user.uid)
+              .where('status', isEqualTo: 'สมาชิก')
+              .get();
+          if (getPetQuerySnapshot.docs.isNotEmpty) {
+            log(getPetQuerySnapshot.docs.isEmpty.toString());
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const LocationSelectionPage()),
+            );
+          } else {
+            log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+            
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AdminHomePage()),
+            );
+          }
+        } catch (e) {
+          print('Error: $e');
+        }
       } else {
         // Handle case when user is null
         ScaffoldMessenger.of(context).showSnackBar(

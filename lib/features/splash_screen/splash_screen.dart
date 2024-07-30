@@ -1,5 +1,6 @@
 // ignore_for_file: camel_case_types
 
+import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
@@ -60,21 +61,30 @@ class _SplashPageState extends State<Splash_Page> {
             if (userData.exists) {
               final lat = userData.data()?['lat'];
               final lng = userData.data()?['lng'];
+              final status = userData.data()?['status'];
 
-              if (lat != null && lng != null) {
-                // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
+              if (status == 'แอดมิน') {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => const Navigator_Page(initialIndex: 0),
-                  ),
-                );
+                    MaterialPageRoute(
+                      builder: (_) => const AdminHomePage(),
+                    ),
+                  );
               } else {
-                // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => const LocationSelectionPage(),
-                  ),
-                );
+                if (lat != null && lng != null) {
+                  // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const Navigator_Page(initialIndex: 0),
+                    ),
+                  );
+                } else {
+                  // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => const LocationSelectionPage(),
+                    ),
+                  );
+                }
               }
             } else {
               // หากผู้ใช้ยังไม่มีข้อมูลใน Firestore นำทางไปยังหน้า LocationSelectionPage
