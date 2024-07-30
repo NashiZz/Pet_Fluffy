@@ -214,7 +214,7 @@ class _Setting_PageState extends State<Setting_Page> {
                     const SizedBox(height: 10),
                     MenuWidget(
                       title: "สัตว์เลี้ยงรายการโปรด",
-                      icon: LineAwesomeIcons.gratipay__gittip_,
+                      icon: LineAwesomeIcons.star,
                       onPress: () {
                         Navigator.push(
                           context,

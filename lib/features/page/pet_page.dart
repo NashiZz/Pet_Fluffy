@@ -465,40 +465,7 @@ class _Pet_PageState extends State<Pet_Page> {
                                 ),
                               ),
                             ),
-                            const Padding(padding: EdgeInsets.all(5)),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: selectNormalImage,
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.grey),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.image),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        _imageFileController.text.isNotEmpty
-                                            ? _imageFileController.text
-                                            : 'เลือกรูปใบเพ็ดดีกรี',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      // เพิ่ม IconButton สำหรับลบรูปภาพ
-                                      onPressed: deleteNormalImage,
-                                      icon: Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            
                           ],
                         ),
                         const SizedBox(height: 15),
