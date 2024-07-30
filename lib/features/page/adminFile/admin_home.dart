@@ -1,15 +1,11 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/login_page.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
-import 'package:Pet_Fluffy/features/page/pet_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -21,9 +17,17 @@ class AdminHomePage extends StatefulWidget {
 class _AdminHomePageState extends State<AdminHomePage> {
   late User? user;
   late List<Map<String, dynamic>> TypePetdatas = [];
+  late List<Map<String, dynamic>> genePetDatas = [];
+  late List<Map<String, dynamic>> vaccinePetDatas = [];
+  final TextEditingController _nameTypeController = TextEditingController();
+  final TextEditingController _nameGeneController = TextEditingController();
+  final TextEditingController _nameVaccController = TextEditingController();
+  final TextEditingController _nameAgeController = TextEditingController();
+  final TextEditingController _nameDoseController = TextEditingController();
   bool isLoading = true;
   final TextEditingController _controller = TextEditingController();
   String? petId_main;
+  String typePet = '5yWv1hawXz6Gh15gEed1';
 
   @override
   void initState() {
@@ -31,6 +35,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _getTypePetData('');
+      _getGene_petData('');
+      _getVaccines_petData('');
     }
   }
 
@@ -62,7 +68,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
           isLoading = false;
         });
       }
-      log(TypePetdatas.length.toString());
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
       setState(() {
@@ -71,17 +76,20 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
-  Future<void> _getPetData(String searchValue) async {
+  Future<void> _getGene_petData(String searchValue) async {
     try {
-      QuerySnapshot TypePetQuerySnapshot =
-          await FirebaseFirestore.instance.collection('pet_type').get();
+      QuerySnapshot genePetQuerySnapshot = await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc(typePet)
+          .collection('gene_pet')
+          .get();
 
-      List<Map<String, dynamic>> allType = TypePetQuerySnapshot.docs
+      List<Map<String, dynamic>> allGene = genePetQuerySnapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
 
       if (searchValue.isNotEmpty) {
-        List<Map<String, dynamic>> allTypedata = allType.where((type) {
+        List<Map<String, dynamic>> allGeneData = allGene.where((type) {
           bool matchesName = type['name']
               .toString()
               .toLowerCase()
@@ -90,16 +98,15 @@ class _AdminHomePageState extends State<AdminHomePage> {
         }).toList();
 
         setState(() {
-          TypePetdatas = allTypedata;
+          genePetDatas = allGeneData;
           isLoading = false;
         });
       } else {
         setState(() {
-          TypePetdatas = allType;
+          genePetDatas = allGene;
           isLoading = false;
         });
       }
-      log(TypePetdatas.length.toString());
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
       setState(() {
@@ -108,7 +115,46 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
-  
+  Future<void> _getVaccines_petData(String searchValue) async {
+    try {
+      QuerySnapshot vaccinesPetQuerySnapshot = await FirebaseFirestore.instance
+          .collection('pet_vaccines')
+          .doc(typePet)
+          .collection("pet_vaccines")
+          .orderBy("id_table_vacc", descending: false)
+          .get();
+
+      List<Map<String, dynamic>> allVaccine = vaccinesPetQuerySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      if (searchValue.isNotEmpty) {
+        List<Map<String, dynamic>> allVaccData = allVaccine.where((type) {
+          bool matchesName = type['vaccine']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+          return matchesName;
+        }).toList();
+
+        setState(() {
+          vaccinePetDatas = allVaccData;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          vaccinePetDatas = allVaccine;
+          isLoading = false;
+        });
+      }
+      log(vaccinePetDatas.length.toString());
+    } catch (e) {
+      print('Error getting pet user data from Firestore: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -119,13 +165,18 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   // ค้นหา
   void _logSearchValuee(String value) {
-    _getTypePetData(value); // Log the current value of the TextField
+    _getTypePetData(value);
+    _getGene_petData(value);
+    _getVaccines_petData(value); // Log the current value of the TextField
   }
+
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
       // log(searchValue.toString());
       _getTypePetData(searchValue);
+      _getGene_petData(searchValue);
+      _getVaccines_petData(searchValue);
     });
   }
 
@@ -260,22 +311,24 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 )
               : TabBarView(
                   children: [
-                    //สุนัข
                     _buildTypePet(TypePetdatas),
-                    //แมว
-                    Center(child: Text('เกณฑ์การฉีดวัคซีนสัตว์เลี้ยง')),
-                    Center(child: Text('เกณฑ์การฉีดวัคซีนสัตว์เลี้ยง')),
-
+                    _buildGenePet(genePetDatas),
+                    _buildVaccPet(vaccinePetDatas)
                   ],
                 ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const Pet_Page()),
-              );
+              setState(() {
+                if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                  typePet = 'Qy38o0xCXKQlIngPz9jb';
+                } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                  typePet = '5yWv1hawXz6Gh15gEed1';
+                }
+                _getGene_petData(_controller.text);
+                _getVaccines_petData(_controller.text);
+              });
             },
-            child: const Icon(Icons.add),
+            child: const Icon(Icons.swipe_vertical_rounded),
           ),
         ),
       ),
@@ -286,7 +339,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     return TypePetList.isEmpty
         ? const Center(
             child: Text(
-              'ไม่มีข้อมูลสัตว์เลี้ยง',
+              'ไม่มีข้อมูลประเภทสัตว์เลี้ยง',
               style: TextStyle(fontSize: 16),
             ),
           )
@@ -301,24 +354,106 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: TypePetList.length,
                   itemBuilder: (context, index) {
-                    return _buildPetCard(TypePetList[index]);
+                    return _buildTypePetCard(TypePetList[index]);
                   },
                 ),
+                const SizedBox(height: 40),
+                Center(
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12.0),
+                      onTap: () {
+                        _nameTypeController.text = '';
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text(
+                                'เพิ่มประเภทสัตว์เลี้ยง',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              content: TextField(
+                                controller: _nameTypeController,
+                                decoration: const InputDecoration(
+                                    hintText: "กรุณากรอกชื่อประเภทสัตว์เลี้ยง"),
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    addType();
+                                  },
+                                  child: const Text("บันทึก"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        child: Center(
+                          child: Icon(
+                            Icons.add,
+                            size: 40.0,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 63),
               ],
             ),
           );
   }
 
   // ข้อมูลสัตว์เลี้ยงที่แสดงผล
-  Widget _buildPetCard(Map<String, dynamic> TypePetData) {
+  Widget _buildTypePetCard(Map<String, dynamic> TypePetData) {
     return GestureDetector(
       onTap: () {
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => Edit_Pet_Page(TypePetData: TypePetData),
-        //   ),
-        // );
+        _nameTypeController.text = TypePetData['name'];
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(
+                'แก้ไขประเภทสัตว์เลี้ยง',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              content: TextField(
+                controller: _nameTypeController,
+                decoration: const InputDecoration(
+                    hintText: "กรุณากรอกชื่อประเภทสัตว์เลี้ยง"),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("ยกเลิก"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    editTypePet(TypePetData['id_type_pet']);
+                  },
+                  child: const Text("บันทึก"),
+                ),
+              ],
+            );
+          },
+        );
       },
       child: Card(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -348,8 +483,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              _deletePetData(TypePetData['pet_id']);
-                              Navigator.of(context).pop();
+                              deleteType(TypePetData['id_type_pet']);
                             },
                             child: const Text("ยืนยัน"),
                           ),
@@ -367,17 +501,642 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  //ปุ่มลบข้อมูลสัตว์เลี้ยง
-  void _deletePetData(String petId) async {
+  Widget _buildGenePet(List<Map<String, dynamic>> GenePetList) {
+    return GenePetList.isEmpty
+        ? const Center(
+            child: Text(
+              'ไม่มีข้อมูลพันธู์สัตว์เลี้ยง',
+              style: TextStyle(fontSize: 16),
+            ),
+          )
+        : SingleChildScrollView(
+            // แสดงรายการสัตว์เลี้ยงเมื่อข้อมูลถูกโหลดเสร็จสิ้น
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: GenePetList.length,
+                  itemBuilder: (context, index) {
+                    return _buildGenePetCard(GenePetList[index]);
+                  },
+                ),
+                const SizedBox(height: 40),
+                Center(
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12.0),
+                      onTap: () {
+                        _nameGeneController.text = '';
+                        String? nameTypePet;
+                        if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                          nameTypePet = 'แมว';
+                        } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                          nameTypePet = 'สุนัข';
+                        }
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text(
+                                'เพิ่มพันธุ์สัตว์เลี้ยงของ$nameTypePet',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              content: TextField(
+                                controller: _nameGeneController,
+                                decoration: const InputDecoration(
+                                    hintText: "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    addGene();
+                                  },
+                                  child: const Text("บันทึก"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        child: Center(
+                          child: Icon(
+                            Icons.add,
+                            size: 40.0,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 63),
+              ],
+            ),
+          );
+  }
+
+  // ข้อมูลสัตว์เลี้ยงที่แสดงผล
+  Widget _buildGenePetCard(Map<String, dynamic> genePetData) {
+    return GestureDetector(
+      onTap: () {
+        _nameGeneController.text = genePetData['name'];
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text(
+                'แก้ไขพันธุ์สัตว์เลี้ยง',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              content: TextField(
+                controller: _nameGeneController,
+                decoration: const InputDecoration(
+                    hintText: "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("ยกเลิก"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    editGenePet(genePetData['id_gene_pet']);
+                  },
+                  child: const Text("บันทึก"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: ListTile(
+          title: Text(
+            genePetData['name'] ?? '',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("ยืนยันการลบ"),
+                        content:
+                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              deleteGene(genePetData['id_gene_pet']);
+                            },
+                            child: const Text("ยืนยัน"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(LineAwesomeIcons.minus),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVaccPet(List<Map<String, dynamic>> VaccPetList) {
+    return VaccPetList.isEmpty
+        ? const Center(
+            child: Text(
+              'ไม่มีข้อมูล',
+              style: TextStyle(fontSize: 16),
+            ),
+          )
+        : SingleChildScrollView(
+            // แสดงรายการสัตว์เลี้ยงเมื่อข้อมูลถูกโหลดเสร็จสิ้น
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: VaccPetList.length,
+                  itemBuilder: (context, index) {
+                    return _buildVaccPetCard(VaccPetList[index]);
+                  },
+                ),
+                const SizedBox(height: 40),
+                Center(
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12.0),
+                      onTap: () {
+                        _nameVaccController.text = '';
+                        _nameAgeController.text = '';
+                        _nameDoseController.text = '';
+                        String? nameTypePet;
+                        if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                          nameTypePet = 'แมว';
+                        } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                          nameTypePet = 'สุนัข';
+                        }
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text(
+                                'เพิ่มพันธุ์สัตว์เลี้ยงของ$nameTypePet',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                TextField(
+                                  controller: _nameVaccController,
+                                  decoration: const InputDecoration(
+                                      hintText:
+                                          "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                                ),
+                                TextField(
+                                  controller: _nameAgeController,
+                                  decoration: const InputDecoration(
+                                      hintText:
+                                          "กรุณากรอกช่วงอายุที่ต้องฉีดวัคซีน"),
+                                ),
+                                TextField(
+                                  controller: _nameDoseController,
+                                  decoration: const InputDecoration(
+                                      hintText: "กรุณากรอกเข็มที่เท่าไหร่"),
+                                ),
+                              ]),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    addVacc();
+                                  },
+                                  child: const Text("บันทึก"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        child: Center(
+                          child: Icon(
+                            Icons.add,
+                            size: 40.0,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 63),
+              ],
+            ),
+          );
+  }
+
+  // ข้อมูลสัตว์เลี้ยงที่แสดงผล
+  Widget _buildVaccPetCard(Map<String, dynamic> VaccPetData) {
+    return GestureDetector(
+      onTap: () {
+        _nameVaccController.text = VaccPetData['vaccine'];
+        _nameAgeController.text = VaccPetData['age'];
+        _nameDoseController.text = VaccPetData['dose'];
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                  title: Text(
+                    'แก้ไขเกณฑ์การฉีดวัคซีนสัตว์เลี้ยง',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: _nameVaccController,
+                        decoration: const InputDecoration(
+                            hintText: "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                      ),
+                      TextField(
+                        controller: _nameAgeController,
+                        decoration: const InputDecoration(
+                            hintText: "กรุณากรอกช่วงอายุที่ต้องฉีดวัคซีน"),
+                      ),
+                      TextField(
+                        controller: _nameDoseController,
+                        decoration: const InputDecoration(
+                            hintText: "กรุณากรอกเข็มที่เท่าไหร่"),
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยกเลิก"),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        editVaccPet(VaccPetData['id_pet_vaccines']);
+                      },
+                      child: const Text("บันทึก"),
+                    ),
+                  ]);
+            });
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: ListTile(
+            title: Text(
+              VaccPetData['vaccine'] ?? '',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Age: ${VaccPetData['age'] ?? ''}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                Padding(padding: EdgeInsets.only(left: 10)),
+                Text(
+                  'Dose: ${VaccPetData['dose'] ?? ''}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text("ยืนยันการลบ"),
+                          content: const Text(
+                              "คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: const Text("ยกเลิก"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                deleteVacc(VaccPetData['id_pet_vaccines']);
+                              },
+                              child: const Text("ยืนยัน"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(LineAwesomeIcons.minus),
+                ),
+              ],
+            )),
+      ),
+    );
+  }
+
+  void addType() async {
+    bool chek = false;
+    for (var element in TypePetdatas) {
+      if (element['name'] == _nameTypeController.text) {
+        chek = true;
+      }
+    }
+
+    if (chek) {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return SizedBox(
+            height: 100,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('The information is already in the system.'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      CollectionReference type =
+          FirebaseFirestore.instance.collection('pet_type');
+      try {
+        DocumentReference newTypeRef =
+            await type.add({'name': _nameTypeController.text});
+        String docId = newTypeRef.id;
+
+        await newTypeRef.update({'id_type_pet': docId});
+
+        setState(() {
+          Navigator.pop(context);
+          _getTypePetData('');
+        });
+      } catch (e) {
+        print('Error Add type data: $e');
+      }
+    }
+  }
+
+  void addGene() async {
+    bool chek = false;
+    for (var element in genePetDatas) {
+      if (element['name'] == _nameGeneController.text) {
+        chek = true;
+      }
+    }
+    if (chek) {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return SizedBox(
+            height: 100,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('The information is already in the system.'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      CollectionReference gene = FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc(typePet)
+          .collection('gene_pet');
+      try {
+        DocumentReference newGeneRef =
+            await gene.add({'name': _nameGeneController.text});
+        String docId = newGeneRef.id;
+
+        await newGeneRef.update({'id_gene_pet': docId});
+
+        setState(() {
+          Navigator.pop(context);
+          _getGene_petData('');
+        });
+      } catch (e) {
+        print('Error Add gene data: $e');
+      }
+    }
+  }
+
+  void addVacc() async {
+    bool chek = false;
+    int id_table_vacc = vaccinePetDatas.last['id_table_vacc']+1;
+    
+    for (var element in vaccinePetDatas) {
+      if (element['vaccine'] == _nameVaccController.text &&
+          element['dose'] == _nameDoseController.text) {
+        chek = true;
+      }
+    }
+    log(chek.toString());
+    if (chek) {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return SizedBox(
+            height: 100,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('The information is already in the system.'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      CollectionReference vacc = FirebaseFirestore.instance
+          .collection('pet_vaccines')
+          .doc(typePet)
+          .collection('pet_vaccines');
+      try {
+        DocumentReference newGeneRef = await vacc.add({
+          'vaccine': _nameVaccController.text,
+          'age': _nameAgeController.text,
+          'dose': _nameDoseController.text,
+          'id_table_vacc':id_table_vacc
+        });
+        String docId = newGeneRef.id;
+        await newGeneRef.update({'id_pet_vaccines': docId});
+        setState(() {
+          Navigator.pop(context);
+          _getVaccines_petData('');
+        });
+      } catch (e) {
+        print('Error Add gene data: $e');
+      }
+    }
+  }
+
+  void deleteType(String id_type_pet) async {
     try {
       await FirebaseFirestore.instance
-          .collection('Pet_User')
-          .doc(petId)
-          .update({'status': 'ถูกลบ'});
+          .collection('pet_type')
+          .doc(id_type_pet)
+          .delete();
+
       // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
-      _getTypePetData('');
+
+      setState(() {
+        Navigator.pop(context);
+        _getTypePetData('');
+      });
     } catch (e) {
       print('Error deleting pet data: $e');
     }
+  }
+
+  void deleteGene(String id_gene_pet) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc(typePet)
+          .collection('gene_pet')
+          .doc(id_gene_pet)
+          .delete();
+
+      // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
+
+      setState(() {
+        Navigator.pop(context);
+        _getGene_petData('');
+      });
+    } catch (e) {
+      print('Error deleting pet data: $e');
+    }
+  }
+
+  void deleteVacc(String id_vacc_pet) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('pet_vaccines')
+          .doc(typePet)
+          .collection('pet_vaccines')
+          .doc(id_vacc_pet)
+          .delete();
+
+      // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
+
+      setState(() {
+        Navigator.pop(context);
+        _getVaccines_petData('');
+      });
+    } catch (e) {
+      print('Error deleting pet data: $e');
+    }
+  }
+
+  void editTypePet(String id_type_pet) {
+    CollectionReference type =
+        FirebaseFirestore.instance.collection('pet_type');
+    type
+        .doc(id_type_pet)
+        .update({'name': _nameTypeController.text}).then((value) {
+      setState(() {
+        Navigator.pop(context);
+        _getTypePetData('');
+      });
+    });
+  }
+
+  void editGenePet(String id_gene_pet) {
+    CollectionReference type = FirebaseFirestore.instance
+        .collection('gene_pet')
+        .doc(typePet)
+        .collection('gene_pet');
+    type
+        .doc(id_gene_pet)
+        .update({'name': _nameGeneController.text}).then((value) {
+      setState(() {
+        Navigator.pop(context);
+        _getGene_petData('');
+      });
+    });
+  }
+
+  void editVaccPet(String id_pet_vaccines) {
+    CollectionReference type = FirebaseFirestore.instance
+        .collection('pet_vaccines')
+        .doc(typePet)
+        .collection('pet_vaccines');
+    type.doc(id_pet_vaccines).update({
+      'vaccine': _nameVaccController.text,
+      'age': _nameAgeController.text,
+      'dose': _nameDoseController.text
+    }).then((value) {
+      setState(() {
+        Navigator.pop(context);
+        _getVaccines_petData('');
+      });
+    });
   }
 }
