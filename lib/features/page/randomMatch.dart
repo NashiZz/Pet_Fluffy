@@ -2,7 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
-
+import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
@@ -11,6 +11,7 @@ import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -216,6 +217,28 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
+  //สร้าง fcm_token 
+  Future<void> _setTokenfirebaseMassag() async {
+    userId = user!.uid;
+    final userDocRef =
+        FirebaseFirestore.instance.collection('user').doc(userId);
+    final userData = await userDocRef.get();
+    if (userData.exists) {
+      final fcmtoken = userData.data()?['fcm_token'];
+      if (fcmtoken == null || fcmtoken == '') {
+        String? token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await FirebaseFirestore.instance
+              .collection('user')
+              .doc(userId)
+              .update({
+            'fcm_token': token,
+          });
+        }
+      }
+    }
+  }
+
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
@@ -241,6 +264,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   @override
   void initState() {
     super.initState();
+    _setTokenfirebaseMassag();
     _getUserDataFromFirestore();
     _getUsage_pet('');
     _petsFuture = ApiPetService.loadAllPet();
@@ -402,8 +426,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 List<Map<String, dynamic>> filteredPetData = snapshot.data!
                     .where((pet) =>
                         pet['type_pet'] == petType &&
-                        pet['gender'] == oppositeGender &&
-                        pet['status'] == 'พร้อมผสมพันธุ์' || pet['status'] == 'มีชีวิต') 
+                            pet['gender'] == oppositeGender &&
+                            pet['status'] == 'พร้อมผสมพันธุ์' ||
+                        pet['status'] == 'มีชีวิต')
                     .toList();
 
                 return FutureBuilder<List<Map<String, dynamic>>>(
@@ -416,7 +441,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 }(), builder: (context,
                         AsyncSnapshot<List<Map<String, dynamic>>>
                             filteredSnapshot) {
-
                   if (filteredSnapshot.connectionState ==
                       ConnectionState.waiting) {
                     return const Center(
@@ -436,8 +460,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   List<Map<String, dynamic>> filteredData =
                       filteredSnapshot.data!;
 
-                   if (search.toString() != 'null') {
-                      List<Map<String, dynamic>> filteredPets = filteredData.where((pet) {
+                  if (search.toString() != 'null') {
+                    List<Map<String, dynamic>> filteredPets =
+                        filteredData.where((pet) {
                       // log(search.toString().toLowerCase());
                       bool matchesName = pet['name']
                           .toString()
@@ -487,9 +512,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                           matchesColor;
                     }).toList();
                     petUserDataList = filteredPets;
-                    } else {
-                      petUserDataList = filteredData;
-                    }
+                  } else {
+                    petUserDataList = filteredData;
+                  }
 
                   return Expanded(
                     //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
@@ -979,8 +1004,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             await newPetMatch.update({'id_match': docId});
 
-            // match success จะให้ไปที่หน้า match d
-
+            sendNotificationToUser(userIdd, 'Pet fluffy', 'You have a new pet match!');
+            // match success จะให้ไปที่หน้า match 
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -1073,4 +1098,37 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       });
     }
   }
+  void sendNotificationToUser(String userIdd, String title, String body) async {
+  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
+  String? fcmToken = userDoc['fcm_token'];
+  
+
+  if (fcmToken != null) {
+    await sendPushMessage(fcmToken, title, body);
+  }
+}
+
+Future<void> sendPushMessage(String token, String title, String body) async {
+  final data = {
+    "to": token,
+    "notification": {
+      "title": title,
+      "body": body,
+    },
+  };
+  final response = await http.post(
+    Uri.parse('https://fcm.googleapis.com/fcm/send'),
+    headers: <String, String>{
+      'Content-Type': 'application/json',
+      'Authorization': 'key=YOUR_SERVER_KEY',
+    },
+    body: jsonEncode(data),
+  );
+
+  if (response.statusCode == 200) {
+    print("Notification sent successfully");
+  } else {
+    print("Failed to send notification");
+  }
+}
 }
