@@ -27,7 +27,37 @@ class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
   String num_pet_f = '';
   String num_pet_m = '';
   String? img_petdigree;
-  bool isLoading = true; // สถานะการโหลด
+  bool isLoading = true; 
+
+  void showImageDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                child: InteractiveViewer(
+        panEnabled: true, // อนุญาตให้เลื่อน
+        minScale: 1,
+        maxScale: 5,
+        child: Image.memory(
+          base64Decode(imageUrl),
+          fit: BoxFit.contain, // ปรับขนาดให้พอดีกับหน้าจอ
+        ),
+      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -162,14 +192,19 @@ class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
                         children: [
                           if (img_petdigree != null &&
                               img_petdigree!.isNotEmpty)
-                            ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(10.0), // กำหนดมุมโค้ง
-                              child: Image.memory(
-                                base64Decode(img_petdigree!),
-                                width: 340,
-                                height: 170,
-                                fit: BoxFit.cover,
+                            GestureDetector(
+                              onTap: () {
+                                showImageDialog(context, img_petdigree!);
+                              },
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(10.0), // กำหนดมุมโค้ง
+                                child: Image.memory(
+                                  base64Decode(img_petdigree!),
+                                  width: 340,
+                                  height: 170,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             )
                           else
