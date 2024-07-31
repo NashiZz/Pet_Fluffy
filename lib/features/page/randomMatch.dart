@@ -1127,7 +1127,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       Uri.parse('https://fcm.googleapis.com/fcm/send'),
       headers: <String, String>{
         'Content-Type': 'application/json',
-        'Authorization': 'key=YOUR_SERVER_KEY',
+        'Authorization': 'key=AIzaSyCqt2HmegX3fbMTkccrHHezInl5A94BXdc',
       },
       body: jsonEncode(data),
     );
