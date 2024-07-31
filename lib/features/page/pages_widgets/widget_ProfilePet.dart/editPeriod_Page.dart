@@ -18,6 +18,7 @@ class EditPeriodPage extends StatefulWidget {
 }
 
 class _EditPeriodPageState extends State<EditPeriodPage> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ProfileService profileService = ProfileService();
   late TextEditingController dateController;
   late TextEditingController desController;
@@ -71,27 +72,29 @@ class _EditPeriodPageState extends State<EditPeriodPage> {
         actions: [
           IconButton(
             onPressed: () {
-              _showLoadingDialog();
-              profileService
-                  .updatePeriod_ToFirestore(
-                userId: widget.userId,
-                docId: widget.report['id_period'] ?? '',
-                petId: widget.report['pet_id'] ?? '',
-                description: desController.text,
-                date: dateController.text,
-              )
-                  .then((_) {
-                Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
-                Navigator.of(context).pop({
-                  'id_period': widget.report['id_period'] ?? '',
-                  'des': desController.text,
-                  'date': dateController.text,
+              if (_formKey.currentState!.validate()) {
+                _showLoadingDialog();
+                profileService
+                    .updatePeriod_ToFirestore(
+                  userId: widget.userId,
+                  docId: widget.report['id_period'] ?? '',
+                  petId: widget.report['pet_id'] ?? '',
+                  description: desController.text,
+                  date: dateController.text,
+                )
+                    .then((_) {
+                  Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
+                  Navigator.of(context).pop({
+                    'id_period': widget.report['id_period'] ?? '',
+                    'des': desController.text,
+                    'date': dateController.text,
+                  });
+                }).catchError((error) {
+                  Navigator.of(context)
+                      .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+                  print("Error updating vaccine data: $error");
                 });
-              }).catchError((error) {
-                Navigator.of(context)
-                    .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
-                print("Error updating vaccine data: $error");
-              });
+              }
             },
             icon: const Icon(LineAwesomeIcons.save),
           ),
@@ -104,9 +107,10 @@ class _EditPeriodPageState extends State<EditPeriodPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Form(
+                key: _formKey,
                 child: Column(
                   children: [
-                    TextField(
+                    TextFormField(
                       controller: dateController,
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
@@ -137,6 +141,12 @@ class _EditPeriodPageState extends State<EditPeriodPage> {
                           horizontal: 15,
                         ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'กรุณากรอกวันที่';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 30),
                     TextField(
