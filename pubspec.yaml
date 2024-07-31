@@ -48,7 +48,7 @@ dependencies:
   flutter_local_notifications: ^17.0.1
   firebase_messaging: ^14.7.18
   path_provider: ^2.1.2
-  http: ^1.2.1
+  http: ^1.2.2
 
   geolocator: ^11.0.0
   google_maps_flutter: ^2.5.0
