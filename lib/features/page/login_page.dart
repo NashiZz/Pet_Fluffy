@@ -341,7 +341,7 @@ class _LoginPageState extends State<LoginPage> {
                   builder: (context) => const LocationSelectionPage()),
             );
           } else {
-            log("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
             
             Navigator.pushReplacement(
               context,

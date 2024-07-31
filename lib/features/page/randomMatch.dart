@@ -142,14 +142,15 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   .instance
                   .collection('Pet_User')
                   .where('pet_id', isEqualTo: petResponeId)
+                  .where('type_pet', isEqualTo: petType)
                   .get();
 
-              // เพิ่มข้อมูลลงใน List
               allPetDataList.addAll(getPetQuerySnapshot.docs
                   .map((doc) => doc.data() as Map<String, dynamic>)
                   .toList());
             }
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+            print(allPetDataList.length);
             setState(() {
               petDataMatchList = allPetDataList;
               isLoading = false;
@@ -191,6 +192,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   .instance
                   .collection('Pet_User')
                   .where('pet_id', isEqualTo: petResponeId)
+                  .where('type_pet', isEqualTo: petType)
                   .get();
 
               // เพิ่มข้อมูลลงใน List
@@ -200,6 +202,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             }
 
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+            print(allPetDataList.length);
             setState(() {
               petDataFavoriteList = allPetDataList;
               isLoading = false;
@@ -217,7 +220,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
-  //สร้าง fcm_token 
+  //สร้าง fcm_token
   Future<void> _setTokenfirebaseMassag() async {
     userId = user!.uid;
     final userDocRef =
@@ -419,6 +422,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     child: Text('ไม่พบข้อมูลสัตว์เลี้ยง'),
                   );
                 }
+
                 // List<Map<String, dynamic>> allPetData = snapshot.data!;
                 // กำหนดเพศตรงข้าม
                 String oppositeGender =
@@ -426,11 +430,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 List<Map<String, dynamic>> filteredPetData = snapshot.data!
                     .where((pet) =>
                         pet['type_pet'] == petType &&
-                            pet['gender'] == oppositeGender &&
-                            pet['status'] == 'พร้อมผสมพันธุ์' ||
-                        pet['status'] == 'มีชีวิต')
+                        pet['gender'] == oppositeGender &&
+                        (pet['status'] == 'พร้อมผสมพันธุ์' ||
+                            pet['status'] == 'มีชีวิต'))
                     .toList();
 
+                print(snapshot.data!.length);
                 return FutureBuilder<List<Map<String, dynamic>>>(
                     future: () async {
                   List<Map<String, dynamic>> uniquePetDataMatch =
@@ -1004,8 +1009,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             await newPetMatch.update({'id_match': docId});
 
-            sendNotificationToUser(userIdd, 'Pet fluffy', 'You have a new pet match!');
-            // match success จะให้ไปที่หน้า match 
+            sendNotificationToUser(
+                userIdd, 'Pet fluffy', 'You have a new pet match!');
+            // match success จะให้ไปที่หน้า match
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -1098,37 +1104,38 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       });
     }
   }
+
   void sendNotificationToUser(String userIdd, String title, String body) async {
-  DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
-  String? fcmToken = userDoc['fcm_token'];
-  
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
+    String? fcmToken = userDoc['fcm_token'];
 
-  if (fcmToken != null) {
-    await sendPushMessage(fcmToken, title, body);
+    if (fcmToken != null) {
+      await sendPushMessage(fcmToken, title, body);
+    }
   }
-}
 
-Future<void> sendPushMessage(String token, String title, String body) async {
-  final data = {
-    "to": token,
-    "notification": {
-      "title": title,
-      "body": body,
-    },
-  };
-  final response = await http.post(
-    Uri.parse('https://fcm.googleapis.com/fcm/send'),
-    headers: <String, String>{
-      'Content-Type': 'application/json',
-      'Authorization': 'key=YOUR_SERVER_KEY',
-    },
-    body: jsonEncode(data),
-  );
+  Future<void> sendPushMessage(String token, String title, String body) async {
+    final data = {
+      "to": token,
+      "notification": {
+        "title": title,
+        "body": body,
+      },
+    };
+    final response = await http.post(
+      Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'Authorization': 'key=YOUR_SERVER_KEY',
+      },
+      body: jsonEncode(data),
+    );
 
-  if (response.statusCode == 200) {
-    print("Notification sent successfully");
-  } else {
-    print("Failed to send notification");
+    if (response.statusCode == 200) {
+      print("Notification sent successfully");
+    } else {
+      print("Failed to send notification");
+    }
   }
-}
 }
