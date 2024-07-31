@@ -22,6 +22,7 @@ class EditContestPage extends StatefulWidget {
 }
 
 class _EditContestPageState extends State<EditContestPage> {
+  final _formKey = GlobalKey<FormState>();
   final ProfileService profileService = ProfileService();
   final TextEditingController _nameAwardController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
@@ -115,32 +116,52 @@ class _EditContestPageState extends State<EditContestPage> {
   }
 
   void _saveOrUpdateContest() {
-    _showLoadingDialog(); // แสดง Dialog โหลดข้อมูล
+    if (_formKey.currentState!.validate()) {
+      if (images.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('กรุณาเพิ่มรูปภาพ')),
+        );
+        return;
+      }
+      _showLoadingDialog(); // แสดง Dialog โหลดข้อมูล
 
-    profileService
-        .updateAward_ToFirestore(
-      userId: widget.userId,
-      docId: widget.report['id_contest'],
-      nameAward: _nameAwardController.text,
-      date: _dateController.text,
-      description: _desController.text,
-      img1: images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
-      img2: images.length > 1 ? uint8ListToBase64(images[1]) : '',
-    )
-        .then((_) {
-      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
-      Navigator.of(context).pop({
-        'id_contest': widget.report['id_contest'] ?? '',
-        'award': _nameAwardController.text,
-        'des': _desController.text,
-        'date': _dateController.text,
-        'img_1': images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
-        'img_2': images.length > 1 ? uint8ListToBase64(images[1]) : '',
-      });
-    }).catchError((error) {
-      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
-      print("Error updating Contest data: $error");
-    });
+      try {
+        profileService
+            .updateAward_ToFirestore(
+          userId: widget.userId,
+          docId: widget.report['id_contest'],
+          nameAward: _nameAwardController.text,
+          date: _dateController.text,
+          description: _desController.text,
+          img1: images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
+          img2: images.length > 1 ? uint8ListToBase64(images[1]) : '',
+        )
+            .then((_) {
+          Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('อัปเดตข้อมูลเรียบร้อยแล้ว')),
+          );
+          Navigator.of(context).pop({
+            'id_contest': widget.report['id_contest'] ?? '',
+            'award': _nameAwardController.text,
+            'des': _desController.text,
+            'date': _dateController.text,
+            'img_1': images.isNotEmpty ? uint8ListToBase64(images[0]) : '',
+            'img_2': images.length > 1 ? uint8ListToBase64(images[1]) : '',
+          });
+        }).catchError((error) {
+          Navigator.of(context)
+              .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+          print("Error updating Contest data: $error");
+        });
+      } catch (e) {
+        Navigator.of(context).pop(); // Close loading dialog in case of error
+        print("Error updating award data: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')),
+        );
+      }
+    }
   }
 
   void selectDate(BuildContext context) async {
@@ -177,6 +198,7 @@ class _EditContestPageState extends State<EditContestPage> {
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Form(
+            key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,6 +217,12 @@ class _EditContestPageState extends State<EditContestPage> {
                       horizontal: 15,
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอกชื่อการประกวด';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 15),
                 TextFormField(

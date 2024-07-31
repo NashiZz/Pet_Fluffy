@@ -94,6 +94,13 @@ class _AddContestPageState extends State<AddContestPage> {
 
   Future<void> _saveAward() async {
     if (_formKey.currentState!.validate()) {
+      if (base64Images.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('กรุณาเพิ่มรูปภาพ')),
+        );
+        return;
+      }
+
       _showLoadingDialog();
 
       try {

@@ -79,6 +79,13 @@ class _AddPetDigreePageState extends State<AddPetDigreePage> {
   }
 
   Future<void> _savePetDigree() async {
+    if (_petDigreeImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('กรุณาเพิ่มรูปภาพก่อนทำการบันทึกข้อมูล')),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       _showLoadingDialog();
 
@@ -109,6 +116,9 @@ class _AddPetDigreePageState extends State<AddPetDigreePage> {
 
   @override
   void dispose() {
+    _numPet_Controller.dispose();
+    _numPetF_Controller.dispose();
+    _numPetM_Controller.dispose();
     super.dispose();
   }
 
