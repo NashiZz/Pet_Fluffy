@@ -1123,11 +1123,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         "body": body,
       },
     };
+    try {
     final response = await http.post(
       Uri.parse('https://fcm.googleapis.com/fcm/send'),
       headers: <String, String>{
         'Content-Type': 'application/json',
-        'Authorization': 'key=AIzaSyCqt2HmegX3fbMTkccrHHezInl5A94BXdc',
+        'Authorization': 'key=AIzaSyCqt2HmegX3fbMTkccrHHezInl5A94BXdc', // ใส่ Server Key ที่ถูกต้องที่นี่
       },
       body: jsonEncode(data),
     );
@@ -1136,6 +1137,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       print("Notification sent successfully");
     } else {
       print("Failed to send notification");
+      print("Response status: ${response.statusCode}");
+      print("Response body: ${response.body}");
     }
+  } catch (error) {
+    print("Error sending notification: $error");
+  }
   }
 }
