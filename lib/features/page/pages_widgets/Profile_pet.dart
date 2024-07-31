@@ -210,20 +210,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             mainAxisSize: MainAxisSize.min,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20.0),
-                  topRight: Radius.circular(20.0),
-                ),
+                borderRadius: BorderRadius.all(Radius.circular(20.0)),
                 child: Image.memory(
                   base64Decode(imageUrl),
                   fit: BoxFit.cover,
                 ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('ปิด'),
               ),
             ],
           ),
@@ -319,7 +310,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
     // อัปเดตรูปภาพใหม่ในช่องที่ว่างเท่านั้น
     Map<String, dynamic> updateData = {
-      'pet_id': petId, // เพิ่ม pet_id ลงใน updateData ด้วย
+      'pet_id': petId,
     };
     int nextIndex = await _getNextAvailableIndex(existingData);
 
@@ -1553,7 +1544,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // รูป Profile
   Widget buildProfileImage(BuildContext context, String status) {
     return GestureDetector(
-      onTap: () => _showEditOptions(context, status),
+      onTap: () => _showEditOptions(context, status, petImageBase64),
       child: Container(
         width: 110,
         height: 110,
@@ -1592,8 +1583,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 leading: Icon(Icons.image),
                 title: Text('ดูรูปภาพ'),
                 onTap: () {
-                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
-                  _changeProfileImage();
+                  Navigator.of(context).pop();
+                  showImageDialog(context, petImageBanner);
                 },
               ),
               ListTile(
@@ -1611,7 +1602,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
-  void _showEditOptions(BuildContext context, String status) {
+  void _showEditOptions(BuildContext context, String status, String petImageBase64) {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
@@ -1624,8 +1615,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 leading: Icon(Icons.image),
                 title: Text('ดูรูปภาพ'),
                 onTap: () {
-                  Navigator.of(context).pop(); // ปิด dialog แก้ไขข้อมูล
-                  _changeProfileImage();
+                  Navigator.of(context).pop();
+                  showImageDialog(context, petImageBase64);
                 },
               ),
               ListTile(
