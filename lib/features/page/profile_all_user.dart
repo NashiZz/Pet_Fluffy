@@ -53,7 +53,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
 
     String? petId = prefs.getString(widget.userId_req);
     String pet_respone = petId.toString();
-
+    
     DocumentReference matchRef =
         FirebaseFirestore.instance.collection('match').doc(widget.userId);
 
@@ -63,10 +63,16 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
           .where('pet_respone', isEqualTo: pet_respone)
           .where('status', isEqualTo: 'จับคู่แล้ว')
           .get();
+
+      log(querySnapshot.docs.first.toString());
+
+
+
       if (querySnapshot.docs.isNotEmpty) {
         isCheckMatch = true;
         log(isCheckMatch.toString());
       }
+
     } catch (e) {}
   }
 
@@ -298,7 +304,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 20, 80, 10),
-                                child: isCheckMatch != false
+                                child: isCheckMatch == false
                                     ? Text('เบอร์โทรศัพท์ : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text(
@@ -308,7 +314,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: isCheckMatch != false
+                                child: isCheckMatch == false
                                     ? Text('Facebook : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text(
@@ -318,7 +324,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: isCheckMatch != false
+                                child: isCheckMatch == false
                                     ? Text('Line : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text('Line : ${userData['line'] ?? ''}',
