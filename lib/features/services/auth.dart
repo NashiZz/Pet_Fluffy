@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:googleapis_auth/auth_io.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -198,5 +200,41 @@ class AuthService {
     } else {
       return '';
     }
+  }
+}
+class FirebaseAccessToken {
+  static String firebaseMsgScope =
+      "https://www.googleapis.com/auth/firebase/firebase.messaging";
+  Future<String> getToken() async {
+    try {
+      final credentials = ServiceAccountCredentials.fromJson({
+        "type": "service_account",
+          "project_id": "",
+          "private_key_id": " ",
+          "private_key":"",
+          "client_email":"",
+          "client_id": "",
+          "auth_uri": "",
+          "token_uri": "",
+          "auth_provider_x509_cert_url":"",
+          "client_x509_cert_url":"",
+          "universe_domain": "googleapis.com"
+      });
+      List<String> scopes = [
+        "https://www.googleapis.com/auth/firebase.messaging"
+      ];
+
+      final client = await obtainAccessCredentialsViaServiceAccount(
+          credentials, scopes, http.Client());
+      final accessToken = client;
+      Timer.periodic(const Duration(minutes: 59), (timer) {
+        accessToken.refreshToken;
+      });
+      return accessToken.accessToken.data;
+    } catch (e) {
+      print(e);
+    }
+
+    return '';
   }
 }
