@@ -53,6 +53,7 @@ dependencies:
   geolocator: ^11.0.0
   google_maps_flutter: ^2.5.0
   location: ^6.0.1
+  geoflutterfire_plus: ^0.0.28
 
   image_picker: ^1.1.0
   line_awesome_flutter: ^2.0.0
