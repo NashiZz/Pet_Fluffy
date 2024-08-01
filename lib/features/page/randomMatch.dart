@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -45,7 +46,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   bool _offsetsInitialized = false;
   late Future<List<Map<String, dynamic>>> _petsFuture;
   bool _isAnimating = false;
-
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   final TextEditingController _controller = TextEditingController();
   //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
@@ -1115,9 +1116,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
-  Future<void> sendPushMessage(String token, String title, String body) async {
+  Future<void> sendPushMessage(String token_user, String title, String body) async {
+    String token = await firebaseAccessToken.getToken();
     final data = {
-      "to": token,
+      "to": token_user,
       "notification": {
         "title": title,
         "body": body,
@@ -1128,7 +1130,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       Uri.parse('https://fcm.googleapis.com/fcm/send'),
       headers: <String, String>{
         'Content-Type': 'application/json',
-        'Authorization': 'key=AIzaSyCqt2HmegX3fbMTkccrHHezInl5A94BXdc', // ใส่ Server Key ที่ถูกต้องที่นี่
+        'Authorization': 'Bearer '+token, // ใส่ Server Key ที่ถูกต้องที่นี่
       },
       body: jsonEncode(data),
     );
