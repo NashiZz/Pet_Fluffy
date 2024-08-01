@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -45,7 +46,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   bool _offsetsInitialized = false;
   late Future<List<Map<String, dynamic>>> _petsFuture;
   bool _isAnimating = false;
-
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   final TextEditingController _controller = TextEditingController();
   //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
@@ -227,17 +228,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         FirebaseFirestore.instance.collection('user').doc(userId);
     final userData = await userDocRef.get();
     if (userData.exists) {
-      final fcmtoken = userData.data()?['fcm_token'];
-      if (fcmtoken == null || fcmtoken == '') {
-        String? token = await FirebaseMessaging.instance.getToken();
-        if (token != null) {
-          await FirebaseFirestore.instance
-              .collection('user')
-              .doc(userId)
-              .update({
-            'fcm_token': token,
-          });
-        }
+      String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('user').doc(userId).update({
+          'fcm_token': token,
+        });
       }
     }
   }
@@ -1115,33 +1110,38 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
-  Future<void> sendPushMessage(String token, String title, String body) async {
+  Future<void> sendPushMessage(
+      String token_user, String title, String body) async {
+    String token = await firebaseAccessToken.getToken();
     final data = {
-      "to": token,
-      "notification": {
-        "title": title,
-        "body": body,
-      },
+      "message": {
+        "token": token_user,
+        "notification": {
+          "body": "Pet Fluffy",
+          "title": "มีการจอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
+        }
+      }
     };
     try {
-    final response = await http.post(
-      Uri.parse('https://fcm.googleapis.com/fcm/send'),
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'Authorization': 'key=AIzaSyCqt2HmegX3fbMTkccrHHezInl5A94BXdc', // ใส่ Server Key ที่ถูกต้องที่นี่
-      },
-      body: jsonEncode(data),
-    );
+      final response = await http.post(
+        Uri.parse(
+            'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token, // ใส่ Server Key ที่ถูกต้องที่นี่
+        },
+        body: jsonEncode(data),
+      );
 
-    if (response.statusCode == 200) {
-      print("Notification sent successfully");
-    } else {
-      print("Failed to send notification");
-      print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+      if (response.statusCode == 200) {
+        print("Notification sent successfully");
+      } else {
+        print("Failed to send notification");
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (error) {
+      print("Error sending notification: $error");
     }
-  } catch (error) {
-    print("Error sending notification: $error");
-  }
   }
 }
