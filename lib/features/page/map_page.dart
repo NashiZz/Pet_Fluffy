@@ -127,15 +127,6 @@ class _MapsPageState extends State<Maps_Page> {
     _loadAllPetLocations(context);
   }
 
-  // void _initializeFirebase() async {
-  //   try {
-  //     await Firebase.initializeApp();
-  //     print("Firebase Initialized");
-  //   } catch (error) {
-  //     print("Failed to initialize Firebase: $error");
-  //   }
-  // }
-
   //จะถูกเรียกเมื่อหน้าจอถูกโหลด
   @override
   void initState() {

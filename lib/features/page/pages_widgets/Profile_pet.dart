@@ -1822,7 +1822,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
-  // บันทึกการฉีดวัคซีนเพิ่มเติม
+  // บันทึกการฉีดวัคซีน
   void _showVaccineDialog() {
     _dateVacController.clear();
     _vacWeight.clear();
@@ -2064,18 +2064,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           SizedBox(height: 20),
                           ElevatedButton(
                             onPressed: () {
-                              if (_selectedVac == null ||
-                                  _vacWeight.text.isEmpty ||
-                                  _vacPrice.text.isEmpty ||
-                                  _vacLocation.text.isEmpty ||
-                                  _dateVacController.text.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('กรุณากรอกข้อมูลให้ครบถ้วน'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              } else {
+                              if (_formKey.currentState!.validate()) {
                                 _saveVaccineTo_MoreFirestore();
                                 Navigator.of(context).pop();
                               }
