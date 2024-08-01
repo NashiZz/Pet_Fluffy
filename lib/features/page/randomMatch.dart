@@ -1111,14 +1111,15 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   Future<void> sendPushMessage(
-      String token_user, String title, String body) async {
+    String token_user, String title, String body) async {
+    print(token_user);
     String token = await firebaseAccessToken.getToken();
     final data = {
       "message": {
         "token": token_user,
         "notification": {
           "body": "Pet Fluffy",
-          "title": "มีการจอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
+          "title": "มีการตอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
         }
       }
     };
@@ -1128,7 +1129,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token, // ใส่ Server Key ที่ถูกต้องที่นี่
+          'Authorization': 'Bearer '+token, // ใส่ Server Key ที่ถูกต้องที่นี่
         },
         body: jsonEncode(data),
       );
