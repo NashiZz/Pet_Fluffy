@@ -208,7 +208,7 @@ class FirebaseAccessToken {
   Future<String> getToken() async {
     try {
       final credentials = ServiceAccountCredentials.fromJson({
-        "type": "service_account",
+         "type": "service_account",
           "project_id": "",
           "private_key_id": " ",
           "private_key":"",
