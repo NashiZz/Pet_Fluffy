@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -351,7 +352,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
           context,
           MaterialPageRoute(
             builder: (context) =>
-                Profile_pet_Page(petId: petUserData['pet_id']),
+                Profile_pet_AllPage(petId: petUserData['pet_id']),
           ),
         );
       },

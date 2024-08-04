@@ -2,6 +2,7 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogHistory_Match.dart';
+import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 
@@ -1071,19 +1072,34 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                         color: Colors.grey.shade500.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(40),
                       ),
-                      child: Center(
-                        child: CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.transparent,
-                          child: ClipOval(
-                            child: userImageURL != null
-                                ? Image.memory(
-                                    base64Decode(userImageURL),
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                  )
-                                : const CircularProgressIndicator(),
+                      child: GestureDetector(
+                        onTap: () {
+                          print(pet_user);
+                          print(userId.toString());
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfileAllUserPage(
+                                userId: pet_user,
+                                userId_req: userId.toString(),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Center(
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Colors.transparent,
+                            child: ClipOval(
+                              child: userImageURL != null
+                                  ? Image.memory(
+                                      base64Decode(userImageURL),
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const CircularProgressIndicator(),
+                            ),
                           ),
                         ),
                       ),

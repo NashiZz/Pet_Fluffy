@@ -63,14 +63,10 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
           .where('pet_respone', isEqualTo: pet_respone)
           .where('status', isEqualTo: 'จับคู่แล้ว')
           .get();
-
-      log(querySnapshot.docs.first.toString());
-
-
-
       if (querySnapshot.docs.isNotEmpty) {
-        isCheckMatch = true;
-        log(isCheckMatch.toString());
+        setState(() {
+          isCheckMatch = true;
+        }); 
       }
 
     } catch (e) {}
@@ -308,7 +304,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                     ? Text('เบอร์โทรศัพท์ : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text(
-                                        'เบอร์โทรศัพท์ : ${userData['phone'] ?? ''}',
+                                        'เบอร์โทรศัพท์ : ${userData['phone'] }',
                                         style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
@@ -318,7 +314,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                     ? Text('Facebook : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text(
-                                        'Facebook : ${userData['facebook'] ?? ''}',
+                                        'Facebook : ${userData['facebook']}',
                                         style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
@@ -327,7 +323,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                 child: isCheckMatch == false
                                     ? Text('Line : ',
                                         style: const TextStyle(fontSize: 16))
-                                    : Text('Line : ${userData['line'] ?? ''}',
+                                    : Text('Line : ${userData['line']}',
                                         style: const TextStyle(fontSize: 16)),
                               )
                             ],

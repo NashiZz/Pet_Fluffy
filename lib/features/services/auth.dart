@@ -8,7 +8,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:googleapis_auth/auth_io.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -69,7 +68,7 @@ class AuthService {
         User? user = userCredential.user;
 
         await saveUserGoogle(user!);
-
+        
         return user;
       }
     } catch (error) {
@@ -203,19 +202,24 @@ class AuthService {
     }
   }
 }
-
 class FirebaseAccessToken {
   static String firebaseMsgScope =
       "https://www.googleapis.com/auth/firebase/firebase.messaging";
-
   Future<String> getToken() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/firebase_credentials.json');
-      final contents = await file.readAsString();
-      final credentials =
-          ServiceAccountCredentials.fromJson(json.decode(contents));
-
+      final credentials = ServiceAccountCredentials.fromJson({
+         "type": "service_account",
+          "project_id": "",
+          "private_key_id": " ",
+          "private_key":"",
+          "client_email":"",
+          "client_id": "",
+          "auth_uri": "",
+          "token_uri": "",
+          "auth_provider_x509_cert_url":"",
+          "client_x509_cert_url":"",
+          "universe_domain": "googleapis.com"
+      });
       List<String> scopes = [
         "https://www.googleapis.com/auth/firebase.messaging"
       ];

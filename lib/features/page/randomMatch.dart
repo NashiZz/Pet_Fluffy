@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:math';
+import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
@@ -36,6 +37,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   String? userImageBase64;
   String? petName;
   bool isLoading = true;
+  String? _selectedDistance;
+  String? _selectedAge;
+  String? _selectedPrice;
+
   late List<Map<String, dynamic>> petDataMatchList = [];
   late List<Map<String, dynamic>> petDataFavoriteList = [];
   late List<Map<String, dynamic>> petUserDataList = [];
@@ -48,6 +53,27 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _otherBreedController = TextEditingController();
+  final TextEditingController _otherColor = TextEditingController();
+  final List<String> _Distance = [
+    '0-500 เมตร',
+    '500-1000 เมตร ',
+    ' 1 - 5 กิโลเมตร',
+    ' 5 - 20 กิโลเมตร'
+  ];
+  final List<String> _Age = [
+    '6 เดือน - 1 ปี',
+    '1 ปี - 1 ปี 6 เดือน',
+    '1 ปี 6 เดือน - 2 ปี',
+    'มากกว่า 2 ปี'
+  ];
+  final List<String> _Price = [
+    'น้อยกว่า 1000 บาท',
+    '1000-5000 บาท',
+    '5000-10000 บาท',
+    '10000-30000 บาท',
+    'มากกว่า 30000 บาท'
+  ];
   //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
@@ -238,6 +264,13 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   void _logSearchValue() {
+    setState(() {
+      _selectedDistance = null;
+      _selectedAge = null;
+      _otherBreedController.text = '';
+      _otherColor.text = '';
+      _selectedPrice = null;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
       search = searchValue.toString();
@@ -316,6 +349,99 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
+  int convertToMonths(String ageString) {
+    int months = 0;
+    RegExp regExp = RegExp(r'(\d+)\s*ปี');
+    Match? match = regExp.firstMatch(ageString);
+    if (match != null) {
+      int years = int.parse(match.group(1)!);
+      months += years * 12;
+    }
+    regExp = RegExp(r'(\d+)\s*เดือน');
+    match = regExp.firstMatch(ageString);
+    if (match != null) {
+      int extraMonths = int.parse(match.group(1)!);
+      months += extraMonths;
+    }
+    return months;
+  }
+
+  bool isAgeInRange(String ageRange, DateTime birthDate) {
+    DateTime now = DateTime.now();
+    int yearsDifference = now.year - birthDate.year;
+    int monthsDifference = now.month - birthDate.month;
+
+    if (now.day < birthDate.day) {
+      monthsDifference--;
+    }
+
+    if (monthsDifference < 0) {
+      yearsDifference--;
+      monthsDifference += 12;
+    }
+
+    // แปลงอายุเป็นเดือน
+    int totalMonths = yearsDifference * 12 + monthsDifference;
+
+    // แปลงช่วงอายุเป็นเดือน
+    List<String> parts = ageRange.split(' - ');
+    if (parts.length == 2) {
+      int minMonths = convertToMonths(parts[0]);
+      int maxMonths = convertToMonths(parts[1]);
+
+      // ตรวจสอบช่วงอายุ
+      return totalMonths >= minMonths && totalMonths <= maxMonths;
+    } else {
+      // กรณีไม่มีการระบุช่วง เช่น 'มากกว่า 2 ปี'
+      if (ageRange == 'มากกว่า 2 ปี') {
+        return totalMonths > 24; // มากกว่า 24 เดือน
+      }
+    }
+
+    return false;
+  }
+
+  bool isPriceInRange(String priceString, String selectedPrice) {
+  // แปลงราคาที่เป็นข้อความเป็นตัวเลข
+  double price = double.tryParse(priceString.replaceAll(',', '')) ?? 0.0;
+
+  // แปลงช่วงราคาที่เลือก
+  double? minPrice;
+  double? maxPrice;
+
+  // ตรวจสอบช่วงราคาที่เลือก
+  if (selectedPrice.contains('น้อยกว่า')) {
+    maxPrice = double.parse(selectedPrice
+        .replaceAll('น้อยกว่า', '')
+        .replaceAll(' บาท', '')
+        .trim());
+  } else if (selectedPrice.contains('มากกว่า')) {
+    minPrice = double.parse(selectedPrice
+        .replaceAll('มากกว่า', '')
+        .replaceAll(' บาท', '')
+        .trim());
+  } else if (selectedPrice.contains('-')) {
+    List<String> parts = selectedPrice.split('-');
+    minPrice = double.parse(parts[0]
+        .replaceAll(' บาท', '')
+        .trim());
+    maxPrice = double.parse(parts[1]
+        .replaceAll(' บาท', '')
+        .trim());
+  }
+
+  // ตรวจสอบว่าราคาอยู่ในช่วงที่เลือกหรือไม่
+  if (minPrice != null && maxPrice != null) {
+    return price >= minPrice && price <= maxPrice;
+  } else if (minPrice != null) {
+    return price > minPrice;
+  } else if (maxPrice != null) {
+    return price < maxPrice;
+  } else {
+    return false; // ไม่มีช่วงราคาที่กำหนด
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     _initializeOffsets(context);
@@ -329,64 +455,298 @@ class _randomMathch_PageState extends State<randomMathch_Page>
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.transparent,
-                      child: ClipOval(
-                        child: GestureDetector(
-                          onTap: () {
-                            if (petImg != null) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      Profile_pet_Page(petId: petId!),
-                                ),
-                              );
-                            } else {
-                              print('User image is not available');
-                            }
-                          },
-                          child: petImg != null
-                              ? Image.memory(
-                                  base64Decode(petImg!),
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                )
-                              : const CircularProgressIndicator(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        decoration: InputDecoration(
-                          hintText: 'ค้นหา',
-                          border: InputBorder.none,
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.search),
-                            onPressed: _logSearchValue,
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.transparent,
+                          child: ClipOval(
+                            child: GestureDetector(
+                              onTap: () {
+                                if (petImg != null) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          Profile_pet_Page(petId: petId!),
+                                    ),
+                                  );
+                                } else {
+                                  print('User image is not available');
+                                }
+                              },
+                              child: petImg != null
+                                  ? Image.memory(
+                                      base64Decode(petImg!),
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const CircularProgressIndicator(),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            decoration: InputDecoration(
+                              hintText: 'ค้นหา',
+                              border: InputBorder.none,
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.search),
+                                onPressed: _logSearchValue,
+                              ),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            historyMatch();
+                          },
+                          icon: const Icon(
+                            Icons.favorite,
+                            color: Colors.pinkAccent,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(Icons.notifications),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      onPressed: () {
-                        historyMatch();
+                    InkWell(
+                      onTap: () {
+                        showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled:
+                              true, // เพิ่มการตั้งค่านี้เพื่อให้สามารถเลื่อนขึ้นลงได้
+                          builder: (BuildContext context) {
+                            return SizedBox(
+                              height: MediaQuery.of(context).size.height *
+                                  0.8, // ปรับขนาดความสูงตามต้องการ
+                              child: SingleChildScrollView(
+                                // เพิ่ม SingleChildScrollView เพื่อให้สามารถเลื่อนขึ้นลงได้
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      const Text('การค้นหาขั้นสูง',
+                                          style: TextStyle(fontSize: 20)),
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                              value: _selectedDistance,
+                                              items:
+                                                  _Distance.map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              onChanged: (String? newValue) {
+                                                setState(() {
+                                                  _selectedDistance = newValue;
+                                                });
+                                              },
+                                              decoration: InputDecoration(
+                                                labelText: 'ระยะความห่าง',
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30.0),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 10,
+                                                  horizontal: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                              value: _selectedAge,
+                                              items: _Age.map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              onChanged: (String? newValue) {
+                                                setState(() {
+                                                  _selectedAge = newValue;
+                                                });
+                                              },
+                                              decoration: InputDecoration(
+                                                labelText: 'ช่วงอายุ',
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30.0),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 10,
+                                                  horizontal: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              style:
+                                                  const TextStyle(fontSize: 15),
+                                              controller: _otherBreedController,
+                                              decoration: InputDecoration(
+                                                labelText: 'สายพันธุ์',
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30.0),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 10,
+                                                  horizontal: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              style:
+                                                  const TextStyle(fontSize: 15),
+                                              controller: _otherColor,
+                                              decoration: InputDecoration(
+                                                labelText: 'สี',
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30.0),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 10,
+                                                  horizontal: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 15),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child:
+                                                DropdownButtonFormField<String>(
+                                              value: _selectedPrice,
+                                              items: _Price.map((String value) {
+                                                return DropdownMenuItem<String>(
+                                                  value: value,
+                                                  child: Text(value),
+                                                );
+                                              }).toList(),
+                                              onChanged: (String? newValue) {
+                                                setState(() {
+                                                  _selectedPrice = newValue;
+                                                });
+                                              },
+                                              decoration: InputDecoration(
+                                                labelText:
+                                                    'ราคา (ค่าผสมพันธุ์)',
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          30.0),
+                                                ),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 10,
+                                                  horizontal: 15,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 15),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedDistance =
+                                                _selectedDistance;
+                                            _selectedAge = _selectedAge;
+                                            _otherBreedController.text =
+                                                _otherBreedController.text;
+                                            _otherColor.text = _otherColor.text;
+                                            _selectedPrice = _selectedPrice;
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                          ),
+                                        ),
+                                        child: const Text('ค้นหา',
+                                            style: TextStyle(fontSize: 16)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
                       },
-                      icon: const Icon(
-                        Icons.favorite,
-                        color: Colors.pinkAccent,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        // ใช้ขนาดที่จำเป็นเท่านั้น
+                        children: [
+                          Text(
+                            'ค้นหาขั้นสูง',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: const Color.fromARGB(
+                                  255, 110, 110, 110), // สีของตัวอักษร
+                            ),
+                          ),
+                          const SizedBox(
+                              width: 8.0), // ระยะห่างระหว่าง Text และ Icon
+                          Icon(
+                            Icons.keyboard_arrow_down_sharp,
+                            color: const Color.fromARGB(
+                                255, 110, 110, 110), // สีของไอคอน
+                          ),
+                        ],
                       ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.notifications),
-                    ),
+                    )
                   ],
                 ),
               ),
@@ -430,7 +790,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                             pet['status'] == 'มีชีวิต'))
                     .toList();
 
-                print(snapshot.data!.length);
                 return FutureBuilder<List<Map<String, dynamic>>>(
                     future: () async {
                   List<Map<String, dynamic>> uniquePetDataMatch =
@@ -459,61 +818,138 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                   List<Map<String, dynamic>> filteredData =
                       filteredSnapshot.data!;
+                  if (_selectedDistance == null &&
+                      _selectedAge == null &&
+                      _otherBreedController.text == '' &&
+                      _otherColor.text == '' &&
+                      _selectedPrice == null) {
+                    if (search.toString() != 'null') {
+                      List<Map<String, dynamic>> filteredPets =
+                          filteredData.where((pet) {
+                        // log(search.toString().toLowerCase());
+                        bool matchesName = pet['name']
+                            .toString()
+                            .toLowerCase()
+                            .contains(search.toString().toLowerCase());
 
-                  if (search.toString() != 'null') {
+                        DateTime birthDate = DateTime.parse(pet['birthdate']);
+                        DateTime now = DateTime.now();
+                        int yearsDifference = now.year - birthDate.year;
+                        int monthsDifference = now.month - birthDate.month;
+
+                        if (now.day < birthDate.day) {
+                          monthsDifference--;
+                        }
+
+                        if (monthsDifference < 0) {
+                          yearsDifference--;
+                          monthsDifference += 12;
+                        }
+
+                        String ageDifference =
+                            '$yearsDifferenceปี$monthsDifferenceเดือน';
+
+                        bool matchesAge = ageDifference
+                            .toLowerCase()
+                            .contains(search.toString().toLowerCase());
+
+                        bool matchesBreed = pet['breed_pet']
+                            .toString()
+                            .toLowerCase()
+                            .contains(search.toString().toLowerCase());
+
+                        bool matchesGender = pet['gender']
+                            .toString()
+                            .toLowerCase()
+                            .contains(search.toString().toLowerCase());
+
+                        bool matchesColor = pet['color']
+                            .toString()
+                            .toLowerCase()
+                            .contains(search.toString().toLowerCase());
+
+                        return matchesName ||
+                            matchesAge ||
+                            matchesBreed ||
+                            matchesGender ||
+                            matchesColor;
+                      }).toList();
+                      petUserDataList = filteredPets;
+                    } else {
+                      petUserDataList = filteredData;
+                    }
+                  } else {
                     List<Map<String, dynamic>> filteredPets =
                         filteredData.where((pet) {
-                      // log(search.toString().toLowerCase());
-                      bool matchesName = pet['name']
-                          .toString()
-                          .toLowerCase()
-                          .contains(search.toString().toLowerCase());
-
-                      DateTime birthDate = DateTime.parse(pet['birthdate']);
-                      DateTime now = DateTime.now();
-                      int yearsDifference = now.year - birthDate.year;
-                      int monthsDifference = now.month - birthDate.month;
-
-                      if (now.day < birthDate.day) {
-                        monthsDifference--;
-                      }
-
-                      if (monthsDifference < 0) {
-                        yearsDifference--;
-                        monthsDifference += 12;
-                      }
-
-                      String ageDifference =
-                          '$yearsDifference ปี $monthsDifference เดือน';
-
-                      bool matchesAge = ageDifference
-                          .toLowerCase()
-                          .contains(search.toString().toLowerCase());
-
                       bool matchesBreed = pet['breed_pet']
                           .toString()
                           .toLowerCase()
-                          .contains(search.toString().toLowerCase());
+                          .contains(_otherBreedController.text.toLowerCase());
 
-                      bool matchesGender = pet['gender']
-                          .toString()
-                          .toLowerCase()
-                          .contains(search.toString().toLowerCase());
+                      DateTime birthDate = DateTime.parse(pet['birthdate']);
+                      bool matchesAge =
+                          isAgeInRange(_selectedAge.toString(), birthDate);
 
                       bool matchesColor = pet['color']
                           .toString()
                           .toLowerCase()
-                          .contains(search.toString().toLowerCase());
+                          .contains(_otherColor.text.toLowerCase());
 
-                      return matchesName ||
-                          matchesAge ||
-                          matchesBreed ||
-                          matchesGender ||
-                          matchesColor;
+                      bool matchesPrice = isPriceInRange(
+                          pet['price'].toString(), _selectedPrice.toString());
+                     
+                     
+                      // return matchesPrice;
+                      if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice != null) {
+                        return matchesBreed && matchesAge && matchesColor && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice != null) {
+                        return matchesAge && matchesColor && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice != null){
+                        return matchesBreed && matchesColor && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice != null){
+                        return matchesBreed && matchesAge && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice == null){
+                        return matchesBreed && matchesAge && matchesColor ;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice != null) {
+                        return matchesColor && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice != null) {
+                        return matchesAge  && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice == null) {
+                        return matchesAge && matchesColor ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text =='' && _selectedPrice != null) {
+                        return matchesBreed && matchesPrice ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice == null) {
+                        return matchesBreed && matchesColor ;
+                      }
+                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice == null) {
+                        return matchesBreed && matchesAge ;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text =='' && _selectedPrice != null) {
+                        return matchesPrice;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice == null) {
+                        return matchesColor;
+                      }
+                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice == null) {
+                        return matchesAge;
+                      }
+                      else {
+                        return matchesBreed;
+                      }
+                      
+
+                      
                     }).toList();
                     petUserDataList = filteredPets;
-                  } else {
-                    petUserDataList = filteredData;
                   }
 
                   return Expanded(
@@ -528,13 +964,18 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                         int years = now.year - birthDate.year;
                         int months = now.month - birthDate.month;
 
+                        if (now.day < birthDate.day) {
+                          months--;
+                        }
+
                         if (months < 0) {
                           years--;
                           months += 12;
                         }
+
                         String ageString = '';
                         if (years > 0) {
-                          ageString += '$years ขวบ';
+                          ageString += '$years ปี';
                           if (months > 0) {
                             ageString += ' ';
                           }
@@ -580,7 +1021,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                Profile_pet_Page(
+                                                Profile_pet_AllPage(
                                                     petId: petData['pet_id']),
                                           ),
                                         );
@@ -1111,7 +1552,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   Future<void> sendPushMessage(
-    String token_user, String title, String body) async {
+      String token_user, String title, String body) async {
     print(token_user);
     String token = await firebaseAccessToken.getToken();
     final data = {
@@ -1129,7 +1570,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer '+token, // ใส่ Server Key ที่ถูกต้องที่นี่
+          'Authorization': 'Bearer ' + token, // ใส่ Server Key ที่ถูกต้องที่นี่
         },
         body: jsonEncode(data),
       );
