@@ -28,6 +28,8 @@ class randomMathch_Page extends StatefulWidget {
 
 class _randomMathch_PageState extends State<randomMathch_Page>
     with SingleTickerProviderStateMixin {
+  final AuthService _authService = AuthService();
+  bool isAnonymousUser = false;
   User? user = FirebaseAuth.instance.currentUser;
   String? userId;
   String? petId;
@@ -295,6 +297,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   @override
   void initState() {
     super.initState();
+    isAnonymousUser = _authService.isAnonymous();
     _setTokenfirebaseMassag();
     _getUserDataFromFirestore();
     _getUsage_pet('');
@@ -402,45 +405,41 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   bool isPriceInRange(String priceString, String selectedPrice) {
-  // แปลงราคาที่เป็นข้อความเป็นตัวเลข
-  double price = double.tryParse(priceString.replaceAll(',', '')) ?? 0.0;
+    // แปลงราคาที่เป็นข้อความเป็นตัวเลข
+    double price = double.tryParse(priceString.replaceAll(',', '')) ?? 0.0;
 
-  // แปลงช่วงราคาที่เลือก
-  double? minPrice;
-  double? maxPrice;
+    // แปลงช่วงราคาที่เลือก
+    double? minPrice;
+    double? maxPrice;
 
-  // ตรวจสอบช่วงราคาที่เลือก
-  if (selectedPrice.contains('น้อยกว่า')) {
-    maxPrice = double.parse(selectedPrice
-        .replaceAll('น้อยกว่า', '')
-        .replaceAll(' บาท', '')
-        .trim());
-  } else if (selectedPrice.contains('มากกว่า')) {
-    minPrice = double.parse(selectedPrice
-        .replaceAll('มากกว่า', '')
-        .replaceAll(' บาท', '')
-        .trim());
-  } else if (selectedPrice.contains('-')) {
-    List<String> parts = selectedPrice.split('-');
-    minPrice = double.parse(parts[0]
-        .replaceAll(' บาท', '')
-        .trim());
-    maxPrice = double.parse(parts[1]
-        .replaceAll(' บาท', '')
-        .trim());
+    // ตรวจสอบช่วงราคาที่เลือก
+    if (selectedPrice.contains('น้อยกว่า')) {
+      maxPrice = double.parse(selectedPrice
+          .replaceAll('น้อยกว่า', '')
+          .replaceAll(' บาท', '')
+          .trim());
+    } else if (selectedPrice.contains('มากกว่า')) {
+      minPrice = double.parse(selectedPrice
+          .replaceAll('มากกว่า', '')
+          .replaceAll(' บาท', '')
+          .trim());
+    } else if (selectedPrice.contains('-')) {
+      List<String> parts = selectedPrice.split('-');
+      minPrice = double.parse(parts[0].replaceAll(' บาท', '').trim());
+      maxPrice = double.parse(parts[1].replaceAll(' บาท', '').trim());
+    }
+
+    // ตรวจสอบว่าราคาอยู่ในช่วงที่เลือกหรือไม่
+    if (minPrice != null && maxPrice != null) {
+      return price >= minPrice && price <= maxPrice;
+    } else if (minPrice != null) {
+      return price > minPrice;
+    } else if (maxPrice != null) {
+      return price < maxPrice;
+    } else {
+      return false; // ไม่มีช่วงราคาที่กำหนด
+    }
   }
-
-  // ตรวจสอบว่าราคาอยู่ในช่วงที่เลือกหรือไม่
-  if (minPrice != null && maxPrice != null) {
-    return price >= minPrice && price <= maxPrice;
-  } else if (minPrice != null) {
-    return price > minPrice;
-  } else if (maxPrice != null) {
-    return price < maxPrice;
-  } else {
-    return false; // ไม่มีช่วงราคาที่กำหนด
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -477,14 +476,21 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                   print('User image is not available');
                                 }
                               },
-                              child: petImg != null
-                                  ? Image.memory(
-                                      base64Decode(petImg!),
+                              child: isAnonymousUser
+                                  ? Image.asset(
+                                      'assets/images/user-286-512.png',
                                       width: 40,
                                       height: 40,
                                       fit: BoxFit.cover,
                                     )
-                                  : const CircularProgressIndicator(),
+                                  : petImg != null
+                                      ? Image.memory(
+                                          base64Decode(petImg!),
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : const CircularProgressIndicator(),
                             ),
                           ),
                         ),
@@ -503,17 +509,15 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                           ),
                         ),
                         IconButton(
-                          onPressed: () {
-                            historyMatch();
-                          },
+                          onPressed: isAnonymousUser
+                              ? null
+                              : () {
+                                  historyMatch();
+                                },
                           icon: const Icon(
                             Icons.favorite,
                             color: Colors.pinkAccent,
                           ),
-                        ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.notifications),
                         ),
                       ],
                     ),
@@ -778,18 +782,28 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   );
                 }
 
+                // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
+                bool isAnonymousUser =
+                    FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
+
                 // List<Map<String, dynamic>> allPetData = snapshot.data!;
                 // กำหนดเพศตรงข้าม
-                String oppositeGender =
-                    (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
-                List<Map<String, dynamic>> filteredPetData = snapshot.data!
-                    .where((pet) =>
-                        pet['type_pet'] == petType &&
-                        pet['gender'] == oppositeGender &&
-                        (pet['status'] == 'พร้อมผสมพันธุ์' ||
-                            pet['status'] == 'มีชีวิต'))
-                    .toList();
-
+                List<Map<String, dynamic>> filteredPetData;
+                if (isAnonymousUser) {
+                  // หากเป็นผู้ใช้ Anonymous ให้แสดงข้อมูลสัตว์เลี้ยงทั้งหมด
+                  filteredPetData = snapshot.data!;
+                } else {
+                  // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
+                  String oppositeGender =
+                      (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                  filteredPetData = snapshot.data!
+                      .where((pet) =>
+                          pet['type_pet'] == petType &&
+                          pet['gender'] == oppositeGender &&
+                          (pet['status'] == 'พร้อมผสมพันธุ์' ||
+                              pet['status'] == 'มีชีวิต'))
+                      .toList();
+                }
                 return FutureBuilder<List<Map<String, dynamic>>>(
                     future: () async {
                   List<Map<String, dynamic>> uniquePetDataMatch =
@@ -897,57 +911,84 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                       bool matchesPrice = isPriceInRange(
                           pet['price'].toString(), _selectedPrice.toString());
-                     
-                     
+
                       // return matchesPrice;
-                      if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice != null) {
-                        return matchesBreed && matchesAge && matchesColor && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice != null) {
-                        return matchesAge && matchesColor && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice != null){
-                        return matchesBreed && matchesColor && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice != null){
-                        return matchesBreed && matchesAge && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice == null){
-                        return matchesBreed && matchesAge && matchesColor ;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice != null) {
-                        return matchesColor && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice != null) {
-                        return matchesAge  && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text !='' && _selectedPrice == null) {
-                        return matchesAge && matchesColor ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text =='' && _selectedPrice != null) {
-                        return matchesBreed && matchesPrice ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice == null) {
-                        return matchesBreed && matchesColor ;
-                      }
-                      else if (_otherBreedController.text != '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice == null) {
-                        return matchesBreed && matchesAge ;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text =='' && _selectedPrice != null) {
+                      if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null) {
+                        return matchesBreed &&
+                            matchesAge &&
+                            matchesColor &&
+                            matchesPrice;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null) {
+                        return matchesAge && matchesColor && matchesPrice;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null) {
+                        return matchesBreed && matchesColor && matchesPrice;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null) {
+                        return matchesBreed && matchesAge && matchesPrice;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice == null) {
+                        return matchesBreed && matchesAge && matchesColor;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null) {
+                        return matchesColor && matchesPrice;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null) {
+                        return matchesAge && matchesPrice;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice == null) {
+                        return matchesAge && matchesColor;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null) {
+                        return matchesBreed && matchesPrice;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice == null) {
+                        return matchesBreed && matchesColor;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice == null) {
+                        return matchesBreed && matchesAge;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null) {
                         return matchesPrice;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge ==null && _otherColor.text !='' && _selectedPrice == null) {
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice == null) {
                         return matchesColor;
-                      }
-                      else if (_otherBreedController.text == '' && _selectedAge !=null && _otherColor.text =='' && _selectedPrice == null) {
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice == null) {
                         return matchesAge;
-                      }
-                      else {
+                      } else {
                         return matchesBreed;
                       }
-                      
-
-                      
                     }).toList();
                     petUserDataList = filteredPets;
                   }
@@ -1097,35 +1138,51 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.blue.shade600
-                                                      .withOpacity(0.8),
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.grey
-                                                          .withOpacity(0.5),
-                                                      spreadRadius: 1,
-                                                      blurRadius: 3,
-                                                      offset:
-                                                          const Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: IconButton(
-                                                  onPressed: () {
-                                                    // log(user.toString());
-                                                    add_Faverite(
-                                                        petData['pet_id']);
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.star_rounded,
-                                                    color: Colors.yellow,
+                                              // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
+                                              GestureDetector(
+                                                onTap: isAnonymousUser
+                                                    ? () {
+                                                        _showSignInDialog(
+                                                            context);
+                                                      }
+                                                    : () {
+                                                        add_Faverite(
+                                                            petData['pet_id']);
+                                                      },
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: isAnonymousUser
+                                                        ? Colors.grey
+                                                        : Colors.blue.shade600
+                                                            .withOpacity(0.8),
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.5),
+                                                        spreadRadius: 1,
+                                                        blurRadius: 3,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  iconSize: 20,
+                                                  child: IconButton(
+                                                    onPressed: isAnonymousUser
+                                                        ? null
+                                                        : () {
+                                                            add_Faverite(
+                                                                petData[
+                                                                    'pet_id']);
+                                                          },
+                                                    icon: const Icon(
+                                                      Icons.star_rounded,
+                                                      color: Colors.yellow,
+                                                    ),
+                                                    iconSize: 20,
+                                                  ),
                                                 ),
                                               ),
                                               GestureDetector(
@@ -1159,50 +1216,78 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                                       backgroundColor:
                                                           Colors.transparent,
                                                       child: ClipOval(
-                                                        child: Image.memory(
-                                                          base64Decode(
-                                                              userImageURL!),
-                                                          width: 40,
-                                                          height: 40,
-                                                          fit: BoxFit.cover,
-                                                        ),
+                                                        child: userImageURL !=
+                                                                null
+                                                            ? Image.memory(
+                                                                base64Decode(
+                                                                    userImageURL),
+                                                                width: 40,
+                                                                height: 40,
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              )
+                                                            : const Icon(
+                                                                Icons.person,
+                                                                size: 40,
+                                                              ),
                                                       ),
                                                     ),
                                                   ),
                                                 ),
                                               ),
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.grey
-                                                          .withOpacity(0.5),
-                                                      spreadRadius: 1,
-                                                      blurRadius: 3,
-                                                      offset:
-                                                          const Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: IconButton(
-                                                  onPressed: () {
-                                                    add_match(
-                                                        petData['pet_id'],
-                                                        petData['user_id'],
-                                                        petData['img_profile'],
-                                                        petData['name']);
-
-                                                    // Add your code to handle the "heart" action here
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.favorite,
-                                                    color: Colors.pinkAccent,
+                                              GestureDetector(
+                                                onTap: isAnonymousUser
+                                                    ? () {
+                                                        _showSignInDialog(
+                                                            context);
+                                                      }
+                                                    : () {
+                                                        add_match(
+                                                          petData['pet_id'],
+                                                          petData['user_id'],
+                                                          petData[
+                                                              'img_profile'],
+                                                          petData['name'],
+                                                        );
+                                                      },
+                                                child: Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: isAnonymousUser
+                                                        ? Colors.grey
+                                                        : Colors.white,
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color: Colors.grey
+                                                            .withOpacity(0.5),
+                                                        spreadRadius: 1,
+                                                        blurRadius: 3,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  iconSize: 20,
+                                                  child: IconButton(
+                                                    onPressed: isAnonymousUser
+                                                        ? null
+                                                        : () {
+                                                            add_match(
+                                                              petData['pet_id'],
+                                                              petData[
+                                                                  'user_id'],
+                                                              petData[
+                                                                  'img_profile'],
+                                                              petData['name'],
+                                                            );
+                                                          },
+                                                    icon: const Icon(
+                                                      Icons.favorite,
+                                                      color: Colors.pinkAccent,
+                                                    ),
+                                                    iconSize: 20,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -1251,6 +1336,33 @@ class _randomMathch_PageState extends State<randomMathch_Page>
               },
             )
           : null,
+    );
+  }
+
+  void _showSignInDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('กรุณาลงทะเบียน'),
+          content: const Text('คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('ลงทะเบียน'),
+              onPressed: () {
+                Navigator.pushNamed(
+                    context, '/register'); // ปรับเส้นทางตามต้องการ
+              },
+            ),
+            TextButton(
+              child: const Text('ยกเลิก'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
