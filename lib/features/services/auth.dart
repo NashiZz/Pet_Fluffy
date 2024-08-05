@@ -210,12 +210,19 @@ class FirebaseAccessToken {
 
   Future<String> getToken() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/firebase_credentials.json');
-      final contents = await file.readAsString();
-      final credentials =
-          ServiceAccountCredentials.fromJson(json.decode(contents));
-
+      final credentials = ServiceAccountCredentials.fromJson({
+        "type": "service_account",
+        "project_id": "",
+        "private_key_id": " ",
+        "private_key": "",
+        "client_email": "",
+        "client_id": "",
+        "auth_uri": "",
+        "token_uri": "",
+        "auth_provider_x509_cert_url": "",
+        "client_x509_cert_url": "",
+        "universe_domain": "googleapis.com"
+      });
       List<String> scopes = [
         "https://www.googleapis.com/auth/firebase.messaging"
       ];
