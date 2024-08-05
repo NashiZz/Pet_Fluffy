@@ -9,6 +9,7 @@ import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -37,6 +38,10 @@ class _MapsPageState extends State<Maps_Page> {
   StreamSubscription<LocationData>?
       _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
 
+  late String petId;
+  late String petImg;
+  late String pet_type;
+  late String gender;
   late String userId;
   late String userImageBase64;
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
@@ -58,6 +63,22 @@ class _MapsPageState extends State<Maps_Page> {
         });
       } else {
         try {
+          DocumentSnapshot idpetDocSnapshot = await FirebaseFirestore.instance
+              .collection('Usage_pet')
+              .doc(userId)
+              .get();
+
+          petId = idpetDocSnapshot['pet_id'];
+
+          DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+              .collection('Pet_User')
+              .doc(petId)
+              .get();
+
+          petImg = petDocSnapshot['img_profile'];
+          pet_type = petDocSnapshot['img_profile'];
+          gender = petDocSnapshot['img_profile'];
+
           Map<String, dynamic>? userMap =
               await ApiUserService.getUserDataFromFirestore(userId);
 
@@ -76,6 +97,26 @@ class _MapsPageState extends State<Maps_Page> {
     setState(() {
       isLoading = false;
     });
+  }
+
+  String calculateDistance(LatLng start, LatLng end) {
+    // คำนวณระยะทางในหน่วยเมตร
+    double distanceInMeters = Geolocator.distanceBetween(
+      start.latitude,
+      start.longitude,
+      end.latitude,
+      end.longitude,
+    );
+
+    // ตรวจสอบและแปลงหน่วย
+    if (distanceInMeters >= 1000) {
+      // แปลงเป็นกิโลเมตรและคืนค่าเป็นสตริง
+      double distanceInKilometers = distanceInMeters / 1000;
+      return '${distanceInKilometers.toStringAsFixed(2)} กิโลเมตร';
+    } else {
+      // คืนค่าเป็นเมตร
+      return '${distanceInMeters.toStringAsFixed(0)} เมตร';
+    }
   }
 
   final Completer<GoogleMapController> _controller =
@@ -211,19 +252,21 @@ class _MapsPageState extends State<Maps_Page> {
                                         const Profile_user_Page()),
                               );
                             },
-                            child: isAnonymous || userImageBase64.isEmpty
+                            child: isAnonymous
                                 ? Image.asset(
                                     'assets/images/user-286-512.png', // ใส่ที่อยู่ของรูปภาพ default ที่คุณต้องการ
                                     width: 40,
                                     height: 40,
                                     fit: BoxFit.cover,
                                   )
-                                : Image.memory(
-                                    base64Decode(userImageBase64),
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                  ),
+                                : petImg != null
+                                    ? Image.memory(
+                                        base64Decode(petImg),
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : const CircularProgressIndicator(),
                           ),
                         ),
                       ),
@@ -474,13 +517,18 @@ class _MapsPageState extends State<Maps_Page> {
       List<Marker> markers = [];
       List<String> errors = [];
 
-      // ตรวจสอบว่ารูปภาพ marker โหลดไว้ล่วงหน้าแล้วหรือยัง
       if (markerImages.isEmpty) {
         await _preloadMarkerImages();
       }
 
       QuerySnapshot<Map<String, dynamic>> petUserDocsSnapshot =
           await FirebaseFirestore.instance.collection('Pet_User').get();
+
+      // ตำแหน่งของผู้ใช้
+      LatLng userLocation = LatLng(
+        _locationData?.latitude ?? 0.0,
+        _locationData?.longitude ?? 0.0,
+      );
 
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();
@@ -490,7 +538,6 @@ class _MapsPageState extends State<Maps_Page> {
 
         double lat = userSnapshot['lat'] ?? 0.0;
         double lng = userSnapshot['lng'] ?? 0.0;
-        //random ตำแหน่ง ให้สัตว์เลี้ยงไม่ซ้อนกัน
         lat += Random().nextDouble() * 0.0002;
         lng += Random().nextDouble() * 0.0002;
         LatLng petLocation = LatLng(lat, lng);
@@ -508,7 +555,6 @@ class _MapsPageState extends State<Maps_Page> {
 
         String age = calculateAge(birthdate);
 
-        // ตรวจสอบว่ามีรูปภาพ marker ในรายการหรือไม่
         Uint8List? bytes = markerImages[doc.id];
         if (bytes == null) {
           errors.add('Marker image not found for document ${doc.id}');
@@ -516,14 +562,32 @@ class _MapsPageState extends State<Maps_Page> {
         }
 
         try {
+          // คำนวณระยะห่าง
+          String distanceStr = calculateDistance(userLocation, petLocation);
+
           Marker petMarker = Marker(
             markerId: MarkerId(doc.id),
             position: petLocation,
             onTap: () {
-              _showPetDetails(context, petID, petName, petImageBase64, weight,
-                  gender, userPhotoURL, age, type, des);
+              _showPetDetails(
+                context,
+                petID,
+                petName,
+                petImageBase64,
+                weight,
+                gender,
+                userPhotoURL,
+                age,
+                type,
+                des,
+                distanceStr, // เพิ่มระยะห่างที่นี่
+              );
             },
             icon: (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+            infoWindow: InfoWindow(
+              title: petName,
+              snippet: distanceStr,
+            ),
           );
 
           markers.add(petMarker);
@@ -538,7 +602,6 @@ class _MapsPageState extends State<Maps_Page> {
         isLoading = false;
       });
 
-      // รายงานข้อผิดพลาดทั้งหมด
       if (errors.isNotEmpty) {
         for (var error in errors) {
           print(error);
@@ -551,17 +614,17 @@ class _MapsPageState extends State<Maps_Page> {
 
   //Show Dialog เมื่อมีการคลิก Maker สัตว์เลี้ยง
   void _showPetDetails(
-    BuildContext context,
-    String petID,
-    String petName,
-    String petImageBase64,
-    String weight,
-    String gender,
-    String userPhotoURL,
-    String age,
-    String type,
-    String des,
-  ) {
+      BuildContext context,
+      String petID,
+      String petName,
+      String petImageBase64,
+      String weight,
+      String gender,
+      String userPhotoURL,
+      String age,
+      String type,
+      String des,
+      String distance) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -570,9 +633,9 @@ class _MapsPageState extends State<Maps_Page> {
           builder: (BuildContext context, BoxConstraints constraints) {
             return FractionallySizedBox(
               heightFactor: constraints.maxHeight > constraints.maxWidth
-                  ? 0.76
+                  ? 0.68
                   : constraints.maxHeight > 600
-                      ? 0.67
+                      ? 0.65
                       : 0.8,
               child: Scaffold(
                 backgroundColor: Colors.transparent,
@@ -764,14 +827,33 @@ class _MapsPageState extends State<Maps_Page> {
                               ),
                             ),
                           ),
-                          const Padding(
+                          Padding(
                             padding: EdgeInsets.only(top: 20),
-                            child: Text(
-                              'คำอธิบาย',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'คำอธิบาย',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.location_on,
+                                      color: Colors.blue,
+                                    ),
+                                    Text(
+                                      '  ห่าง ${distance}จากคุณ',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 5),
