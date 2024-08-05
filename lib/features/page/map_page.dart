@@ -48,9 +48,34 @@ class _MapsPageState extends State<Maps_Page> {
   bool isLoading = true;
   bool isAnonymous = false;
 
-  // Async func to handle Futures easier; or use Future.then
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
 
-  //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
+  CameraPosition _initialCameraPosition = const CameraPosition(
+    target: LatLng(37.42796133580664, -122.085749655962),
+    zoom: 14.4746,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    location = Location();
+    _getUserDataFromFirestore();
+    _locationSubscription =
+        location.onLocationChanged.listen((LocationData currentLocation) {
+      setState(() {
+        _locationData = currentLocation;
+        _updateUserLocationMarker();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -76,15 +101,14 @@ class _MapsPageState extends State<Maps_Page> {
               .get();
 
           petImg = petDocSnapshot['img_profile'];
-          pet_type = petDocSnapshot['img_profile'];
-          gender = petDocSnapshot['img_profile'];
+          pet_type = petDocSnapshot['type_pet'];
+          gender = petDocSnapshot['gender'];
 
           Map<String, dynamic>? userMap =
               await ApiUserService.getUserDataFromFirestore(userId);
 
           if (userMap != null) {
             userImageBase64 = userMap['photoURL'] ?? '';
-
             getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
           } else {
             print("User data does not exist");
@@ -119,16 +143,6 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
-  final Completer<GoogleMapController> _controller =
-      Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
-
-  //เก็บตำแหน่งเริ่มต้นของมุมกล้องบนแผนที่
-  CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(37.42796133580664, -122.085749655962),
-    zoom: 14.4746,
-  );
-
-  //สร้าง Marker แสดงตำแหน่งปัจจุบันของผู้ใช้
   void _createUserLocationMarker() {
     _markers.add(Marker(
       markerId: const MarkerId('currentLocation'),
@@ -141,7 +155,6 @@ class _MapsPageState extends State<Maps_Page> {
     ));
   }
 
-  //เมื่อมีการเปลี่ยนแปลงตำแหน่งของผู้ใช้ marker จะแสดงตามตำแหน่งของผู้ใช้
   void _updateUserLocationMarker() {
     setState(() {
       _markers
@@ -150,45 +163,19 @@ class _MapsPageState extends State<Maps_Page> {
     });
   }
 
-  // ดึงข้อมูลตำแหน่งปัจจุบันของผู้ใช้และอัปเดต
   void getLocation() async {
-    Location location = Location();
     _locationData = await location.getLocation();
-
     setState(() {
       _initialCameraPosition = CameraPosition(
-          bearing: 192.8334901395799,
-          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-          tilt: 59.4407176971435555,
-          zoom: 19.151926040649414);
+        bearing: 192.8334901395799,
+        target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+        tilt: 59.4407176971435555,
+        zoom: 19.151926040649414,
+      );
       _createUserLocationMarker();
     });
-
     _goToTheLake();
     _loadAllPetLocations(context);
-  }
-
-  //จะถูกเรียกเมื่อหน้าจอถูกโหลด
-  @override
-  void initState() {
-    super.initState();
-    _getUserDataFromFirestore();
-    location = Location();
-    _locationSubscription =
-        location.onLocationChanged.listen((LocationData currentLocation) {
-      setState(() {
-        _locationData = currentLocation;
-        _updateUserLocationMarker();
-      });
-    });
-    // _initializeFirebase();
-    getLocation(); //เพื่อดึงข้อมูลตำแหน่งที่ตั้งของผู้ใช้
-  }
-
-  @override
-  void dispose() {
-    _locationSubscription?.cancel();
-    super.dispose();
   }
 
   @override
@@ -203,7 +190,7 @@ class _MapsPageState extends State<Maps_Page> {
               SizedBox(height: 15),
               Text('กำลังโหลดแผนที่ รอสักครู่....')
             ],
-          ), // แสดง indicator ในระหว่างโหลด
+          ),
         ),
       );
     }
@@ -225,8 +212,6 @@ class _MapsPageState extends State<Maps_Page> {
               },
               markers: _markers,
             ),
-
-            //แสดงรูปภาพโปรไฟล์ผู้ใช้ และ ปุ่มค้นหา
             Positioned(
               top: 10,
               left: 10,
@@ -294,7 +279,6 @@ class _MapsPageState extends State<Maps_Page> {
           ],
         ),
       ),
-      //ปุ่มเลือก ตำแหน่งแสดงผลสัตว์เลี้ยง
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           _startSelectingLocation();
@@ -507,7 +491,7 @@ class _MapsPageState extends State<Maps_Page> {
     return ageString;
   }
 
-  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
+  // ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Future<void> _loadAllPetLocations(BuildContext context) async {
     try {
       setState(() {
@@ -521,6 +505,7 @@ class _MapsPageState extends State<Maps_Page> {
         await _preloadMarkerImages();
       }
 
+      // ดึงข้อมูลทั้งหมด
       QuerySnapshot<Map<String, dynamic>> petUserDocsSnapshot =
           await FirebaseFirestore.instance.collection('Pet_User').get();
 
@@ -533,6 +518,11 @@ class _MapsPageState extends State<Maps_Page> {
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();
 
+        // ข้ามข้อมูลของสัตว์เลี้ยงที่เป็นของผู้ใช้เอง
+        if (data['user_id'] == user?.uid) {
+          return;
+        }
+
         DocumentSnapshot userSnapshot =
             await ApiUserService.getUserData(data['user_id']);
 
@@ -542,57 +532,60 @@ class _MapsPageState extends State<Maps_Page> {
         lng += Random().nextDouble() * 0.0002;
         LatLng petLocation = LatLng(lat, lng);
 
-        String userPhotoURL = userSnapshot['photoURL'] ?? '';
-        String petID = data['pet_id'] ?? '';
-        String petName = data['name'] ?? '';
-        String type = data['breed_pet'] ?? '';
-        String petImageBase64 = data['img_profile'] ?? '';
-        String weight = data['weight'] ?? '0.0';
-        String gender = data['gender'] ?? '';
-        String des = data['description'] ?? '';
-        String birthdateStr = data['birthdate'] ?? '';
-        DateTime birthdate = DateTime.parse(birthdateStr);
+        String petType = data['type_pet'] ?? '';
+        String petGender = data['gender'] ?? '';
 
-        String age = calculateAge(birthdate);
+        // ตรวจสอบประเภทและเพศ
+        if (petType == pet_type && petGender != gender) {
+          String userPhotoURL = userSnapshot['photoURL'] ?? '';
+          String petID = data['pet_id'] ?? '';
+          String petName = data['name'] ?? '';
+          String petImageBase64 = data['img_profile'] ?? '';
+          String weight = data['weight'] ?? '0.0';
+          String des = data['description'] ?? '';
+          String birthdateStr = data['birthdate'] ?? '';
+          DateTime birthdate = DateTime.parse(birthdateStr);
+          String age = calculateAge(birthdate);
 
-        Uint8List? bytes = markerImages[doc.id];
-        if (bytes == null) {
-          errors.add('Marker image not found for document ${doc.id}');
-          return;
-        }
+          Uint8List? bytes = markerImages[doc.id];
+          if (bytes == null) {
+            errors.add('Marker image not found for document ${doc.id}');
+            return;
+          }
 
-        try {
-          // คำนวณระยะห่าง
-          String distanceStr = calculateDistance(userLocation, petLocation);
+          try {
+            // คำนวณระยะห่าง
+            String distanceStr = calculateDistance(userLocation, petLocation);
 
-          Marker petMarker = Marker(
-            markerId: MarkerId(doc.id),
-            position: petLocation,
-            onTap: () {
-              _showPetDetails(
-                context,
-                petID,
-                petName,
-                petImageBase64,
-                weight,
-                gender,
-                userPhotoURL,
-                age,
-                type,
-                des,
-                distanceStr, // เพิ่มระยะห่างที่นี่
-              );
-            },
-            icon: (await _createMarkerIcon(bytes).toBitmapDescriptor()),
-            infoWindow: InfoWindow(
-              title: petName,
-              snippet: distanceStr,
-            ),
-          );
+            Marker petMarker = Marker(
+              markerId: MarkerId(doc.id),
+              position: petLocation,
+              onTap: () {
+                _showPetDetails(
+                  context,
+                  petID,
+                  petName,
+                  petImageBase64,
+                  weight,
+                  petGender,
+                  userPhotoURL,
+                  age,
+                  petType,
+                  des,
+                  distanceStr, // เพิ่มระยะห่างที่นี่
+                );
+              },
+              icon: (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+              infoWindow: InfoWindow(
+                title: petName,
+                snippet: distanceStr,
+              ),
+            );
 
-          markers.add(petMarker);
-        } catch (e) {
-          errors.add('Error creating marker for document ${doc.id}: $e');
+            markers.add(petMarker);
+          } catch (e) {
+            errors.add('Error creating marker for document ${doc.id}: $e');
+          }
         }
       });
 
