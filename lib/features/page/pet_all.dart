@@ -1,6 +1,7 @@
 // ignore_for_file: camel_case_types, avoid_print
 
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
@@ -61,12 +62,27 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
           DateTime birthDate = DateTime.parse(pet['birthdate']);
           DateTime now = DateTime.now();
+          // คำนวณความแตกต่างของปีและเดือน
           int yearsDifference = now.year - birthDate.year;
-          if (now.month < birthDate.month ||
-              (now.month == birthDate.month && now.day < birthDate.day)) {
-            yearsDifference--;
+          int monthsDifference = now.month - birthDate.month;
+
+// ถ้าความแตกต่างของวันทำให้ต้องลดจำนวนเดือนลงหนึ่งเดือน
+          if (now.day < birthDate.day) {
+            monthsDifference--;
+            
           }
-          bool matchesAge = yearsDifference
+          
+
+// แปลงจำนวนปีเป็นเดือนแล้วรวมกับจำนวนเดือนที่เหลือ
+          int totalMonths = yearsDifference * 12 + monthsDifference;
+
+          if(totalMonths > 12){
+            totalMonths = totalMonths % 12; 
+          }
+          
+
+// ตรวจสอบว่า totalMonths มีค่าเหมือนกับ searchValue หรือไม่
+          bool matchesAge = totalMonths
               .toString()
               .toLowerCase()
               .contains(searchValue.toLowerCase());

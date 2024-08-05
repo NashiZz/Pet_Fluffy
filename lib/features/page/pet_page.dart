@@ -550,7 +550,14 @@ class _Pet_PageState extends State<Pet_Page> {
     String color = _colorController.text;
     String birtdate = _dateController.text;
     String weight = _weightController.text;
-    String price = _priceController.text;
+    String price ;
+    if (_priceController.text=='') {
+      price = '0';
+    }
+    else{
+      price = _priceController.text;
+    }
+    
     String petdegreeBase64 =
         _normalImage != null ? base64Encode(_normalImage!) : '';
     String description = _desController.text;
