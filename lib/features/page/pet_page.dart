@@ -1,7 +1,5 @@
 // ignore_for_file: camel_case_types, avoid_print, use_build_context_synchronously, no_leading_underscores_for_local_identifiers
 
-import 'dart:developer';
-
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';

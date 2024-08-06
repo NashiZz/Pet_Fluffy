@@ -129,7 +129,7 @@ class AuthService {
           'birtdate': '',
           'country': '',
           'facebeook': '',
-          'line': ''
+          'line': 'สมาชิก'
         });
       }
     } catch (error) {
@@ -156,7 +156,8 @@ class AuthService {
       'birthdate': '',
       'country': '',
       'facebook': '',
-      'line': ''
+      'line': '',
+      'status': 'สมาชิก'
     }).then((_) {
       print("User data added to Firestore");
     }).catchError((error) {
