@@ -514,6 +514,7 @@ class _MapsPageState extends State<Maps_Page> {
         _locationData?.latitude ?? 0.0,
         _locationData?.longitude ?? 0.0,
       );
+      print(userLocation);
 
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();
