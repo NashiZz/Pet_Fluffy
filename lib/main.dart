@@ -1,4 +1,5 @@
 import 'package:Pet_Fluffy/features/api/notification_api.dart';
+import 'package:Pet_Fluffy/features/services/notification_helper.dart';
 import 'package:Pet_Fluffy/features/splash_screen/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -7,13 +8,14 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+
 final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
-
+  NotificationHelper.init();
   //ทำการเชื่อมต่อแอปกับ Firebase 
   await Firebase.initializeApp();
   await FirebaseApi().initNotifications();

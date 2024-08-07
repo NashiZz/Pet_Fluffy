@@ -6,6 +6,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
+
 class ProfileService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -196,12 +197,15 @@ class ProfileService {
     });
   }
 
+  
+
   Future<void> saveReportToFirestore({
     required String userId,
     required String petId,
     required String date,
     required String description,
   }) async {
+    
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     final String formatted =
