@@ -23,9 +23,10 @@ class ApiPetService {
         Map<String, dynamic> data = doc.data();
         petList.add(data);
       }
+      
 
       petList.shuffle();
-
+      
       return petList;
     } catch (e) {
       print('Error loading pet locations from Firestore: $e');

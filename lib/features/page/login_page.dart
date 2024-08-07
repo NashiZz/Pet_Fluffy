@@ -341,8 +341,6 @@ class _LoginPageState extends State<LoginPage> {
                   builder: (context) => const LocationSelectionPage()),
             );
           } else {
-
-            
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const AdminHomePage()),

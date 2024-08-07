@@ -39,7 +39,7 @@ class _MapsPageState extends State<Maps_Page> {
       _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
 
   late String petId;
-  late String petImg;
+  String petImg = '';
   late String pet_type;
   late String gender;
   late String userId;
@@ -47,6 +47,7 @@ class _MapsPageState extends State<Maps_Page> {
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
   bool isAnonymous = false;
+  bool _isMapInitialized = false; // ใช้เพื่อตรวจสอบการโหลดแผนที่
 
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
@@ -60,7 +61,6 @@ class _MapsPageState extends State<Maps_Page> {
   void initState() {
     super.initState();
     location = Location();
-    _getUserDataFromFirestore();
     _locationSubscription =
         location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
@@ -68,6 +68,8 @@ class _MapsPageState extends State<Maps_Page> {
         _updateUserLocationMarker();
       });
     });
+    getLocation(); // เรียก getLocation ที่นี่
+    _getUserDataFromFirestore();
   }
 
   @override
@@ -84,7 +86,6 @@ class _MapsPageState extends State<Maps_Page> {
       if (isAnonymous) {
         setState(() {
           userImageBase64 = ''; // หรือคุณอาจจะใช้รูปภาพ default ที่คุณต้องการ
-          isLoading = false;
         });
       } else {
         try {
@@ -109,7 +110,6 @@ class _MapsPageState extends State<Maps_Page> {
 
           if (userMap != null) {
             userImageBase64 = userMap['photoURL'] ?? '';
-            getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
           } else {
             print("User data does not exist");
           }
@@ -118,9 +118,6 @@ class _MapsPageState extends State<Maps_Page> {
         }
       }
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 
   String calculateDistance(LatLng start, LatLng end) {
@@ -173,6 +170,8 @@ class _MapsPageState extends State<Maps_Page> {
         zoom: 19.151926040649414,
       );
       _createUserLocationMarker();
+      _isMapInitialized =
+          true; // ตั้งค่าเป็น true เมื่อกำหนดค่าตำแหน่งเสร็จสิ้น
     });
     _goToTheLake();
     _loadAllPetLocations(context);
@@ -180,111 +179,351 @@ class _MapsPageState extends State<Maps_Page> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 15),
-              Text('กำลังโหลดแผนที่ รอสักครู่....')
-            ],
-          ),
-        ),
-      );
-    }
     return Scaffold(
       body: SafeArea(
-        child: Stack(
-          children: [
-            GoogleMap(
-              myLocationButtonEnabled: true,
-              zoomControlsEnabled: false,
-              myLocationEnabled: true,
-              mapType: MapType.normal,
-              initialCameraPosition: _initialCameraPosition,
-              onTap: _isSelectingLocation ? _selectLocation : null,
-              onMapCreated: (GoogleMapController controller) {
-                if (!_controller.isCompleted) {
-                  _controller.complete(controller);
-                }
-              },
-              markers: _markers,
-            ),
-            Positioned(
-              top: 10,
-              left: 10,
-              right: 10,
-              child: Card(
-                elevation: 4,
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.transparent,
-                        child: ClipOval(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const Profile_user_Page()),
-                              );
-                            },
-                            child: isAnonymous
-                                ? Image.asset(
-                                    'assets/images/user-286-512.png', // ใส่ที่อยู่ของรูปภาพ default ที่คุณต้องการ
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                  )
-                                : petImg != null
-                                    ? Image.memory(
-                                        base64Decode(petImg),
-                                        width: 40,
-                                        height: 40,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : const CircularProgressIndicator(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'ค้นหา',
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (value) {},
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          // Add code for notification button
+        child: _isMapInitialized
+            ? Stack(
+                children: [
+                  GoogleMap(
+                    myLocationButtonEnabled: true,
+                    zoomControlsEnabled: false,
+                    myLocationEnabled: true,
+                    mapType: MapType.normal,
+                    initialCameraPosition: _initialCameraPosition,
+                    onTap: _isSelectingLocation ? _selectLocation : null,
+                    onMapCreated: (GoogleMapController controller) {
+                      if (!_controller.isCompleted) {
+                        _controller.complete(controller);
+                      }
+                      controller.setMapStyle('''
+                       [
+                        {
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
                         },
-                        icon: const Icon(Icons.notifications),
-                      ),
-                    ],
+                        {
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#8ec3b9"
+                            }
+                          ]
+                        },
+                        {
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1a3646"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.country",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#4b6878"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.land_parcel",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#64779e"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.province",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#4b6878"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "landscape.man_made",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#334e87"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "landscape.natural",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#283d6a"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#6f9ba5"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi.park",
+                          "elementType": "geometry.fill",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi.park",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#3C7680"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#304a7d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#98a5be"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#2c6675"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#255763"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#b0d5ce"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#98a5be"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit.line",
+                          "elementType": "geometry.fill",
+                          "stylers": [
+                            {
+                              "color": "#283d6a"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit.station",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#3a4762"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "water",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#0e1626"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "water",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#4e6d70"
+                            }
+                          ]
+                        }
+                      ]
+                      ''');
+                    },
+                    markers: _markers,
                   ),
-                ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    child: Card(
+                      elevation: 4,
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.transparent,
+                              child: ClipOval(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const Profile_user_Page()),
+                                    );
+                                  },
+                                  child: isAnonymous
+                                      ? Image.asset(
+                                          'assets/images/user-286-512.png',
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : petImg.isNotEmpty
+                                          ? Image.memory(
+                                              base64Decode(petImg),
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : const CircularProgressIndicator(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextField(
+                                decoration: const InputDecoration(
+                                  hintText: 'ค้นหา',
+                                  border: InputBorder.none,
+                                ),
+                                onChanged: (value) {},
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                // Add code for notification button
+                              },
+                              icon: const Icon(Icons.notifications),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 30,
+                    right: 20,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        _startSelectingLocation();
+                      },
+                      tooltip: 'Add Pet Location',
+                      child: const Icon(Icons.location_on),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 30,
+                    left: 20,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        _goToTheLake();
+                      },
+                      tooltip: 'My Location',
+                      child: const Icon(Icons.my_location),
+                    ),
+                  ),
+                ],
+              )
+            : const Center(
+                child: CircularProgressIndicator(),
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _startSelectingLocation();
-        },
-        tooltip: 'Select Location',
-        child: const Icon(Icons.location_on),
       ),
     );
   }
@@ -311,58 +550,46 @@ class _MapsPageState extends State<Maps_Page> {
                   GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: LatLng(
-                        _locationData!.latitude!,
-                        _locationData!.longitude!,
-                      ),
-                      zoom: 14,
+                          _locationData!.latitude!, _locationData!.longitude!),
+                      zoom: 14.4746,
                     ),
-                    onTap: (LatLng latLng) {
+                    onTap: (LatLng location) {
                       setState(() {
-                        _selectedLocation = latLng;
+                        _selectedLocation = location;
                       });
                     },
-                    markers: _selectedLocation != null
-                        ? {
+                    markers: _selectedLocation == null
+                        ? {}
+                        : {
                             Marker(
-                              markerId: const MarkerId('selectedLocation'),
+                              markerId: const MarkerId('selected-location'),
                               position: _selectedLocation!,
-                            )
-                          }
-                        : {},
-                  ),
-                  const Positioned(
-                    top: 10,
-                    child: Text(
-                      'เลือกตำแหน่งที่ตั้งสัตว์เลี้ยงของคุณ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                            ),
+                          },
                   ),
                   if (_selectedLocation != null)
                     Positioned(
                       bottom: 10,
-                      left: 10,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _selectLocation(_selectedLocation!);
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Select'),
+                      child: Column(
+                        children: [
+                          Text('Selected Location: $_selectedLocation'),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _markers.add(Marker(
+                                markerId: const MarkerId('selected-location'),
+                                position: _selectedLocation!,
+                              ));
+                              _selectedLocation = null;
+                            },
+                            child: const Text('Confirm Location'),
+                          ),
+                        ],
                       ),
                     ),
                 ],
               ),
             ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Cancel'),
-              ),
-            ],
           );
         },
       ),
@@ -434,14 +661,14 @@ class _MapsPageState extends State<Maps_Page> {
   //สร้าง Maker สำหรับแสดง รูปภาพสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Widget _createMarkerIcon(Uint8List markerImages) {
     return Container(
-      width: 80,
-      height: 80,
+      width: 100,
+      height: 100,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
-          width: 4,
+          color: Colors.grey.shade700,
+          width: 6,
         ),
         boxShadow: [
           BoxShadow(
@@ -514,6 +741,7 @@ class _MapsPageState extends State<Maps_Page> {
         _locationData?.latitude ?? 0.0,
         _locationData?.longitude ?? 0.0,
       );
+      print(userLocation);
 
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();

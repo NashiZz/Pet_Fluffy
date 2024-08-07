@@ -1,9 +1,12 @@
 // ignore_for_file: camel_case_types, file_names
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
@@ -16,6 +19,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Menu Home ของ App
@@ -42,26 +46,35 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   String? _selectedDistance;
   String? _selectedAge;
   String? _selectedPrice;
+  LatLng? petLocation;
+  LocationData? _locationData;
+  late Location location;
 
+  StreamSubscription<LocationData>? _locationSubscription;
+  late Map<String, String> petPosition_ = {};
+  late Map<String, String> userLocation_get = {};
   late List<Map<String, dynamic>> petDataMatchList = [];
   late List<Map<String, dynamic>> petDataFavoriteList = [];
   late List<Map<String, dynamic>> petUserDataList = [];
+  List<Map<String, String>> petPositions = [];
   String? search;
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
   late List<Offset> _randomOffsets;
   bool _offsetsInitialized = false;
-  late Future<List<Map<String, dynamic>>> _petsFuture;
+
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _otherBreedController = TextEditingController();
   final TextEditingController _otherColor = TextEditingController();
   final List<String> _Distance = [
-    '0-500 เมตร',
-    '500-1000 เมตร ',
-    ' 1 - 5 กิโลเมตร',
-    ' 5 - 20 กิโลเมตร'
+    '0 - 500 เมตร',
+    '500 - 1000 เมตร ',
+    '1 - 5 กิโลเมตร',
+    '5 - 20 กิโลเมตร',
+    '20 - 100 กิโลเมตร',
+    'มากกว่า 100 กิโลเมตร'
   ];
   final List<String> _Age = [
     '6 เดือน - 1 ปี',
@@ -142,6 +155,17 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         User? userData = FirebaseAuth.instance.currentUser;
         if (userData != null) {
           userId = user!.uid;
+          DocumentSnapshot userSnapshot =
+              await ApiUserService.getUserData(userId.toString());
+
+          double lat = userSnapshot['lat'] ?? 0.0;
+          double lng = userSnapshot['lng'] ?? 0.0;
+          setState(() {
+            userLocation_get = {
+              'lat': lat.toString(),
+              'lng': lng.toString(),
+            };
+          });
           try {
             SharedPreferences prefs = await SharedPreferences.getInstance();
             String? petId = prefs.getString(userId.toString());
@@ -231,7 +255,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             }
 
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-            print(allPetDataList.length);
             setState(() {
               petDataFavoriteList = allPetDataList;
               isLoading = false;
@@ -262,6 +285,56 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           'fcm_token': token,
         });
       }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getPets() async {
+    try {
+      // รับ UID ของผู้ใช้ปัจจุบัน
+      String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
+      // ดึงข้อมูลสัตว์เลี้ยงจาก Firestore
+      QuerySnapshot<Map<String, dynamic>> petUserDocsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('Pet_User')
+              .where('user_id', isNotEqualTo: currentUserId)
+              .get();
+
+      List<Map<String, dynamic>> petList = [];
+
+      for (var doc in petUserDocsSnapshot.docs) {
+        Map<String, dynamic> data = doc.data();
+
+        // ดึงข้อมูลผู้ใช้
+        DocumentSnapshot userSnapshot =
+            await ApiUserService.getUserData(data['user_id']);
+
+        double lat = userSnapshot['lat'] ?? 0.0;
+        double lng = userSnapshot['lng'] ?? 0.0;
+
+        // เพิ่มความสุ่มเล็กน้อย
+        lat += Random().nextDouble() * 0.0002;
+        lng += Random().nextDouble() * 0.0002;
+
+        // สร้าง Map ของตำแหน่ง
+        Map<String, String> petPosition_ = {
+          'lat': lat.toString(),
+          'lng': lng.toString(),
+          'user_id': data['user_id'] as String,
+          'pet_id': data['pet_id'] as String,
+        };
+
+        // เพิ่ม petPosition_ ลงใน List
+        petPositions.add(petPosition_);
+        petList.add(data);
+      }
+
+      petList.shuffle();
+
+      return petList;
+    } catch (e) {
+      print('Error loading pet locations from Firestore: $e');
+      return []; // คืนค่าเป็น List ว่างในกรณีที่เกิดข้อผิดพลาด
     }
   }
 
@@ -301,7 +374,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _setTokenfirebaseMassag();
     _getUserDataFromFirestore();
     _getUsage_pet('');
-    _petsFuture = ApiPetService.loadAllPet();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -439,6 +511,101 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     } else {
       return false; // ไม่มีช่วงราคาที่กำหนด
     }
+  }
+
+  bool isDistanceRange(String distanceStr, String selectedRange) {
+    // แปลง distanceStr เป็นค่าตัวเลข
+    double distance = _parseDistance(distanceStr);
+
+    // แปลง selectedRange เป็นช่วงระยะทาง
+    List<double> range = _parseRange(selectedRange);
+
+    // ตรวจสอบว่าระยะทางอยู่ในช่วงหรือไม่
+    return distance >= range[0] && distance <= range[1];
+  }
+
+  double _parseDistance(String distanceStr) {
+    final RegExp regex = RegExp(r'(\d+\.?\d*)\s*(กิโลเมตร|เมตร)');
+    final match = regex.firstMatch(distanceStr);
+    if (match != null) {
+      double value = double.parse(match.group(1)!);
+      String unit = match.group(2)!;
+
+      // แปลงหน่วยเป็นเมตร
+      if (unit == 'กิโลเมตร') {
+        return value * 1000;
+      } else {
+        return value;
+      }
+    }
+    return 0.0;
+  }
+
+  List<double> _parseRange(String rangeStr) {
+    final RegExp regexRange = RegExp(r'(\d+)\s*-\s*(\d+)\s*(เมตร|กิโลเมตร)');
+    final RegExp regexMoreThan = RegExp(r'มากกว่า\s*(\d+)\s*(เมตร|กิโลเมตร)');
+    final matchRange = regexRange.firstMatch(rangeStr);
+    final matchMoreThan = regexMoreThan.firstMatch(rangeStr);
+
+    if (matchRange != null) {
+      double start = double.parse(matchRange.group(1)!);
+      double end = double.parse(matchRange.group(2)!);
+      String unit = matchRange.group(3)!;
+
+      // แปลงหน่วยเป็นเมตร
+      if (unit == 'กิโลเมตร') {
+        start *= 1000;
+        end *= 1000;
+      }
+
+      return [start, end];
+    } else if (matchMoreThan != null) {
+      double start = double.parse(matchMoreThan.group(1)!);
+      String unit = matchMoreThan.group(2)!;
+
+      // แปลงหน่วยเป็นเมตร
+      if (unit == 'กิโลเมตร') {
+        start *= 1000;
+      }
+
+      return [
+        start,
+        double.infinity
+      ]; // ใช้ double.infinity สำหรับค่าที่ไม่จำกัด
+    }
+
+    return [0.0, 0.0];
+  }
+
+  String calculateDistance(LatLng start, LatLng end) {
+    // คำนวณระยะทางในหน่วยเมตร
+    double distanceInMeters = Geolocator.distanceBetween(
+      start.latitude,
+      start.longitude,
+      end.latitude,
+      end.longitude,
+    );
+
+    // ตรวจสอบและแปลงหน่วย
+    if (distanceInMeters >= 1000) {
+      // แปลงเป็นกิโลเมตรและคืนค่าเป็นสตริง
+      double distanceInKilometers = distanceInMeters / 1000;
+      return '${distanceInKilometers.toStringAsFixed(2)} กิโลเมตร';
+    } else {
+      // คืนค่าเป็นเมตร
+      return '${distanceInMeters.toStringAsFixed(0)} เมตร';
+    }
+  }
+
+  Future<LatLng> position_pet(String user_id) async {
+    DocumentSnapshot userSnapshot = await ApiUserService.getUserData(user_id);
+
+    double lat = userSnapshot['lat'] ?? 0.0;
+    double lng = userSnapshot['lng'] ?? 0.0;
+    lat += Random().nextDouble() * 0.0002;
+    lng += Random().nextDouble() * 0.0002;
+    LatLng petLocation = LatLng(lat, lng);
+    return petLocation;
   }
 
   @override
@@ -757,7 +924,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             ),
             // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: _petsFuture, // ใช้ Future ที่คงที่
+              future: _getPets(), // ใช้ Future ที่คงที่
               builder: (BuildContext context,
                   AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -895,6 +1062,35 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   } else {
                     List<Map<String, dynamic>> filteredPets =
                         filteredData.where((pet) {
+                      String distanceStr = '';
+                      bool matchDistance = false;
+                      for (var doc in petPositions) {
+                        if (doc['pet_id'] == pet['pet_id']) {
+                          double lat =
+                              double.tryParse(doc['lat'].toString()) ?? 0.0;
+                          double lng =
+                              double.tryParse(doc['lng'].toString()) ?? 0.0;
+                          double lat_user = double.tryParse(
+                                  userLocation_get['lat'].toString()) ??
+                              0.0;
+                          double lng_user = double.tryParse(
+                                  userLocation_get['lng'].toString()) ??
+                              0.0;
+                          LatLng petLocation = LatLng(lat, lng);
+                          LatLng userLocation = LatLng(lat_user, lng_user);
+                          distanceStr =
+                              calculateDistance(userLocation, petLocation);
+                          print(pet['name']);
+                          print(pet['pet_id']);
+                          print(distanceStr);
+                          print(_selectedDistance);
+                          matchDistance = isDistanceRange(
+                              distanceStr, _selectedDistance.toString());
+                          print(matchDistance);
+                          break;
+                        }
+                      }
+
                       bool matchesBreed = pet['breed_pet']
                           .toString()
                           .toLowerCase()
@@ -916,75 +1112,201 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                       if (_otherBreedController.text != '' &&
                           _selectedAge != null &&
                           _otherColor.text != '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesBreed &&
+                            matchesAge &&
+                            matchesColor &&
+                            matchesPrice &&
+                            matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesAge &&
+                            matchesColor &&
+                            matchesPrice &&
+                            matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesBreed &&
+                            matchesColor &&
+                            matchesPrice &&
+                            matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesBreed &&
+                            matchesAge &&
+                            matchesPrice &&
+                            matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesBreed &&
+                            matchesAge &&
+                            matchesColor &&
+                            matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesBreed &&
                             matchesAge &&
                             matchesColor &&
                             matchesPrice;
                       } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesColor && matchesPrice && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesAge && matchesPrice && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
                           _selectedAge != null &&
                           _otherColor.text != '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesAge && matchesColor && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesAge && matchesColor && matchesPrice;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesBreed && matchesPrice && matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
                           _otherColor.text != '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesBreed && matchesColor && matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesColor && matchesPrice;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge != null &&
                           _otherColor.text == '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesBreed && matchesAge && matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesAge && matchesPrice;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge != null &&
                           _otherColor.text != '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesAge && matchesColor;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance != null) {
+                        return matchesPrice && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
                           _otherColor.text != '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesColor && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text != '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesColor && matchesPrice;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge != null &&
                           _otherColor.text == '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesAge && matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge != null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesAge && matchesPrice;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge != null &&
                           _otherColor.text != '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesAge && matchesColor;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge == null &&
                           _otherColor.text == '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchesBreed && matchDistance;
+                      } else if (_otherBreedController.text != '' &&
+                          _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesPrice;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge == null &&
                           _otherColor.text != '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesColor;
                       } else if (_otherBreedController.text != '' &&
                           _selectedAge != null &&
                           _otherColor.text == '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesBreed && matchesAge;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge == null &&
                           _otherColor.text == '' &&
-                          _selectedPrice != null) {
+                          _selectedPrice == null &&
+                          _selectedDistance != null) {
+                        return matchDistance;
+                      } else if (_otherBreedController.text == '' &&
+                          _selectedAge == null &&
+                          _otherColor.text == '' &&
+                          _selectedPrice != null &&
+                          _selectedDistance == null) {
                         return matchesPrice;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge == null &&
                           _otherColor.text != '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesColor;
                       } else if (_otherBreedController.text == '' &&
                           _selectedAge != null &&
                           _otherColor.text == '' &&
-                          _selectedPrice == null) {
+                          _selectedPrice == null &&
+                          _selectedDistance == null) {
                         return matchesAge;
                       } else {
                         return matchesBreed;
