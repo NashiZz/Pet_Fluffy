@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogHistory_Match.dart';
+import 'package:Pet_Fluffy/features/services/notification_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
@@ -20,6 +21,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+
 
 //หน้า Profile ของ สัตว์เลี้ยง
 class Profile_pet_Page extends StatefulWidget {
@@ -92,6 +94,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   @override
   void initState() {
     super.initState();
+    
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _refreshHomePage();
@@ -489,6 +492,15 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
+      final DateTime now = DateTime.now();
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      final String formatted =
+          formatter.format(now.toUtc().add(Duration(hours: 7)));
+      // แปลงวันที่จาก TextEditingController
+      DateTime dateSend = DateTime.parse(formatted);
+
+      // scheduleNotification(dateSend);
+
       _refreshHomePage();
     } catch (e) {
       print('Error saving report: $e');
@@ -497,6 +509,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       );
     }
   }
+
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -1799,8 +1813,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                   SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () {
+                      
                       if (_formKey.currentState!.validate()) {
+                        NotificationHelper.scheduledNotification('Pet fluffy', 'พร้อมผสมพันธู์แล้ว', _dateController.text);
                         _saveReportToFirestore();
+                        
                         Navigator.of(context).pop();
                       }
                     },
