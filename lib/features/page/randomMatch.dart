@@ -105,7 +105,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
-  Future<void> _getUsage_pet(String searchValue) async {
+  Future<void> _getUsage_pet() async {
     if (user != null) {
       userId = user!.uid;
       try {
@@ -349,7 +349,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
       search = searchValue.toString();
-      _getUsage_pet(searchValue);
+      _getUsage_pet();
     });
   }
 
@@ -373,7 +373,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     isAnonymousUser = _authService.isAnonymous();
     _setTokenfirebaseMassag();
     _getUserDataFromFirestore();
-    _getUsage_pet('');
+    _getUsage_pet();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -967,8 +967,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                       .where((pet) =>
                           pet['type_pet'] == petType &&
                           pet['gender'] == oppositeGender &&
-                          (pet['status'] == 'พร้อมผสมพันธุ์' ||
-                              pet['status'] == 'มีชีวิต'))
+                          pet['status'] == 'พร้อมผสมพันธุ์')
                       .toList();
                 }
                 return FutureBuilder<List<Map<String, dynamic>>>(
@@ -1797,7 +1796,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       });
     }
     _getUserDataFromFirestore();
-    _getUsage_pet(search.toString());
+    _getUsage_pet();
   }
 
   void add_match(String petIdd, String userIdd, String img_profile,
@@ -1957,7 +1956,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           }
 
           _getUserDataFromFirestore();
-          _getUsage_pet(search.toString());
+          _getUsage_pet();
         } catch (error) {
           print("Failed to add pet: $error");
 
