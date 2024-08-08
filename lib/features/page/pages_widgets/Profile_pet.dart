@@ -492,12 +492,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
-      final DateTime now = DateTime.now();
-      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-      final String formatted =
-          formatter.format(now.toUtc().add(Duration(hours: 7)));
-      // แปลงวันที่จาก TextEditingController
-      DateTime dateSend = DateTime.parse(formatted);
+      
 
       // scheduleNotification(dateSend);
 
@@ -1815,9 +1810,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     onPressed: () {
                       
                       if (_formKey.currentState!.validate()) {
-                        NotificationHelper.scheduledNotification('Pet fluffy', 'พร้อมผสมพันธู์แล้ว', _dateController.text);
-                        _saveReportToFirestore();
-                        
+                        NotificationHelper.scheduledNotification('Pet fluffy', '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว', _dateController.text,pet_type);
+                        _saveReportToFirestore();  
                         Navigator.of(context).pop();
                       }
                     },
