@@ -1712,119 +1712,121 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             padding: EdgeInsets.all(20),
             child: Form(
               key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
-                      IconButton(
-                        onPressed: () {
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Spacer(), // ใช้ Spacer เพื่อดัน IconButton ไปทางขวา
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          icon: Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    Center(
+                      child: Text(
+                        'บันทึกประจำเดือน',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'วันที่เริ่มเป็นประจำเดือน',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextFormField(
+                      controller: _dateController,
+                      decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.calendar_today),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                      ),
+                      readOnly: true,
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2101),
+                        );
+                
+                        if (pickedDate != null) {
+                          setState(() {
+                            _dateController.text =
+                                pickedDate.toString().split(' ')[0];
+                          });
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'กรุณากรอกวันที่';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
+                        child: Text(
+                          'ข้อมูลเพิ่มเติม',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextFormField(
+                      controller: _infoController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'อาการ, พฤติกรรมของสัตว์เลี้ยง',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: () {
+                        
+                        if (_formKey.currentState!.validate()) {
+                          NotificationHelper.scheduledNotification('Pet fluffy', '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว', _dateController.text,pet_type);
+                          _saveReportToFirestore();  
                           Navigator.of(context).pop();
-                        },
-                        icon: Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                  Center(
-                    child: Text(
-                      'บันทึกประจำเดือน',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 30),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
-                      child: Text(
-                        'วันที่เริ่มเป็นประจำเดือน',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[700],
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20.0),
                         ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                       ),
+                      child: Text('บันทึก'),
                     ),
-                  ),
-                  TextFormField(
-                    controller: _dateController,
-                    decoration: InputDecoration(
-                      suffixIcon: Icon(Icons.calendar_today),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    readOnly: true,
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2101),
-                      );
-
-                      if (pickedDate != null) {
-                        setState(() {
-                          _dateController.text =
-                              pickedDate.toString().split(' ')[0];
-                        });
-                      }
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'กรุณากรอกวันที่';
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 8.0, bottom: 5.0),
-                      child: Text(
-                        'ข้อมูลเพิ่มเติม',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                    ),
-                  ),
-                  TextFormField(
-                    controller: _infoController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: 'อาการ, พฤติกรรมของสัตว์เลี้ยง',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      
-                      if (_formKey.currentState!.validate()) {
-                        NotificationHelper.scheduledNotification('Pet fluffy', '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว', _dateController.text,pet_type);
-                        _saveReportToFirestore();  
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                    ),
-                    child: Text('บันทึก'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
