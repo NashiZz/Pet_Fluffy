@@ -46,7 +46,6 @@ class _Pet_PageState extends State<Pet_Page> {
 
   final List<String> _genders = ['ตัวผู้', 'ตัวเมีย'];
   final List<String> _status = [
-    'มีชีวิต',
     'เสียชีวิต',
     'พร้อมผสมพันธุ์',
     'ไม่พร้อมผสมพันธุ์'

@@ -4,6 +4,10 @@ class AgeCalculatorService {
     int years = now.year - birthdate.year;
     int months = now.month - birthdate.month;
 
+    if (now.day < birthdate.day) {
+      months--;
+    }
+
     if (months < 0) {
       years--;
       months += 12;
@@ -11,7 +15,7 @@ class AgeCalculatorService {
 
     String ageString = '';
     if (years > 0) {
-      ageString += '$years ขวบ';
+      ageString += '$years ปี';
       if (months > 0) {
         ageString += ' ';
       }
