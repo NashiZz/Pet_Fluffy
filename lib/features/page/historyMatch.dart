@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/page/notification_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,14 +25,39 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
   late List<Map<String, dynamic>> getPetDataList = [];
   User? user = FirebaseAuth.instance.currentUser;
   late String userId;
-  late String id_fav;
+  late String petId;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    userId = user?.uid ?? '';
     _getPetUserDataFromMatch_wait(); // รอ
     _getPetUserDataFromMatch_paired(); // จับคู่แล้ว
+    _initializePetId(); // กำหนดค่า petId
+  }
+
+  Future<void> _initializePetId() async {
+    await getPetId();
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> getPetId() async {
+    // ดึงข้อมูลจาก SharedPreferences
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    petId = prefs.getString(userId) ?? '';
+
+    if (petId.isEmpty) {
+      // หาก petId ไม่ได้จาก SharedPreferences ให้ดึงจาก Firestore
+      DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+          .collection('Usage_pet')
+          .doc(userId)
+          .get();
+
+      petId = petDocSnapshot['pet_id'] ?? '';
+    }
   }
 
   //ดึงข้อมูลจาก firebase
@@ -40,41 +65,66 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
+      if (userId.isEmpty) {
+        print('User ID is empty');
+        return;
+      }
+
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String? petId = prefs.getString(userId);
-        // ดึงข้อมูลจากคอลเล็กชัน favorites
+        if (petId == null || petId.isEmpty) {
+          print('Pet ID is empty');
+          return;
+        }
+
+        // ดึงข้อมูลจากคอลเล็กชัน match_pet
         QuerySnapshot petUserQuerySnapshot_wait = await FirebaseFirestore
             .instance
             .collection('match')
-            .doc(userId)
-            .collection('match_pet')
             .where('pet_request', isEqualTo: petId)
             .where('status', isEqualTo: "กำลังรอ")
             .get();
 
-        // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
-        List<dynamic> petResponses = petUserQuerySnapshot_wait.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone และ description
+        List<Map<String, dynamic>> petResponsesWithDescription =
+            petUserQuerySnapshot_wait.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return {
+            'pet_respone': data['pet_respone'],
+            'description': data['description']
+          };
+        }).toList();
 
         // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
         List<Map<String, dynamic>> allPetDataList_wait = [];
 
         // ลูปเพื่อดึงข้อมูลแต่ละรายการ
-        for (var petRespone in petResponses) {
-          String petResponeId = petRespone['pet_respone'];
+        for (var petResponse in petResponsesWithDescription) {
+          String petResponseId = petResponse['pet_respone'];
+          String description = petResponse['description'];
 
-          // ดึงข้อมูลจาก pet_user
+          // เก็บค่า petIdResponse ใน SharedPreferences
+          prefs.setString('pet_id_respone', petResponseId);
+
+          // ดึงข้อมูลจาก Pet_User
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('Pet_User')
-              .where('pet_id', isEqualTo: petResponeId)
+              .where('pet_id', isEqualTo: petResponseId)
               .get();
 
-          // เพิ่มข้อมูลลงใน List
-          allPetDataList_wait.addAll(getPetQuerySnapshot.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList());
+          // เพิ่มข้อมูลลงใน List พร้อมกับ description และ user_id
+          allPetDataList_wait.addAll(getPetQuerySnapshot.docs.map((doc) {
+            final petData = doc.data() as Map<String, dynamic>;
+            String userId = petData['user_id'];
+            prefs.setString('pet_user_id_respone', userId);
+            // ปริ้นค่า user_id
+            print('User ID: $userId');
+            return {
+              ...petData,
+              'description': description, // เพิ่ม description ที่นี่
+            };
+          }).toList());
         }
 
         // ส่วนที่ถูกนำไปแสดง
@@ -86,6 +136,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         List<Map<String, dynamic>> pet_Deleted = allPetDataList_wait
             .where((pet) => pet['status'] == 'ถูกลบ')
             .toList();
+
         for (var idpet_res in pet_Deleted) {
           String petResId = idpet_res['pet_id'];
 
@@ -101,10 +152,8 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
             DocumentSnapshot docSnapshot = querySnapshot.docs.first;
 
-            // ดึง id_fav จากเอกสาร
             String id_match = docSnapshot.get('id_match');
 
-            // อ้างอิงถึงเอกสารที่มี id_fav
             DocumentReference docRef = petFavoriteRef.doc(id_match);
 
             // ตรวจสอบเอกสารก่อนที่จะลบ
@@ -126,6 +175,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             print('No document found with pet_id: $petId');
           }
         }
+
         // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
           petUserDataList_wait = nonDeletedPets;
@@ -151,8 +201,6 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         QuerySnapshot petUserQuerySnapshot_pair = await FirebaseFirestore
             .instance
             .collection('match')
-            .doc(userId)
-            .collection('match_pet')
             .where('pet_request', isEqualTo: petId)
             .where('status', isEqualTo: "จับคู่แล้ว")
             .get();
@@ -285,6 +333,17 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           centerTitle: true,
+          actions: [
+            IconButton(
+              onPressed: () {
+                notification_Page();
+              },
+              icon: Icon(
+                Icons.notifications_rounded,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
           automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
           bottom: TabBar(
             tabs: [
@@ -381,8 +440,9 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
                 'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              // แสดง description ที่ดึงมาจาก Firestore
               Text(
-                'ค่าผสมพันธุ์: ${petUserData['price'] ?? ''}',
+                'รายละเอียด: ${petUserData['description'] ?? 'ไม่มีรายละเอียด'}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -437,13 +497,9 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
       final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
       final String formatted =
           formatter.format(now.toUtc().add(Duration(hours: 7)));
-      // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
-      DocumentReference userMatchRef_req =
-          FirebaseFirestore.instance.collection('match').doc(userId);
 
-      // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
       CollectionReference petMatchRef_req =
-          userMatchRef_req.collection('match_pet');
+          FirebaseFirestore.instance.collection('match');
 
       // ดึงเอกสารที่มี pet_respone ตรงกับ petId
       QuerySnapshot querySnapshot_req = await petMatchRef_req
@@ -458,12 +514,9 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
           await doc.reference
               .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
         });
-        DocumentReference userMatchRef_res =
-            FirebaseFirestore.instance.collection('match').doc(Userid_res);
 
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
         CollectionReference petMatchRef_res =
-            userMatchRef_res.collection('match_pet');
+            FirebaseFirestore.instance.collection('match');
 
         // ดึงเอกสารที่มี pet_respone ตรงกับ petId
         QuerySnapshot querySnapshot_res = await petMatchRef_res
@@ -484,12 +537,8 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
           print('No document found with pet_id: $petId_res');
         }
       } else {
-        DocumentReference userMatchRef_req =
-            FirebaseFirestore.instance.collection('match').doc(userId);
-
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
         CollectionReference petMatchRef_req =
-            userMatchRef_req.collection('match_pet');
+            FirebaseFirestore.instance.collection('match');
 
         // ดึงเอกสารที่มี pet_respone ตรงกับ petId
         QuerySnapshot querySnapshot_req = await petMatchRef_req
@@ -526,6 +575,34 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
       }
     } catch (e) {
       print('Error deleting pet data: $e');
+    }
+  }
+
+  void notification_Page() async {
+    // ตรวจสอบให้แน่ใจว่า petId ได้รับค่าแล้ว
+    if (petId.isNotEmpty) {
+      Navigator.push(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              Notification_Page(idPet: petId),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.ease;
+
+            var tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      );
+    } else {
+      print('Pet ID is not available');
     }
   }
 }
