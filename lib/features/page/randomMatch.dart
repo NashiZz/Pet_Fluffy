@@ -8,7 +8,6 @@ import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:Pet_Fluffy/features/api/pet_data.dart';
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/matchSuccess.dart';
@@ -48,9 +47,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   String? _selectedPrice;
   LatLng? petLocation;
   LocationData? _locationData;
-  late Location location;
+  Location location = Location();
 
-  StreamSubscription<LocationData>? _locationSubscription;
   late Map<String, String> petPosition_ = {};
   late Map<String, String> userLocation_get = {};
   late List<Map<String, dynamic>> petDataMatchList = [];
@@ -62,6 +60,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   late Animation<double> _opacityAnimation;
   late List<Offset> _randomOffsets;
   bool _offsetsInitialized = false;
+  bool hasPrimaryPet = false;
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
@@ -105,6 +104,44 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
+  Future<void> _printStoredPetId() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? storedPetId = prefs.getString(userId.toString());
+
+      if (storedPetId != null && storedPetId.isNotEmpty) {
+        // พิมพ์ค่า storedPetId ลงในคอนโซล
+        print('Stored Pet ID: $storedPetId');
+
+        // ต่อไปให้ใช้ storedPetId ในการค้นหาข้อมูล
+        QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+            .collection('match')
+            .where('pet_request', isEqualTo: storedPetId)
+            .get();
+
+        // แสดงจำนวนเอกสารที่ได้รับ
+        print('Number of documents found: ${petUserQuerySnapshot.docs.length}');
+      } else {
+        print('Stored Pet ID is null or empty.');
+      }
+    } catch (e) {
+      print('Error retrieving stored pet ID: $e');
+    }
+  }
+
+  void getLocation() async {
+    try {
+      _locationData = await location.getLocation();
+      if (_locationData != null) {
+        print(LatLng(_locationData!.latitude!, _locationData!.longitude!));
+      } else {
+        print('Location data is null.');
+      }
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+  }
+
   Future<void> _getUsage_pet(String searchValue) async {
     if (user != null) {
       userId = user!.uid;
@@ -117,26 +154,34 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
         if (userDocSnapshot.exists) {
           // ดึงข้อมูลผู้ใช้จาก Snapshot
-          petId = userDocSnapshot['pet_id'];
+          petId = userDocSnapshot['pet_id'] as String?;
 
-          // ค้นหาข้อมูลในคอลเลคชัน Pet_user เพื่อดึงประเภทสัตว์เลี้ยงและเพศ
-          DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
-              .collection('Pet_User')
-              .doc(petId)
-              .get();
+          // ตรวจสอบว่าค่าของ petId ไม่เป็น null และไม่ว่าง
+          if (petId != null && petId!.isNotEmpty) {
+            hasPrimaryPet = true;
 
-          if (petDocSnapshot.exists) {
-            setState(() {
-              petName = petDocSnapshot['name'];
-              petType = petDocSnapshot['type_pet'];
-              petGender = petDocSnapshot['gender'];
-              petImg = petDocSnapshot['img_profile'] ?? '';
-              isLoading = false;
-            });
+            // ค้นหาข้อมูลในคอลเลคชัน Pet_user เพื่อดึงประเภทสัตว์เลี้ยงและเพศ
+            DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+                .collection('Pet_User')
+                .doc(petId)
+                .get();
 
-            print('Type : $petType, Gender : $petGender');
+            if (petDocSnapshot.exists) {
+              setState(() {
+                petName = petDocSnapshot['name'] as String?;
+                petType = petDocSnapshot['type_pet'] as String?;
+                petGender = petDocSnapshot['gender'] as String?;
+                petImg = petDocSnapshot['img_profile'] as String? ?? '';
+                isLoading = false;
+              });
+
+              print('Type : $petType, Gender : $petGender');
+            } else {
+              print('No pet data found with pet_id: $petId');
+            }
           } else {
-            print('No pet data found with pet_id: $petId');
+            print('No primary pet assigned.');
+            hasPrimaryPet = false;
           }
         } else {
           // หากไม่มีข้อมูลใน Usage_pet ให้สร้างเอกสารใหม่
@@ -154,116 +199,112 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         // เรียกเก็บข้อมูลจากตัวที่เคย match
         User? userData = FirebaseAuth.instance.currentUser;
         if (userData != null) {
-          userId = user!.uid;
-          DocumentSnapshot userSnapshot =
-              await ApiUserService.getUserData(userId.toString());
+          userId = userData.uid;
 
-          double lat = userSnapshot['lat'] ?? 0.0;
-          double lng = userSnapshot['lng'] ?? 0.0;
-          setState(() {
-            userLocation_get = {
-              'lat': lat.toString(),
-              'lng': lng.toString(),
-            };
-          });
-          try {
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            String? petId = prefs.getString(userId.toString());
-            // ดึงข้อมูลจากคอลเล็กชัน favorites
+          // ดึงข้อมูลจากคอลเล็กชัน match
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          String? storedPetId = prefs.getString(userId.toString());
+
+          // ตรวจสอบว่าค่าของ storedPetId ไม่เป็น null ก่อนที่จะทำการใช้งาน
+          if (storedPetId != null && storedPetId.isNotEmpty) {
             QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
                 .instance
                 .collection('match')
-                .doc(userId)
-                .collection('match_pet')
-                .where('pet_request', isEqualTo: petId)
+                .where('pet_request', isEqualTo: storedPetId)
                 .get();
 
-            // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
             List<dynamic> petResponses = petUserQuerySnapshot.docs
                 .map((doc) => doc.data() as Map<String, dynamic>)
                 .toList();
 
-            // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
             List<Map<String, dynamic>> allPetDataList = [];
 
-            // ลูปเพื่อดึงข้อมูลแต่ละรายการ
             for (var petRespone in petResponses) {
-              String petResponeId = petRespone['pet_respone'];
+              String? petResponeId = petRespone['pet_respone'] as String?;
 
-              // ดึงข้อมูลจาก pet_user
-              QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
-                  .instance
-                  .collection('Pet_User')
-                  .where('pet_id', isEqualTo: petResponeId)
-                  .where('type_pet', isEqualTo: petType)
-                  .get();
+              if (petResponeId != null) {
+                // ดึงข้อมูลจาก Pet_User
+                QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+                    .instance
+                    .collection('Pet_User')
+                    .where('pet_id', isEqualTo: petResponeId)
+                    .where('type_pet', isEqualTo: petType)
+                    .get();
 
-              allPetDataList.addAll(getPetQuerySnapshot.docs
-                  .map((doc) => doc.data() as Map<String, dynamic>)
-                  .toList());
+                List<Map<String, dynamic>> petDataList = getPetQuerySnapshot
+                    .docs
+                    .map((doc) => doc.data() as Map<String, dynamic>)
+                    .toList();
+
+                // กรองสัตว์เลี้ยงที่ไม่ใช่ตัวที่กำลังขอจับคู่
+                petDataList
+                    .removeWhere((petData) => petData['pet_id'] == storedPetId);
+
+                allPetDataList.addAll(petDataList);
+              }
             }
+
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
             print(allPetDataList.length);
             setState(() {
               petDataMatchList = allPetDataList;
               isLoading = false;
             });
-          } catch (e) {
-            print('Error getting pet user data from Match: $e');
-            setState(() {
-              isLoading = false;
-            });
-          }
 
-          // ส่วน Favorite
-          try {
-            SharedPreferences prefs = await SharedPreferences.getInstance();
-            String? petId = prefs.getString(userId.toString());
-            // ดึงข้อมูลจากคอลเล็กชัน favorites
-            QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
-                .instance
-                .collection('favorites')
-                .doc(userId)
-                .collection('pet_favorite')
-                .where('pet_request', isEqualTo: petId)
-                .get();
-
-            // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
-            List<dynamic> petResponses = petUserQuerySnapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .toList();
-
-            // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
-            List<Map<String, dynamic>> allPetDataList = [];
-
-            // ลูปเพื่อดึงข้อมูลแต่ละรายการ
-            for (var petRespone in petResponses) {
-              String petResponeId = petRespone['pet_respone'];
-
-              // ดึงข้อมูลจาก pet_user
-              QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+            // ส่วน Favorite
+            try {
+              QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
                   .instance
-                  .collection('Pet_User')
-                  .where('pet_id', isEqualTo: petResponeId)
-                  .where('type_pet', isEqualTo: petType)
+                  .collection('favorites')
+                  .doc(userId)
+                  .collection('pet_favorite')
+                  .where('pet_request', isEqualTo: storedPetId)
                   .get();
 
-              // เพิ่มข้อมูลลงใน List
-              allPetDataList.addAll(getPetQuerySnapshot.docs
+              List<dynamic> petResponses = petUserQuerySnapshot.docs
                   .map((doc) => doc.data() as Map<String, dynamic>)
-                  .toList());
-            }
+                  .toList();
 
-            // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-            setState(() {
-              petDataFavoriteList = allPetDataList;
-              isLoading = false;
-            });
-          } catch (e) {
-            print('Error getting pet user data from Firestore: $e');
-            setState(() {
-              isLoading = false;
-            });
+              List<Map<String, dynamic>> allPetDataList = [];
+
+              for (var petRespone in petResponses) {
+                String? petResponeId = petRespone['pet_respone'] as String?;
+
+                if (petResponeId != null) {
+                  // ดึงข้อมูลจาก Pet_User
+                  QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+                      .instance
+                      .collection('Pet_User')
+                      .where('pet_id', isEqualTo: petResponeId)
+                      .where('type_pet', isEqualTo: petType)
+                      .get();
+
+                  List<Map<String, dynamic>> petDataList = getPetQuerySnapshot
+                      .docs
+                      .map((doc) => doc.data() as Map<String, dynamic>)
+                      .toList();
+
+                  // กรองสัตว์เลี้ยงที่ไม่ใช่ตัวที่กำลังขอจับคู่
+                  petDataList.removeWhere(
+                      (petData) => petData['pet_id'] == storedPetId);
+
+                  allPetDataList.addAll(petDataList);
+                }
+              }
+
+              // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+              setState(() {
+                petDataFavoriteList = allPetDataList;
+                isLoading = false;
+              });
+            } catch (e) {
+              print('Error getting pet user data from Firestore: $e');
+              setState(() {
+                isLoading = false;
+              });
+            }
+          } else {
+            print('Stored Pet ID is null or empty.');
           }
         }
       } catch (e) {
@@ -364,7 +405,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   bool isSamePet(Map<String, dynamic> pet1, Map<String, dynamic> pet2) {
-    return pet1['name'] == pet2['name'];
+    return pet1['pet_id'] == pet2['pet_id'];
   }
 
   @override
@@ -374,6 +415,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _setTokenfirebaseMassag();
     _getUserDataFromFirestore();
     _getUsage_pet('');
+    getLocation();
+    _printStoredPetId();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -608,6 +651,40 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     return petLocation;
   }
 
+  Future<Widget> _getImage() async {
+    if (user != null && user!.isAnonymous) {
+      return Image.asset(
+        'assets/images/user-286-512.png',
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+      );
+    } else if (petImg == null || petImg!.isEmpty) {
+      if (userImageBase64 != null && userImageBase64!.isNotEmpty) {
+        return Image.memory(
+          base64Decode(userImageBase64!),
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+        );
+      } else {
+        return Image.asset(
+          'assets/images/user-286-512.png',
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+        );
+      }
+    } else {
+      return Image.memory(
+        base64Decode(petImg!),
+        width: 40,
+        height: 40,
+        fit: BoxFit.cover,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _initializeOffsets(context);
@@ -643,21 +720,24 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                   print('User image is not available');
                                 }
                               },
-                              child: isAnonymousUser
-                                  ? Image.asset(
-                                      'assets/images/user-286-512.png',
-                                      width: 40,
-                                      height: 40,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : petImg != null
-                                      ? Image.memory(
-                                          base64Decode(petImg!),
-                                          width: 40,
-                                          height: 40,
-                                          fit: BoxFit.cover,
-                                        )
-                                      : const CircularProgressIndicator(),
+                              child: FutureBuilder(
+                                future:
+                                    _getImage(), // Future function to get the image
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    // Show a loading indicator while waiting
+                                    return Center(
+                                        child: CircularProgressIndicator());
+                                  } else if (snapshot.hasError) {
+                                    // Handle errors, e.g., image not found
+                                    return Icon(Icons.error, size: 40);
+                                  } else {
+                                    // Show the image when done
+                                    return snapshot.data as Widget;
+                                  }
+                                },
+                              ),
                             ),
                           ),
                         ),
@@ -953,7 +1033,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 bool isAnonymousUser =
                     FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
 
-                // List<Map<String, dynamic>> allPetData = snapshot.data!;
                 // กำหนดเพศตรงข้าม
                 List<Map<String, dynamic>> filteredPetData;
                 if (isAnonymousUser) {
@@ -971,6 +1050,13 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                               pet['status'] == 'มีชีวิต'))
                       .toList();
                 }
+
+                // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
+                if (filteredPetData.isEmpty) {
+                  // หากว่างเปล่า ให้แสดงสัตว์เลี้ยงทั้งหมด
+                  filteredPetData = snapshot.data!;
+                }
+
                 return FutureBuilder<List<Map<String, dynamic>>>(
                     future: () async {
                   List<Map<String, dynamic>> uniquePetDataMatch =
@@ -984,7 +1070,14 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   if (filteredSnapshot.connectionState ==
                       ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 15),
+                          Text('กำลังโหลดข้อมูล...')
+                        ],
+                      ),
                     );
                   }
                   if (filteredSnapshot.hasError) {
@@ -1062,6 +1155,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   } else {
                     List<Map<String, dynamic>> filteredPets =
                         filteredData.where((pet) {
+                      LatLng userLocation = LatLng(
+                        _locationData?.latitude ?? 0.0,
+                        _locationData?.longitude ?? 0.0,
+                      );
+
                       String distanceStr = '';
                       bool matchDistance = false;
                       for (var doc in petPositions) {
@@ -1070,14 +1168,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                               double.tryParse(doc['lat'].toString()) ?? 0.0;
                           double lng =
                               double.tryParse(doc['lng'].toString()) ?? 0.0;
-                          double lat_user = double.tryParse(
-                                  userLocation_get['lat'].toString()) ??
-                              0.0;
-                          double lng_user = double.tryParse(
-                                  userLocation_get['lng'].toString()) ??
-                              0.0;
                           LatLng petLocation = LatLng(lat, lng);
-                          LatLng userLocation = LatLng(lat_user, lng_user);
                           distanceStr =
                               calculateDistance(userLocation, petLocation);
                           print(pet['name']);
@@ -1462,23 +1553,33 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                             children: [
                                               // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
                                               GestureDetector(
-                                                onTap: isAnonymousUser
+                                                onTap: (hasPrimaryPet &&
+                                                        !user!
+                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
                                                     ? () {
-                                                        _showSignInDialog(
-                                                            context);
-                                                      }
-                                                    : () {
+                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
                                                         add_Faverite(
                                                             petData['pet_id']);
+                                                      }
+                                                    : () {
+                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                        if (user!.isAnonymous) {
+                                                          _showSignInDialog(
+                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                        } else {
+                                                          _showNoPrimaryPetDialog(
+                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                        }
                                                       },
                                                 child: Container(
                                                   width: 40,
                                                   height: 40,
                                                   decoration: BoxDecoration(
-                                                    color: isAnonymousUser
-                                                        ? Colors.grey
-                                                        : Colors.blue.shade600
-                                                            .withOpacity(0.8),
+                                                    color: (hasPrimaryPet &&
+                                                            !user!.isAnonymous)
+                                                        ? Colors.blue.shade600
+                                                            .withOpacity(0.8)
+                                                        : Colors.grey,
                                                     shape: BoxShape.circle,
                                                     boxShadow: [
                                                       BoxShadow(
@@ -1491,19 +1592,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                                       ),
                                                     ],
                                                   ),
-                                                  child: IconButton(
-                                                    onPressed: isAnonymousUser
-                                                        ? null
-                                                        : () {
-                                                            add_Faverite(
-                                                                petData[
-                                                                    'pet_id']);
-                                                          },
-                                                    icon: const Icon(
-                                                      Icons.star_rounded,
-                                                      color: Colors.yellow,
-                                                    ),
-                                                    iconSize: 20,
+                                                  child: Icon(
+                                                    Icons.star_rounded,
+                                                    color: Colors.yellow,
+                                                    size: 20,
                                                   ),
                                                 ),
                                               ),
@@ -1558,27 +1650,38 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                                 ),
                                               ),
                                               GestureDetector(
-                                                onTap: isAnonymousUser
+                                                onTap: (hasPrimaryPet &&
+                                                        !user!
+                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
                                                     ? () {
-                                                        _showSignInDialog(
-                                                            context);
+                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                                        _showRequestDialog(
+                                                            context,
+                                                            petData['name'],
+                                                            petData['pet_id'],
+                                                            petData['user_id'],
+                                                            petData[
+                                                                'img_profile']);
                                                       }
                                                     : () {
-                                                        add_match(
-                                                          petData['pet_id'],
-                                                          petData['user_id'],
-                                                          petData[
-                                                              'img_profile'],
-                                                          petData['name'],
-                                                        );
+                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                        if (user!.isAnonymous) {
+                                                          _showSignInDialog(
+                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                        } else {
+                                                          _showNoPrimaryPetDialog(
+                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                        }
                                                       },
                                                 child: Container(
                                                   width: 40,
                                                   height: 40,
                                                   decoration: BoxDecoration(
-                                                    color: isAnonymousUser
-                                                        ? Colors.grey
-                                                        : Colors.white,
+                                                    color: (hasPrimaryPet &&
+                                                            !user!.isAnonymous)
+                                                        ? Colors.white
+                                                        : Colors
+                                                            .grey, // สีปุ่มเปลี่ยนตามสถานะ
                                                     shape: BoxShape.circle,
                                                     boxShadow: [
                                                       BoxShadow(
@@ -1591,24 +1694,13 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                                       ),
                                                     ],
                                                   ),
-                                                  child: IconButton(
-                                                    onPressed: isAnonymousUser
-                                                        ? null
-                                                        : () {
-                                                            add_match(
-                                                              petData['pet_id'],
-                                                              petData[
-                                                                  'user_id'],
-                                                              petData[
-                                                                  'img_profile'],
-                                                              petData['name'],
-                                                            );
-                                                          },
-                                                    icon: const Icon(
-                                                      Icons.favorite,
-                                                      color: Colors.pinkAccent,
-                                                    ),
-                                                    iconSize: 20,
+                                                  child: Icon(
+                                                    Icons.favorite,
+                                                    color: (hasPrimaryPet &&
+                                                            !user!.isAnonymous)
+                                                        ? Colors.pinkAccent
+                                                        : Colors.white,
+                                                    size: 20,
                                                   ),
                                                 ),
                                               ),
@@ -1661,6 +1753,107 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     );
   }
 
+  void _showRequestDialog(BuildContext context, petName, petId, petUser, Img) {
+    TextEditingController des = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          title: Column(
+            children: [
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'ส่งคำขอจับคู่ไปหา ',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      petName,
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.pink.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: 150,
+                height: 120,
+                child: AspectRatio(
+                  aspectRatio: 1.5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.memory(
+                      base64Decode(Img),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: des,
+                decoration: InputDecoration(
+                  hintText: 'พิมพ์ข้อความที่ต้องการส่งไปหา....',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.grey.shade300, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child: Text('ยกเลิกการส่งคำขอ',
+                        style: TextStyle(color: Colors.black)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      add_match(petId, petUser, Img, petName, des.text);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.grey.shade700, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child:
+                        Text('ส่งคำขอ', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showSignInDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -1671,10 +1864,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           actions: <Widget>[
             TextButton(
               child: const Text('ลงทะเบียน'),
-              onPressed: () {
-                Navigator.pushNamed(
-                    context, '/register'); // ปรับเส้นทางตามต้องการ
-              },
+              onPressed: () {},
             ),
             TextButton(
               child: const Text('ยกเลิก'),
@@ -1801,11 +1991,14 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   void add_match(String petIdd, String userIdd, String img_profile,
-      String name_petrep) async {
+      String name_petrep, String des) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? petId = prefs.getString(userId.toString());
     String pet_request = petId.toString();
     String pet_respone = petIdd.toString();
+
+    print(pet_request);
+    print(pet_respone);
 
     // รับวันและเวลาปัจจุบันในโซนเวลาไทย
     final DateTime now = DateTime.now();
@@ -1813,15 +2006,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     final String formatted =
         formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-    // เช็คตัวที่ถูกร้องขอ
-    DocumentReference userMatchRefCheck =
-        FirebaseFirestore.instance.collection('match').doc(userIdd);
-
-    CollectionReference petMatchRefCheck =
-        userMatchRefCheck.collection('match_pet');
+    CollectionReference petMatchRef =
+        FirebaseFirestore.instance.collection('match');
     try {
       // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-      QuerySnapshot querySnapshot = await petMatchRefCheck
+      QuerySnapshot querySnapshot = await petMatchRef
           .where('pet_request', isEqualTo: pet_respone)
           .where('pet_respone', isEqualTo: pet_request)
           .get();
@@ -1832,11 +2021,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           await doc.reference
               .update({'status': 'จับคู่แล้ว', 'updates_at': formatted});
         });
-        DocumentReference userMatchRef =
-            FirebaseFirestore.instance.collection('match').doc(userId);
 
         // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef = userMatchRef.collection('match_pet');
+        CollectionReference petMatchRef =
+            FirebaseFirestore.instance.collection('match');
 
         try {
           // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
@@ -1868,7 +2056,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
             DocumentReference newPetMatch = await petMatchRef.add({
               'created_at': formatted,
-              'description': '',
+              'description': des,
               'pet_request': pet_request,
               'pet_respone': pet_respone,
               'status': 'จับคู่แล้ว',
@@ -1903,11 +2091,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           });
         }
       } else {
-        DocumentReference userMatchRef =
-            FirebaseFirestore.instance.collection('match').doc(userId);
-
         // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef = userMatchRef.collection('match_pet');
+        CollectionReference petMatchRef =
+            FirebaseFirestore.instance.collection('match');
 
         try {
           // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
@@ -1939,7 +2125,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
             DocumentReference newPetMatch = await petMatchRef.add({
               'created_at': formatted,
-              'description': '',
+              'description': des,
               'pet_request': pet_request,
               'pet_respone': pet_respone,
               'status': 'กำลังรอ',
@@ -1973,6 +2159,27 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         isLoading = false;
       });
     }
+  }
+
+  void _showNoPrimaryPetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('เลือกสัตว์เลี้ยงตัวหลัก'),
+          content: const Text(
+              'กรุณาเลือกสัตว์เลี้ยงตัวหลักที่จะใช้ในการจับคู่และกดถูกใจก่อน'),
+          actions: [
+            TextButton(
+              child: const Text('ตกลง'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void sendNotificationToUser(String userIdd, String title, String body) async {

@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
-import 'package:Pet_Fluffy/features/page/randomMatch.dart';
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -49,27 +47,47 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
   }
 
   Future<void> _getIsCheckMatchSuccess() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    String? petId = prefs.getString(widget.userId_req);
-    String pet_respone = petId.toString();
-    
-    DocumentReference matchRef =
-        FirebaseFirestore.instance.collection('match').doc(widget.userId);
-
-    CollectionReference petMatchRef = matchRef.collection('match_pet');
     try {
-      QuerySnapshot querySnapshot = await petMatchRef
-          .where('pet_respone', isEqualTo: pet_respone)
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      // ดึง petId จาก SharedPreferences
+      String? petId = prefs.getString(widget.userId_req);
+
+      // ตรวจสอบว่า petId มีค่าไหม
+      if (petId == null) {
+        setState(() {
+          isCheckMatch = false;
+        });
+        return;
+      }
+
+      // ใช้ CollectionReference แทน DocumentReference
+      CollectionReference matchRef =
+          FirebaseFirestore.instance.collection('match');
+
+      // ค้นหาข้อมูลการจับคู่
+      QuerySnapshot querySnapshot = await matchRef
+          .where('pet_respone', isEqualTo: petId)
           .where('status', isEqualTo: 'จับคู่แล้ว')
           .get();
+
+      // ตรวจสอบผลลัพธ์และตั้งค่าตัวแปร isCheckMatch
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
           isCheckMatch = true;
-        }); 
+        });
+      } else {
+        setState(() {
+          isCheckMatch = false;
+        });
       }
-
-    } catch (e) {}
+    } catch (e) {
+      // พิมพ์ข้อผิดพลาดออกมาเพื่อช่วยในการดีบัก
+      print('Error checking match status: $e');
+      setState(() {
+        isCheckMatch = false;
+      });
+    }
   }
 
   // Future<void> _showNotification() async {
@@ -150,11 +168,11 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
               if (previousPage.toString() == 'matchSuccess') {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => Navigator_Page(initialIndex: 0)),
+                  MaterialPageRoute(
+                      builder: (context) => Navigator_Page(initialIndex: 0)),
                   (Route<dynamic> route) => false,
                 );
-              }
-              else {
+              } else {
                 Navigator.pop(context);
               }
             },
@@ -304,7 +322,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                     ? Text('เบอร์โทรศัพท์ : ',
                                         style: const TextStyle(fontSize: 16))
                                     : Text(
-                                        'เบอร์โทรศัพท์ : ${userData['phone'] }',
+                                        'เบอร์โทรศัพท์ : ${userData['phone']}',
                                         style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
@@ -313,8 +331,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                 child: isCheckMatch == false
                                     ? Text('Facebook : ',
                                         style: const TextStyle(fontSize: 16))
-                                    : Text(
-                                        'Facebook : ${userData['facebook']}',
+                                    : Text('Facebook : ${userData['facebook']}',
                                         style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(

@@ -16,7 +16,7 @@ Future<void> main() async {
   //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
   NotificationHelper.init();
-  //ทำการเชื่อมต่อแอปกับ Firebase 
+  //ทำการเชื่อมต่อแอปกับ Firebase
   await Firebase.initializeApp();
   await FirebaseApi().initNotifications();
 
@@ -35,7 +35,7 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(

@@ -129,7 +129,8 @@ class AuthService {
           'birtdate': '',
           'country': '',
           'facebeook': '',
-          'line': 'สมาชิก'
+          'line': '',
+          'status': 'สมาชิก'
         });
       }
     } catch (error) {
