@@ -1,7 +1,6 @@
 // ignore_for_file: camel_case_types, avoid_print
 
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
@@ -39,8 +38,24 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? petId = prefs.getString(user!.uid.toString());
-    petId_main = petId;
+
     try {
+      // ดึงข้อมูลจากคอลเลคชัน Usage_pet เพื่อหาข้อมูล pet_id
+      QuerySnapshot petIdQuerySnapshot = await FirebaseFirestore.instance
+          .collection('Usage_pet')
+          .where('pet_id', isEqualTo: petId)
+          .get();
+
+      if (petIdQuerySnapshot.docs.isNotEmpty) {
+        // ตรวจสอบว่าเอกสารแรกไม่เป็น null และมีข้อมูล pet_id
+        var firstDoc =
+            petIdQuerySnapshot.docs.first.data() as Map<String, dynamic>?;
+        petId_main = firstDoc?['pet_id'];
+        print('Pet ID from Usage_pet: $petId_main');
+      } else {
+        print('No pet_id found in Usage_pet for petId: $petId');
+      }
+
       QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
           .collection('Pet_User')
           .where('user_id', isEqualTo: user!.uid)
@@ -69,17 +84,14 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 // ถ้าความแตกต่างของวันทำให้ต้องลดจำนวนเดือนลงหนึ่งเดือน
           if (now.day < birthDate.day) {
             monthsDifference--;
-            
           }
-          
 
 // แปลงจำนวนปีเป็นเดือนแล้วรวมกับจำนวนเดือนที่เหลือ
           int totalMonths = yearsDifference * 12 + monthsDifference;
 
-          if(totalMonths > 12){
-            totalMonths = totalMonths % 12; 
+          if (totalMonths > 12) {
+            totalMonths = totalMonths % 12;
           }
-          
 
 // ตรวจสอบว่า totalMonths มีค่าเหมือนกับ searchValue หรือไม่
           bool matchesAge = totalMonths

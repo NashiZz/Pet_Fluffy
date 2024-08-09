@@ -24,8 +24,6 @@ void showHistoryDialog({
             if (_future == null) {
               _future = FirebaseFirestore.instance
                   .collection('match')
-                  .doc(userId)
-                  .collection('match_pet')
                   .where('pet_request', isEqualTo: petId)
                   .where('status', isEqualTo: "ไม่ยอมรับ")
                   .get();

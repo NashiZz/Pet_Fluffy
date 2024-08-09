@@ -8,6 +8,7 @@ import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+
 final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -15,7 +16,7 @@ Future<void> main() async {
   //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
   NotificationHelper.init();
-  //ทำการเชื่อมต่อแอปกับ Firebase 
+  //ทำการเชื่อมต่อแอปกับ Firebase
   await Firebase.initializeApp();
   await FirebaseApi().initNotifications();
 
@@ -34,7 +35,7 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-  
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(

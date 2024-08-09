@@ -228,11 +228,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      // _signUp();
-                      Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const addDataUser_Page()));
+                     _signUp();
                     },
                     child: Container(
                       width: double.infinity,

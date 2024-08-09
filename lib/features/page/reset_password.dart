@@ -35,8 +35,7 @@ class _ResetPwdState extends State<ResetPwd> {
             Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const LoginPage()),
+              MaterialPageRoute(builder: (context) => const LoginPage()),
               (route) => false,
             );
           });
@@ -44,7 +43,8 @@ class _ResetPwdState extends State<ResetPwd> {
             title: Text('Success'),
             content: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Text('ส่งลิงค์เปลี่ยนรหัสผ่านไปให้คุณแล้ว กรุณาเข้าไปตรวจสอบที่อีเมลของคุณ'),
+              child: Text(
+                  'ส่งลิงค์เปลี่ยนรหัสผ่านไปให้คุณแล้ว กรุณาเข้าไปตรวจสอบที่อีเมลของคุณ'),
             ),
           );
         },
@@ -86,17 +86,17 @@ class _ResetPwdState extends State<ResetPwd> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 25.0),
                 child: Text(
-                  "กรอกอีเมลของคุณแล้วเราจะส่งลิงก์รีเซ็ตรหัสผ่านไปให้คุณ",
+                  "กู้คืนรหัสผ่าน",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 30),
                 ),
               ),
               const SizedBox(
-                height: 20,
+                height: 30,
               ),
               FormContainerWidget(
                 controller: _emailController,
-                hintText: "Email",
+                hintText: "อีเมล",
                 isPasswordField: false,
               ),
               const SizedBox(
@@ -119,12 +119,35 @@ class _ResetPwdState extends State<ResetPwd> {
                               color: Colors.white,
                             )
                           : const Text(
-                              "ส่ง",
+                              "ลืมรหัสผ่าน",
                               style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold),
                             )),
                 ),
+              ),
+               const SizedBox(
+                height: 10,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("คุณจำรหัสผ่านได้แล้ว ?",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  GestureDetector(
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const LoginPage()),
+                            (route) => false);
+                      },
+                      child: const Text(
+                        "  เข้าสู่ระบบ",
+                        style: TextStyle(
+                            color: Colors.blue, fontWeight: FontWeight.bold),
+                      ))
+                ],
               ),
               const SizedBox(
                 height: 20,

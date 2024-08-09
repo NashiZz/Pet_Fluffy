@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class Setting_Page extends StatefulWidget {
   const Setting_Page({super.key});
@@ -50,8 +49,7 @@ class _Setting_PageState extends State<Setting_Page> {
         });
       } else {
         try {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          petId = prefs.getString(userId)!;
+
 
           DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
               .collection('user')
