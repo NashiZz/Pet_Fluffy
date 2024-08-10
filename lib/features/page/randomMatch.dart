@@ -2068,7 +2068,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             await newPetMatch.update({'id_match': docId});
 
             sendNotificationToUser(
-                userIdd, 'Pet fluffy', 'You have a new pet match!');
+                userId.toString(), 'Pet fluffy', 'มีการตอบรับจากสัตว์เลี้ยง $name_petrep ที่คุณร้องขอแล้วไปดูเร็ว!!!');
             // match success จะให้ไปที่หน้า match
             Navigator.push(
               context,
@@ -2136,6 +2136,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             await newPetMatch.update({'id_match': docId});
 
+            sendNotificationToUser(
+                userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+                "คุณมีคำขอใหม่!",
+                "สัตว์เลี้ยงของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
             setState(() {
               isLoading = false;
             });
@@ -2183,35 +2187,57 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   }
 
   void sendNotificationToUser(String userIdd, String title, String body) async {
-    DocumentSnapshot userDoc =
-        await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
-    String? fcmToken = userDoc['fcm_token'];
+    try {
+      // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
+      if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(userIdd)
+            .get();
 
-    if (fcmToken != null) {
-      await sendPushMessage(fcmToken, title, body);
+        // ดึง FCM Token ของผู้ใช้จากข้อมูลที่ได้มา
+        String? fcmToken = userDoc['fcm_token'];
+
+        if (fcmToken != null) {
+          // ส่งการแจ้งเตือนโดยเรียกใช้ฟังก์ชัน sendPushMessage
+          await sendPushMessage(fcmToken, title, body);
+        } else {
+          print("FCM Token is null, unable to send notification");
+        }
+      } else {
+        print(
+            "No notification sent because the user is the one who made the request.");
+      }
+    } catch (error) {
+      print("Error sending notification to user: $error");
     }
   }
 
   Future<void> sendPushMessage(
       String token_user, String title, String body) async {
-    print(token_user);
-    String token = await firebaseAccessToken.getToken();
-    final data = {
-      "message": {
-        "token": token_user,
-        "notification": {
-          "body": "Pet Fluffy",
-          "title": "มีการตอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
-        }
-      }
-    };
     try {
+      print("Sending notification to token: $token_user");
+
+      // ดึง Firebase Access Token
+      String token = await firebaseAccessToken.getToken();
+
+      final data = {
+        "message": {
+          "token": token_user,
+          "notification": {
+            "title": title, 
+            "body": body 
+          }
+        }
+      };
+
       final response = await http.post(
         Uri.parse(
             'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token, // ใส่ Server Key ที่ถูกต้องที่นี่
+          'Authorization': 'Bearer $token', 
         },
         body: jsonEncode(data),
       );

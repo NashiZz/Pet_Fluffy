@@ -69,7 +69,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (user != null && widget.petId.isNotEmpty) {
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
       _fetchVaccinationData();
@@ -97,6 +97,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
         });
       }
     }
+    print(userId);
   }
 
   Future<void> _loadAllPet(String petId) async {
@@ -195,7 +196,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('vac_history')
-          .doc(userId)
+          .doc(pet_user)
           .collection('vac_pet')
           .where('pet_id', isEqualTo: pet_id)
           .get();
@@ -431,16 +432,12 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                       title: "ประวัติการจับคู่",
                       icon: LineAwesomeIcons.history,
                       onPress: () => showHistoryDialog(
-                          context: context,
-                          userId: userId ?? '',
-                          petId: pet_id)),
+                          context: context, userId: pet_user, petId: pet_id)),
                   MenuPetWidget(
                       title: "การประกวด",
                       icon: LineAwesomeIcons.certificate,
                       onPress: () => showContestDialog(
-                          context: context,
-                          userId: userId ?? '',
-                          petId: pet_id)),
+                          context: context, userId: pet_user, petId: pet_id)),
                   MenuPetWidget(
                     title: "ใบเพ็ดดีกรี",
                     icon: LineAwesomeIcons.dna,
@@ -451,7 +448,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                           pageBuilder:
                               (context, animation, secondaryAnimation) =>
                                   PetdigreeDetailPage(
-                            userId: userId ?? '',
+                            userId: pet_user,
                             petId: pet_id,
                           ),
                           transitionsBuilder:
@@ -611,13 +608,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
           SizedBox(height: 10),
           // แสดงข้อมูลบันทึกประจำเดือน
           FutureBuilder<QuerySnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('report_period')
-                .doc(userId)
-                .collection('period_pet')
-                .where('pet_id', isEqualTo: widget.petId)
-                .orderBy('date', descending: true) // เรียงลำดับจากวันที่ใหม่สุด
-                .get(),
+            future: (pet_user.isNotEmpty)
+                ? FirebaseFirestore.instance
+                    .collection('report_period')
+                    .doc(pet_user)
+                    .collection('period_pet')
+                    .where('pet_id', isEqualTo: widget.petId)
+                    .orderBy('date', descending: true)
+                    .get()
+                : null,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
@@ -651,7 +650,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                                 (context, animation, secondaryAnimation) =>
                                     PeriodDetailPage(
                               report: report,
-                              userId: userId ?? '',
+                              userId: pet_user,
                               idPeriod: idPeriod,
                             ),
                             transitionsBuilder: (context, animation,
@@ -891,13 +890,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
               const SizedBox(height: 5),
               // แสดงข้อมูลบันทึกวัคซีน
               FutureBuilder<QuerySnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('vac_more')
-                    .doc(userId)
-                    .collection('vac_pet')
-                    .where('pet_id', isEqualTo: widget.petId)
-                    .orderBy('date', descending: true)
-                    .get(),
+                future: (pet_user.isNotEmpty)
+                    ? FirebaseFirestore.instance
+                        .collection('vac_more')
+                        .doc(pet_user)
+                        .collection('vac_pet')
+                        .where('pet_id', isEqualTo: widget.petId)
+                        .orderBy('date', descending: true)
+                        .get()
+                    : null,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -924,7 +925,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                                     (context, animation, secondaryAnimation) =>
                                         VaccineDetailPage(
                                   report: report,
-                                  userId: userId ?? '',
+                                  userId: pet_user,
                                   pet_type: pet_type,
                                 ),
                                 transitionsBuilder: (context, animation,
@@ -1075,13 +1076,13 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                       child: GestureDetector(
                         onTap: () {
                           print(pet_user);
-                          print(userId.toString());
+                          print(pet_user);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProfileAllUserPage(
                                 userId: pet_user,
-                                userId_req: userId.toString(),
+                                userId_req: pet_user,
                               ),
                             ),
                           );
