@@ -97,6 +97,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _refreshHomePage();
+      _refreshData();
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
       _fetchVaccinationData();
@@ -181,7 +182,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         pet_type = petData['type_pet'] ?? '';
         DateTime birthdate = DateTime.parse(birthdateStr);
         age = _ageCalculatorService.calculateAge(birthdate);
-        status = petData['status'] ?? 'มีชีวิต';
+        status = petData['status'] ?? 'พร้อมผสมพันธุ์';
         _firestoreImages = firestoreImages;
 
         vaccinationSchedule =
@@ -538,136 +539,146 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       }
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "โปรไฟล์สัตว์เลี้ยง",
-          style: TextStyle(color: Color.fromARGB(255, 49, 42, 42)),
-        ),
-        centerTitle: true,
-        toolbarHeight: 70,
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'menu1',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('แก้ไขข้อมูลส่วนตัว'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'menu2',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem),
-                      SizedBox(width: 8),
-                      Text('รายงานปัญหา'),
-                    ],
-                  ),
-                ),
-              ];
-            },
-            onSelected: (value) {
-              // เมื่อเลือกเมนู
-              if (value == 'menu1') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Edit_Pet_Page(petUserData: {
-                        'pet_id': pet_id,
-                        'name': petName,
-                        'breed_pet': type,
-                        'img_profile': petImageBase64,
-                        'color': color,
-                        'weight': weight,
-                        'gender': gender,
-                        'description': des,
-                        'price': price,
-                        'birthdate': birthdateStr,
-                        'type_pet': pet_type,
-                        'status': status
-                      }),
-                    ));
-              } else if (value == 'menu2') {}
-            },
+    return WillPopScope(
+      onWillPop: () async {
+        // ทำการรีเฟรชข้อมูลเมื่อผู้ใช้กลับมาจากหน้าที่เคยเปิดอยู่
+        _refreshHomePage();
+        return true; // ทำการย้อนกลับ
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            "โปรไฟล์สัตว์เลี้ยง",
+            style: TextStyle(color: Color.fromARGB(255, 49, 42, 42)),
           ),
-        ],
-      ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                buildTop(),
-                const SizedBox(height: 30),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 30.0),
-                  child: Text(
-                    'คำอธิบาย',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+          centerTitle: true,
+          toolbarHeight: 70,
+          actions: [
+            PopupMenuButton(
+              itemBuilder: (BuildContext context) {
+                return [
+                  const PopupMenuItem(
+                    value: 'menu1',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit),
+                        SizedBox(width: 8),
+                        Text('แก้ไขข้อมูลส่วนตัว'),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                  child: Container(
-                    width: 360,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              des,
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          )
-                        ],
-                      ),
+                  const PopupMenuItem(
+                    value: 'menu2',
+                    child: Row(
+                      children: [
+                        Icon(Icons.report_problem),
+                        SizedBox(width: 8),
+                        Text('รายงานปัญหา'),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: DefaultTabController(
-                    length: myTabs.length,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: Column(
-                        children: [
-                          TabBar(
-                            controller: _tabController,
-                            tabs: myTabs,
-                          ),
-                          Expanded(
-                            child: TabBarView(
-                              controller: _tabController,
-                              children: myTabViews,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ];
+              },
+              onSelected: (value) {
+                // เมื่อเลือกเมนู
+                if (value == 'menu1') {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Edit_Pet_Page(petUserData: {
+                          'pet_id': pet_id,
+                          'name': petName,
+                          'breed_pet': type,
+                          'img_profile': petImageBase64,
+                          'color': color,
+                          'weight': weight,
+                          'gender': gender,
+                          'description': des,
+                          'price': price,
+                          'birthdate': birthdateStr,
+                          'type_pet': pet_type,
+                          'status': status
+                        }),
+                      )).then((_) {
+                    // Refresh data after returning from Edit_Pet_Page
+                    _refreshHomePage();
+                  });
+                } else if (value == 'menu2') {}
+              },
             ),
+          ],
+        ),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  buildTop(),
+                  const SizedBox(height: 30),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 30.0),
+                    child: Text(
+                      'คำอธิบาย',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                    child: Container(
+                      width: 360,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                des,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: DefaultTabController(
+                      length: myTabs.length,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Column(
+                          children: [
+                            TabBar(
+                              controller: _tabController,
+                              tabs: myTabs,
+                            ),
+                            Expanded(
+                              child: TabBarView(
+                                controller: _tabController,
+                                children: myTabViews,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -901,7 +912,23 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     );
   }
 
-  // Tab ข้อมูลประจำเดือน เฉพาะตัวเมีย
+  Future<void> _refreshData() async {
+    setState(() {
+      fetchMonthlyData();
+      fetchVacmoreData();
+    });
+  }
+
+  Future<QuerySnapshot> fetchMonthlyData() {
+    return FirebaseFirestore.instance
+        .collection('report_period')
+        .doc(userId)
+        .collection('period_pet')
+        .where('pet_id', isEqualTo: widget.petId)
+        .orderBy('date', descending: true)
+        .get();
+  }
+
   Widget _buildMonthlyInfoTab() {
     return SingleChildScrollView(
       child: Column(
@@ -935,15 +962,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             ],
           ),
           SizedBox(height: 10),
-          // แสดงข้อมูลบันทึกประจำเดือน
           FutureBuilder<QuerySnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('report_period')
-                .doc(userId)
-                .collection('period_pet')
-                .where('pet_id', isEqualTo: widget.petId)
-                .orderBy('date', descending: true) // เรียงลำดับจากวันที่ใหม่สุด
-                .get(),
+            future: fetchMonthlyData(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
@@ -961,15 +981,12 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     Map<String, dynamic> report =
                         reportDoc.data() as Map<String, dynamic>;
                     final date = DateTime.parse(report['date']);
-
-                    // Create a DateFormat with the Thai locale
                     final formattedDate =
                         DateFormat('d MMM yyyy', 'th_TH').format(date);
                     final idPeriod = reportDoc.id;
 
                     return GestureDetector(
                       onTap: () {
-                        // แสดงข้อมูลทั้งหมดใน BottomSheet เมื่อคลิกที่ Card
                         Navigator.push(
                           context,
                           PageRouteBuilder(
@@ -995,7 +1012,10 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                               );
                             },
                           ),
-                        );
+                        ).then((_) {
+                          // รีเฟรชข้อมูลหลังจากกลับจากหน้ารายละเอียด
+                          _refreshData();
+                        });
                       },
                       child: Card(
                         shape: RoundedRectangleBorder(
@@ -1064,10 +1084,20 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
               }
               return Text('ไม่มีบันทึกประจำเดือน');
             },
-          )
+          ),
         ],
       ),
     );
+  }
+
+  Future<QuerySnapshot> fetchVacmoreData() {
+    return FirebaseFirestore.instance
+        .collection('vac_more')
+        .doc(userId)
+        .collection('vac_pet')
+        .where('pet_id', isEqualTo: widget.petId)
+        .orderBy('date', descending: true)
+        .get();
   }
 
   // Tab ข้อมูลประวัติสุขภาพ
@@ -1228,13 +1258,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
               const SizedBox(height: 5),
               // แสดงข้อมูลบันทึกวัคซีน
               FutureBuilder<QuerySnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('vac_more')
-                    .doc(userId)
-                    .collection('vac_pet')
-                    .where('pet_id', isEqualTo: widget.petId)
-                    .orderBy('date', descending: true)
-                    .get(),
+                future: fetchVacmoreData(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -1279,7 +1303,10 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                   );
                                 },
                               ),
-                            );
+                            ).then((_) {
+                              // รีเฟรชข้อมูลหลังจากกลับจากหน้ารายละเอียด
+                              _refreshData();
+                            });
                           },
                           child: VaccineCard(report: report),
                         );
@@ -1304,9 +1331,9 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       switch (status) {
         case 'เสียชีวิต':
           return Colors.red;
-        case 'พร้อมผสมพันธ์':
+        case 'พร้อมผสมพันธุ์':
           return Colors.pinkAccent;
-        case 'ไม่พร้อมผสมพันธ์':
+        case 'ไม่พร้อมผสมพันธ์ุ':
           return Colors.grey;
         default:
           return Colors.green;
@@ -1656,8 +1683,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildStatusOption(context, 'เสียชีวิต', currentStatus),
-              _buildStatusOption(context, 'พร้อมผสมพันธ์', currentStatus),
-              _buildStatusOption(context, 'ไม่พร้อมผสมพันธ์', currentStatus),
+              _buildStatusOption(context, 'พร้อมผสมพันธ์ุ', currentStatus),
+              _buildStatusOption(context, 'ไม่พร้อมผสมพันธุ์', currentStatus),
             ],
           ),
         );
@@ -1799,26 +1826,49 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                       ),
                     ),
                     SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          NotificationHelper.scheduledNotification(
-                              'Pet fluffy',
-                              '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
-                              _dateController.text,
-                              pet_type);
-                          _saveReportToFirestore();
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20.0),
+                    Center(
+                      child: SizedBox(
+                        height: 40,
+                        width: 120,
+                        child: TextButton(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              NotificationHelper.scheduledNotification(
+                                'Pet fluffy',
+                                '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
+                                _dateController.text,
+                                pet_type,
+                                user!.uid,
+                                pet_id,
+                              );
+                              _saveReportToFirestore();
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          child: Center(
+                            // ใช้ Center widget เพื่อตั้งค่า Row ให้อยู่ตรงกลาง
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment
+                                  .center, // จัดให้อยู่ตรงกลางแนวนอน
+                              children: [
+                                Icon(
+                                  pet_type == 'สุนัข'
+                                      ? LineAwesomeIcons.dog
+                                      : LineAwesomeIcons.cat,
+                                ),
+                                SizedBox(
+                                    width:
+                                        8), // เพิ่ม space ระหว่าง Icon กับ Text
+                                Text('บันทึก', style: TextStyle(fontSize: 16)),
+                              ],
+                            ),
+                          ),
                         ),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                       ),
-                      child: Text('บันทึก'),
                     ),
                   ],
                 ),
@@ -1870,7 +1920,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                   ),
                   Center(
                     child: Text(
-                      'บันทึกการฉีดวัคซีน',
+                      'บันทึกการฉีดวัคซีน(เพิ่มเติม)',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -2070,21 +2120,42 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                             },
                           ),
                           SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                _saveVaccineTo_MoreFirestore();
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20.0),
+                          Center(
+                            child: SizedBox(
+                              height: 40,
+                              width: 120,
+                              child: TextButton(
+                                onPressed: () {
+                                  if (_formKey.currentState!.validate()) {
+                                    _saveVaccineTo_MoreFirestore();
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                                child: Center(
+                                  // ใช้ Center widget เพื่อตั้งค่า Row ให้อยู่ตรงกลาง
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .center, // จัดให้อยู่ตรงกลางแนวนอน
+                                    children: [
+                                      Icon(
+                                        pet_type == 'สุนัข'
+                                            ? LineAwesomeIcons.dog
+                                            : LineAwesomeIcons.cat,
+                                      ),
+                                      SizedBox(
+                                          width:
+                                              8), // เพิ่ม space ระหว่าง Icon กับ Text
+                                      Text('บันทึก',
+                                          style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 30, vertical: 10),
                             ),
-                            child: Text('บันทึกข้อมูล'),
                           ),
                         ],
                       ),
@@ -2347,61 +2418,82 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           ),
                         ),
                         SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            String errorMessage = '';
+                        Center(
+                          child: SizedBox(
+                            height: 40,
+                            width: 120,
+                            child: TextButton(
+                              onPressed: () {
+                                String errorMessage = '';
 
-                            if (_selectedVac_Table == null ||
-                                _vacStatus_Table == null) {
-                              errorMessage =
-                                  'กรุณากรอกข้อมูลวัคซีนและสถานะก่อนทำการบันทึก';
-                            } else if (_vacStatus_Table == 'ฉีดแล้ว' &&
-                                (_vacWeightTable.text.isEmpty ||
-                                    _vacPriceTable.text.isEmpty ||
-                                    _dateVacTable.text.isEmpty)) {
-                              errorMessage =
-                                  'กรุณากรอกข้อมูลให้ครบทุกช่องสำหรับสถานะฉีดแล้ว';
-                            }
+                                if (_selectedVac_Table == null ||
+                                    _vacStatus_Table == null) {
+                                  errorMessage =
+                                      'กรุณากรอกข้อมูลวัคซีนและสถานะก่อนทำการบันทึก';
+                                } else if (_vacStatus_Table == 'ฉีดแล้ว' &&
+                                    (_vacWeightTable.text.isEmpty ||
+                                        _vacPriceTable.text.isEmpty ||
+                                        _dateVacTable.text.isEmpty)) {
+                                  errorMessage =
+                                      'กรุณากรอกข้อมูลให้ครบทุกช่องสำหรับสถานะฉีดแล้ว';
+                                }
 
-                            if (errorMessage.isNotEmpty) {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Text('กรุณากรอกข้อมูลให้ครบ'),
-                                    content: Text(
-                                      errorMessage,
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                    actions: <Widget>[
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: Text('ตกลง'),
-                                      ),
-                                    ],
+                                if (errorMessage.isNotEmpty) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text('กรุณากรอกข้อมูลให้ครบ'),
+                                        content: Text(
+                                          errorMessage,
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Text('ตกลง'),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   );
-                                },
-                              );
-                            } else {
-                              _saveVaccineToFirestore();
-                              setState(() {
-                                _selectedVaccines.add(_selectedVac_Table!);
-                                _updateVaccinationList();
-                              });
-                              Navigator.of(context).pop();
-                              _resetForm();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20.0),
+                                } else {
+                                  _saveVaccineToFirestore();
+                                  setState(() {
+                                    _selectedVaccines.add(_selectedVac_Table!);
+                                    _updateVaccinationList();
+                                  });
+                                  Navigator.of(context).pop();
+                                  _resetForm();
+                                }
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.blue,
+                              ),
+                              child: Center(
+                                // ใช้ Center widget เพื่อตั้งค่า Row ให้อยู่ตรงกลาง
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment
+                                      .center, // จัดให้อยู่ตรงกลางแนวนอน
+                                  children: [
+                                    Icon(
+                                      pet_type == 'สุนัข'
+                                          ? LineAwesomeIcons.dog
+                                          : LineAwesomeIcons.cat,
+                                    ),
+                                    SizedBox(
+                                        width:
+                                            8), // เพิ่ม space ระหว่าง Icon กับ Text
+                                    Text('บันทึก',
+                                        style: TextStyle(fontSize: 16)),
+                                  ],
+                                ),
+                              ),
                             ),
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 10),
                           ),
-                          child: Text('บันทึกข้อมูล'),
                         ),
                       ],
                     ),
@@ -2515,11 +2607,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
   // ดึงข้อมูลที่บันทึกมาใส่ตารางการฉีดวัคซีนตามเกณฑ์
-  List<TableRow> _buildTableRows(List<Map<String, dynamic>> vaccination_Table) {
-    return vaccination_Table.map((schedule_table) {
+  List<TableRow> _buildTableRows(List<Map<String, dynamic>> vaccinationTable) {
+    return vaccinationTable.map((scheduleTable) {
       // รวม vaccine และ dose เป็นค่าเดียวเพื่อใช้ในการค้นหา
       String vaccineWithDose =
-          "${schedule_table['vaccine']} ${schedule_table['dose']}";
+          "${scheduleTable['vaccine']} ${scheduleTable['dose']}";
 
       // ค้นหาข้อมูลการฉีดวัคซีนที่ตรงกับ vaccine + dose จาก Firestore
       var firestoreData = vaccinationDataFromFirestore.firstWhere(
@@ -2527,33 +2619,262 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         orElse: () => {},
       );
 
+      // ตรวจสอบว่าสถานะมีหรือไม่
+      bool hasStatus =
+          firestoreData.isNotEmpty && firestoreData['status'] != '';
+
       return TableRow(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child:
-                Text(firestoreData.isNotEmpty ? firestoreData['status'] : ''),
+          GestureDetector(
+            onTap: hasStatus
+                ? () {
+                    // เปิดไดอะล็อกเพื่อแก้ไขข้อมูล
+                    _showEditDialog(context, scheduleTable);
+                  }
+                : null, // ถ้าไม่มีสถานะ, ไม่สามารถแก้ไขได้
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(hasStatus ? firestoreData['status'] : ''),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(vaccineWithDose),
+          GestureDetector(
+            onTap: hasStatus
+                ? () {
+                    _showEditDialog(context, scheduleTable);
+                  }
+                : null, // ถ้าไม่มีสถานะ, ไม่สามารถแก้ไขได้
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(vaccineWithDose),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(firestoreData.isNotEmpty ? firestoreData['date'] : ''),
+          GestureDetector(
+            onTap: hasStatus
+                ? () {
+                    _showEditDialog(context, scheduleTable);
+                  }
+                : null, // ถ้าไม่มีสถานะ, ไม่สามารถแก้ไขได้
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(hasStatus ? firestoreData['date'] : ''),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child:
-                Text(firestoreData.isNotEmpty ? firestoreData['weight'] : ''),
+          GestureDetector(
+            onTap: hasStatus
+                ? () {
+                    _showEditDialog(context, scheduleTable);
+                  }
+                : null, // ถ้าไม่มีสถานะ, ไม่สามารถแก้ไขได้
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(hasStatus ? firestoreData['weight'] : ''),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(firestoreData.isNotEmpty ? firestoreData['price'] : ''),
+          GestureDetector(
+            onTap: hasStatus
+                ? () {
+                    _showEditDialog(context, scheduleTable);
+                  }
+                : null, // ถ้าไม่มีสถานะ, ไม่สามารถแก้ไขได้
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(hasStatus ? firestoreData['price'] : ''),
+            ),
           ),
         ],
       );
     }).toList();
+  }
+
+  void _showEditDialog(BuildContext context, Map<String, dynamic> data) {
+    final String vaccineWithDose = "${data['vaccine']} ${data['dose']}";
+    var firestoreData = vaccinationDataFromFirestore.firstWhere(
+      (item) => item['vaccine'] == vaccineWithDose,
+      orElse: () => {},
+    );
+
+    // ใช้ค่า default ถ้า firestoreData ว่างเปล่า
+    firestoreData = firestoreData.isEmpty
+        ? {
+            'date': data['date'],
+            'weight': data['weight'],
+            'price': data['price'],
+            'status': data['status'] ?? '',
+          }
+        : firestoreData;
+
+    final TextEditingController dateController =
+        TextEditingController(text: firestoreData['date']);
+    final TextEditingController weightController =
+        TextEditingController(text: firestoreData['weight']);
+    final TextEditingController priceController =
+        TextEditingController(text: firestoreData['price']);
+
+    String? statusValue = firestoreData['status'];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Text(
+            'แก้ไขข้อมูลตารางการฉีดวัคซีน',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${data['vaccine']} (${data['dose']})',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 15),
+                TextField(
+                  controller: dateController,
+                  decoration: InputDecoration(
+                    labelText: 'วันที่ฉีด',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  keyboardType: TextInputType.datetime,
+                  onTap: () async {
+                    FocusScope.of(context).requestFocus(FocusNode());
+                    DateTime currentDate = DateTime.now();
+                    DateTime? selectedDate = await showDatePicker(
+                      context: context,
+                      initialDate:
+                          DateTime.tryParse(dateController.text) ?? currentDate,
+                      firstDate: DateTime(2000),
+                      lastDate:
+                          currentDate, // กำหนดให้ไม่สามารถเลือกวันที่เกินวันปัจจุบันได้
+                    );
+                    if (selectedDate != null) {
+                      dateController.text =
+                          DateFormat('yyyy-MM-dd').format(selectedDate);
+                    }
+                  },
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: weightController,
+                  decoration: InputDecoration(
+                    labelText: 'น้ำหนัก',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  controller: priceController,
+                  decoration: InputDecoration(
+                    labelText: 'ราคา',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: statusValue,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'ฉีดแล้ว',
+                      child: Text('ฉีดแล้ว'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ยังไม่ฉีด',
+                      child: Text('ยังไม่ฉีด'),
+                    ),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'สถานะ',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      statusValue = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยกเลิก"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        // อัปเดตข้อมูลที่ถูกแก้ไข
+                        setState(() {
+                          data['date'] = dateController.text;
+                          data['weight'] = weightController.text;
+                          data['price'] = priceController.text;
+                          data['status'] = statusValue; // อัปเดตสถานะ
+                          // อัปเดตข้อมูลที่ Firestore ด้วย
+                          if (firestoreData.isNotEmpty) {
+                            firestoreData['date'] = dateController.text;
+                            firestoreData['weight'] = weightController.text;
+                            firestoreData['price'] = priceController.text;
+                            firestoreData['status'] =
+                                statusValue; // อัปเดตสถานะ
+                          }
+                        });
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยืนยัน"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // ดึงข้อมูลตารางการฉีดวัคซีนตามเกณฑ์

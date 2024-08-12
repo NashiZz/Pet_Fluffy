@@ -236,6 +236,23 @@ class ProfileService {
     await newData.update({'id_period': docId});
   }
 
+  Future<void> deleteReportFromFirestore(
+    String userId,
+    periodId,
+  ) async {
+    try {
+      await _firestore
+          .collection('report_period')
+          .doc(userId)
+          .collection('period_pet')
+          .doc(periodId)
+          .delete();
+      print("Document successfully deleted!");
+    } catch (e) {
+      print("Error removing document: $e");
+    }
+  }
+
   Future<void> updatePeriod_ToFirestore({
     required String docId,
     required String userId,
@@ -363,7 +380,7 @@ class ProfileService {
         'updates_at': formatted,
       });
       String docId = newData.id;
-      await newData.update({'id_period': docId});
+      await newData.update({'id_vac': docId});
     }
   }
 
@@ -396,7 +413,24 @@ class ProfileService {
       'updates_at': formatted,
     });
     String docId = newData.id;
-    await newData.update({'id_period': docId});
+    await newData.update({'id_vacmore': docId});
+  }
+
+  Future<void> deleteVaccine_MoreFromFirestore(String userId, docId) async {
+    try {
+      // ระบุ DocumentReference ที่ต้องการลบ
+      DocumentReference docRef = _firestore
+          .collection('vac_more')
+          .doc(userId)
+          .collection('vac_pet')
+          .doc(docId);
+
+      // ลบเอกสาร
+      await docRef.delete();
+      print('Document with ID $docId has been deleted successfully.');
+    } catch (e) {
+      print('Error deleting document: $e');
+    }
   }
 
   Future<void> updateVaccine_MoreToFirestore({

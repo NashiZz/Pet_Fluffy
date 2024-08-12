@@ -27,6 +27,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
   late String userId;
   late String petId;
   bool isLoading = true;
+  int _currentIndex = 0; // ตัวแปรสถานะของแถบที่ถูกเลือก
 
   @override
   void initState() {
@@ -355,6 +356,11 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
           ],
           automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
           bottom: TabBar(
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
             tabs: [
               Tab(text: 'กำลังรอ'),
               Tab(text: 'จับคู่แล้ว'),
@@ -427,6 +433,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         );
       },
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -440,15 +447,25 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
                 ? const ImageIcon(AssetImage('assets/default_pet_image.png'))
                 : null,
           ),
-          title: Text(
-            petUserData['name'] ?? '',
-            style: Theme.of(context).textTheme.titleLarge,
+          title: Row(
+            children: [
+              Text(
+                petUserData['name'] ?? '',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              petUserData['gender'] == 'ตัวผู้'
+                  ? const Icon(Icons.male, size: 20, color: Colors.purple)
+                  : petUserData['gender'] == 'ตัวเมีย'
+                      ? const Icon(Icons.female, size: 20, color: Colors.pink)
+                      : const Icon(Icons.help_outline,
+                          size: 20, color: Colors.black),
+            ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
+                '${petUserData['breed_pet'] ?? ''}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               // แสดง description ที่ดึงมาจาก Firestore
@@ -466,24 +483,67 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
+                      bool isMatching =
+                          _currentIndex == 1; // 1 สำหรับ "จับคู่แล้ว"
+
                       return AlertDialog(
-                        title: const Text("ยืนยันการลบ"),
-                        content:
-                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        title: Column(
+                          children: [
+                            const Icon(LineAwesomeIcons.heart_1,
+                                color: Colors.pink, size: 50),
+                            SizedBox(height: 20),
+                            Text(
+                              isMatching
+                                  ? 'คุณต้องการที่จะลบการจับคู่กับ'
+                                  : 'คุณต้องการลบคำร้องขอการจับคู่กับ',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                          ],
+                        ),
+                        content: Text(
+                          "${petUserData['name']} ?",
+                          style:
+                              TextStyle(fontSize: 30, color: Colors.deepPurple),
+                          textAlign: TextAlign.center,
+                        ),
                         actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              _deletePetData(petUserData['pet_id'],
-                                  petUserData['user_id']);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยืนยัน"),
+                          SizedBox(height: 20),
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ยกเลิก"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      _deletePetData(petUserData['pet_id'],
+                                          petUserData['user_id']);
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ยืนยัน"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       );
@@ -499,7 +559,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
     );
   }
 
-  void _deletePetData(String petId_res, String Userid_res) async {
+   void _deletePetData(String petId_res, String Userid_res) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? petId_req = prefs.getString(userId);

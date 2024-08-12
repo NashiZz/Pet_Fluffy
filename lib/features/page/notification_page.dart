@@ -48,13 +48,11 @@ class _Notification_PageState extends State<Notification_Page>
       vsync: this,
     );
 
-    // กำหนด Animation สำหรับ opacity
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
   }
 
-  //สร้าง fcm_token
   Future<void> _setTokenfirebaseMassag() async {
     userId = user!.uid;
     final userDocRef =
@@ -79,11 +77,7 @@ class _Notification_PageState extends State<Notification_Page>
 
       if (querySnapshot.docs.isNotEmpty) {
         final petData = querySnapshot.docs.first.data() as Map<String, dynamic>;
-        return {
-          'name': petData['name'], // หรือชื่อฟิลด์ที่ใช้เก็บชื่อสัตว์เลี้ยง
-          'img_profile':
-              petData['img_profile'] // หรือชื่อฟิลด์ที่ใช้เก็บ URL ของรูปภาพ
-        };
+        return {'name': petData['name'], 'img_profile': petData['img_profile']};
       }
     } catch (error) {
       print("Failed to get pet details: $error");
@@ -100,7 +94,7 @@ class _Notification_PageState extends State<Notification_Page>
 
       if (querySnapshot.docs.isNotEmpty) {
         final petData = querySnapshot.docs.first.data() as Map<String, dynamic>;
-        return petData['name']; // หรือชื่อฟิลด์ที่ใช้เก็บชื่อสัตว์เลี้ยง
+        return petData['name'];
       }
     } catch (error) {
       print("Failed to get pet name: $error");
@@ -108,14 +102,13 @@ class _Notification_PageState extends State<Notification_Page>
     return null;
   }
 
-  //ดึงข้อมูลจาก firebase
   Future<void> _getPetUserDataFromMatch_wait() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
       try {
         print(widget.idPet);
-        // ดึงข้อมูลจากคอลเล็กชัน match โดยใช้ pet_respone เป็น idPet
+
         QuerySnapshot petUserQuerySnapshot_wait = await FirebaseFirestore
             .instance
             .collection('match')
@@ -134,33 +127,25 @@ class _Notification_PageState extends State<Notification_Page>
 
         List<Map<String, dynamic>> allPetDataList_wait = [];
 
-        // ลูปเพื่อดึงข้อมูล pet_request ที่ได้จากเอกสารในคอลเล็กชัน match
         for (var petResponse in petRequestWithDescription) {
           String petRequestId = petResponse['pet_request'];
           String description = petResponse['description'];
 
-          // ดึงข้อมูลจาก Pet_User โดยใช้ pet_request
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('Pet_User')
               .where('pet_id', isEqualTo: petRequestId)
               .get();
 
-          // เพิ่มข้อมูลลงใน List พร้อมกับ description
           allPetDataList_wait.addAll(getPetQuerySnapshot.docs.map((doc) {
             final petData = doc.data() as Map<String, dynamic>;
-            return {
-              ...petData,
-              'description': description // เพิ่ม description ที่นี่
-            };
+            return {...petData, 'description': description};
           }).toList());
         }
 
-        // กรองข้อมูลที่ไม่ต้องการแสดง
         List<Map<String, dynamic>> nonDeletedPets = allPetDataList_wait
             .where((pet) => pet['status'] != 'ถูกลบ')
             .toList();
 
-        // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
         setState(() {
           petUserDataList_wait = nonDeletedPets;
           isLoading = false;
@@ -198,8 +183,7 @@ class _Notification_PageState extends State<Notification_Page>
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         centerTitle: true,
-
-        automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
+        automaticallyImplyLeading: false,
       ),
       body: Container(
         child: isLoading
@@ -253,7 +237,6 @@ class _Notification_PageState extends State<Notification_Page>
             ),
           )
         : SingleChildScrollView(
-            // แสดงรายการสัตว์เลี้ยงเมื่อข้อมูลถูกโหลดเสร็จสิ้น
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -283,6 +266,7 @@ class _Notification_PageState extends State<Notification_Page>
         );
       },
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -326,36 +310,110 @@ class _Notification_PageState extends State<Notification_Page>
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text("ยืนยันการจับคู่"),
-                        content: const Text(
-                            "คุณต้องการที่จะยืนยันการจับคู่กับสัตว์เลี้ยงตัวนี้หรือไม่"),
+                        title: Column(
+                          children: [
+                            const Icon(LineAwesomeIcons.heart_1,
+                                color: Colors.pink, size: 50),
+                            SizedBox(height: 20),
+                            Text('คุณต้องการที่จะยืนยันการจับคู่กับ',
+                                style: TextStyle(fontSize: 18)),
+                          ],
+                        ),
+                        content: Text(
+                          "${petUserData['name']} หรือไม่?",
+                          style:
+                              TextStyle(fontSize: 30, color: Colors.deepPurple),
+                          textAlign: TextAlign.center,
+                        ),
                         actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              print_deletePetData(
-                                  petUserData['pet_id'] as String,
-                                  petUserData['user_id'] as String);
-                              _deletePetData(petUserData['pet_id'],
-                                  petUserData['user_id']);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ปฏิเสธการจับคู่"),
+                          SizedBox(
+                            height: 20,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              String petIdd = petUserData['pet_id'] as String;
-                              String userIdd = petUserData['user_id'] as String;
-                              String img_profile =
-                                  petUserData['img_profile'] as String;
-                              String name_petrep =
-                                  petUserData['name'] as String;
-                              String des = petUserData['description'] as String;
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    height: 40,
+                                    width: 160,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        _deletePetData(petUserData['pet_id'],
+                                            petUserData['user_id']);
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 8),
+                                            child: Icon(
+                                              LineAwesomeIcons.times,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const Text("ปฏิเสธการจับคู่"),
+                                        ],
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    height: 40,
+                                    width: 160,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        String petIdd =
+                                            petUserData['pet_id'] as String;
+                                        String userIdd =
+                                            petUserData['user_id'] as String;
+                                        String img_profile =
+                                            petUserData['img_profile']
+                                                as String;
+                                        String name_petrep =
+                                            petUserData['name'] as String;
+                                        String des = petUserData['description']
+                                            as String;
 
-                              add_match(petIdd, userIdd, img_profile,
-                                  name_petrep, des);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยืนยันการจับคู่"),
+                                        add_match(petIdd, userIdd, img_profile,
+                                            name_petrep, des);
+                                        Navigator.of(context).pop();
+                                        _getPetUserDataFromMatch_wait(); // Update the list after confirming
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 8),
+                                            child: Icon(
+                                              LineAwesomeIcons.heart,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const Text("ยืนยันการจับคู่"),
+                                        ],
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.pinkAccent,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       );
@@ -382,75 +440,52 @@ class _Notification_PageState extends State<Notification_Page>
   void _deletePetData(String petId_res, String Userid_res) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? petId_req = prefs.getString(userId);
+      String? petId_req = prefs.getString(Userid_res);
+
+      if (petId_req == null) {
+        print('No pet ID found for user $Userid_res');
+        return;
+      }
 
       final DateTime now = DateTime.now();
       final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
       final String formatted =
           formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-      CollectionReference petMatchRef_req =
+      CollectionReference petMatchRef =
           FirebaseFirestore.instance.collection('match');
 
-      QuerySnapshot querySnapshot_req = await petMatchRef_req
-          .where('pet_respone', isEqualTo: petId_req)
-          .where('pet_resquest', isEqualTo: petId_res)
+      // ตรวจสอบเอกสารที่ตรงกับเงื่อนไข 'จับคู่แล้ว'
+      QuerySnapshot querySnapshot_req = await petMatchRef
+          .where('pet_respone', isEqualTo: widget.idPet)
+          .where('pet_request', isEqualTo: petId_res)
           .where('status', isEqualTo: "จับคู่แล้ว")
           .get();
 
       if (querySnapshot_req.docs.isNotEmpty) {
-        querySnapshot_req.docs.forEach((doc) async {
+        for (var doc in querySnapshot_req.docs) {
           await doc.reference
               .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-        });
-
-        CollectionReference petMatchRef_res =
-            FirebaseFirestore.instance.collection('match');
-
-        QuerySnapshot querySnapshot_res = await petMatchRef_res
-            .where('pet_respone', isEqualTo: petId_req)
-            .where('pet_resquest', isEqualTo: petId_res)
-            .where('status', isEqualTo: "จับคู่แล้ว")
-            .get();
-
-        if (querySnapshot_res.docs.isNotEmpty) {
-          querySnapshot_res.docs.forEach((doc) async {
-            await doc.reference
-                .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-          });
-          _getPetUserDataFromMatch_wait();
-        } else {
-          print('No document found with pet_id: $petId_res');
         }
       } else {
-        CollectionReference petMatchRef_req =
-            FirebaseFirestore.instance.collection('match');
-
-        QuerySnapshot querySnapshot_req = await petMatchRef_req
-            .where('pet_respone', isEqualTo: petId_req)
-            .where('pet_resquest', isEqualTo: petId_res)
+        // ตรวจสอบเอกสารที่ตรงกับเงื่อนไข 'กำลังรอ'
+        QuerySnapshot querySnapshot_req_pending = await petMatchRef
+            .where('pet_respone', isEqualTo: widget.idPet)
+            .where('pet_request', isEqualTo: petId_res)
             .where('status', isEqualTo: "กำลังรอ")
             .get();
-        if (querySnapshot_req.docs.isNotEmpty) {
-          DocumentSnapshot docSnapshot = querySnapshot_req.docs.first;
 
-          String idFav = docSnapshot.get('id_match');
-
-          DocumentReference docRef = petMatchRef_req.doc(idFav);
-
-          DocumentSnapshot docToCheck = await docRef.get();
-
-          if (docToCheck.exists) {
-            await docRef.delete();
-
-            _getPetUserDataFromMatch_wait();
-
-            print('Document with id_fav $idFav deleted successfully');
-          } else {
-            print('No document found with id_fav: $idFav');
+        if (querySnapshot_req_pending.docs.isNotEmpty) {
+          for (var doc in querySnapshot_req_pending.docs) {
+            await doc.reference.delete();
           }
+          print('Pending match request deleted successfully');
+        } else {
+          print(
+              'No document found with pet_id: $petId_res and ${widget.idPet}');
         }
       }
+      _getPetUserDataFromMatch_wait(); // Refresh data
     } catch (e) {
       print('Error deleting pet data: $e');
     }
