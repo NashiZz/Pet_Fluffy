@@ -111,74 +111,103 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
-  void _showLocationPickerDialog() {
+  void _showLocationPickerDialog() async {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 500,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_locationData != null)
-                    GoogleMap(
+            contentPadding: EdgeInsets.zero,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
+                  alignment: Alignment.center,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(5.0),
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const Text(
+                        'เลือกตำแหน่งที่จะแสดงผลสัตว์เลี้ยง',
+                        style:
+                            TextStyle(fontSize: 18, color: Colors.deepPurple),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.maxFinite,
+                  height: 500,
+                  child: Padding(
+                    padding: const EdgeInsets.all(
+                        16.0), // Adjust the padding value as needed
+                    child: GoogleMap(
                       initialCameraPosition: CameraPosition(
                         target: LatLng(
                           _locationData!.latitude!,
                           _locationData!.longitude!,
                         ),
-                        zoom: 14,
+                        zoom: 14.4746,
                       ),
-                      onTap: (LatLng latLng) {
+                      onTap: (LatLng location) {
                         setState(() {
-                          _selectedLocation = latLng;
+                          _selectedLocation = location;
                         });
                       },
-                      markers: _selectedLocation != null
-                          ? {
+                      markers: _selectedLocation == null
+                          ? {}
+                          : {
                               Marker(
-                                markerId: const MarkerId('selectedLocation'),
+                                markerId: const MarkerId('selected-location'),
                                 position: _selectedLocation!,
-                              )
-                            }
-                          : {},
-                    ),
-                  const Positioned(
-                    top: 10,
-                    child: Text(
-                      'เลือกตำแหน่งที่ตั้งสัตว์เลี้ยงของคุณ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                              ),
+                            },
                     ),
                   ),
-                  if (_selectedLocation != null)
-                    Positioned(
-                      bottom: 10,
-                      left: 10,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _selectLocation(_selectedLocation!);
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text('Select'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: Column(
+                    children: [
+                      if (_selectedLocation != null)
+                        SizedBox(
+                          width: double
+                              .infinity, // Make the button take up the full width
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              _selectLocation(_selectedLocation!);
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: const Text(
+                              'ยืนยันตำแหน่ง',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      SizedBox(
+                        width: double
+                            .infinity, // Make the button take up the full width
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('ยกเลิก'),
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Cancel'),
-              ),
-            ],
           );
         },
       ),

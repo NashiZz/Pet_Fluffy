@@ -226,13 +226,29 @@ class _Pet_PageState extends State<Pet_Page> {
                                 backgroundImage: NetworkImage(tempPetImageUrl),
                               ),
                         Positioned(
-                          bottom: -10,
-                          left: 80,
-                          child: IconButton(
-                            onPressed: selectImage,
-                            icon: const Icon(Icons.add_a_photo),
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 35,
+                            height: 35,
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: IconButton(
+                                onPressed: selectImage,
+                                icon: const Icon(Icons.add_a_photo,
+                                    color: Colors.white),
+                                iconSize: 15,
+                              ),
+                            ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     const SizedBox(
@@ -463,7 +479,6 @@ class _Pet_PageState extends State<Pet_Page> {
                                 ),
                               ),
                             ),
-                            
                           ],
                         ),
                         const SizedBox(height: 15),
@@ -515,17 +530,29 @@ class _Pet_PageState extends State<Pet_Page> {
                         ButtonTheme(
                           minWidth: 300,
                           height: 100,
-                          child: ElevatedButton(
-                            onPressed: () {
+                          child: GestureDetector(
+                            onTap: () {
                               addPetToFirestore();
                             },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
+                            child: Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
                                 borderRadius: BorderRadius.circular(30),
                               ),
+                              child: Center(
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                      : const Text(
+                                          "เพิ่มสัตว์เลี้ยง",
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18),
+                                        )),
                             ),
-                            child: const Text('เพิ่มสัตว์เลี้ยง',
-                                style: TextStyle(fontSize: 16)),
                           ),
                         ),
                       ],
@@ -548,26 +575,24 @@ class _Pet_PageState extends State<Pet_Page> {
     String color = _colorController.text;
     String birtdate = _dateController.text;
     String weight = _weightController.text;
-    String price ;
-    if (_priceController.text=='') {
+    String price;
+    if (_priceController.text == '') {
       price = '0';
-    }
-    else{
+    } else {
       price = _priceController.text;
     }
-    
+
     String petdegreeBase64 =
         _normalImage != null ? base64Encode(_normalImage!) : '';
     String description = _desController.text;
     String type = _selectedType ?? '';
-    String breed ;
+    String breed;
     String gender = _selectedGender ?? '';
     String status = _selectedStatus ?? '';
-    
-    if(_isOtherBreed){
+
+    if (_isOtherBreed) {
       breed = _otherBreedController.text;
-    }
-    else {
+    } else {
       breed = _selectedBreed ?? '';
     }
 

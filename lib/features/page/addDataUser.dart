@@ -1,15 +1,25 @@
+import 'dart:convert';
+
+import 'package:Pet_Fluffy/features/page/email_verifly.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 class addDataUser_Page extends StatefulWidget {
-  const addDataUser_Page({Key? key}) : super(key: key);
+  final Map<String, dynamic> userData;
+
+  const addDataUser_Page({Key? key, required this.userData}) : super(key: key);
 
   @override
   State<addDataUser_Page> createState() => _addDataUser_PageState();
 }
 
 class _addDataUser_PageState extends State<addDataUser_Page> {
+  final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
   final TextEditingController nicknameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController facebookController = TextEditingController();
@@ -19,12 +29,33 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
   String? _selectedGender;
   DateTime? _selectedDate;
   final TextEditingController _dateController = TextEditingController();
-  final List<String> _county = ['อุดรธานี', 'มหาสารคาม'];
+  List<String> _county = []; // เริ่มต้นด้วย List เปล่า
   final List<String> _gender = ['ชาย', 'หญิง', 'อื่นๆ'];
 
   bool _isLoading = false;
 
-  // เพื่อแสดงหน้าต่างเลือกวันที่และอัปเดตวันที่ที่เลือกและฟิลด์ข้อความที่เกี่ยวข้อง
+  @override
+  void initState() {
+    super.initState();
+    _loadCounties(); // เรียกใช้ฟังก์ชันโหลดข้อมูลจังหวัด
+  }
+
+  // ฟังก์ชันสำหรับโหลดข้อมูลจังหวัดจากไฟล์ JSON
+  Future<void> _loadCounties() async {
+    try {
+      // อ่านไฟล์ JSON
+      final String response =
+          await rootBundle.loadString('assets/counties.json');
+      final data = json.decode(response);
+      setState(() {
+        _county = List<String>.from(data['counties']);
+      });
+    } catch (e) {
+      print('Error loading counties: $e');
+    }
+  }
+
+  // ฟังก์ชันสำหรับแสดงหน้าต่างเลือกวันที่
   void selectDate(BuildContext context) async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -44,11 +75,6 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
   void dispose() {
     _dateController.dispose(); // ล้างทรัพยากร
     super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
   }
 
   @override
@@ -79,279 +105,306 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
           : SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(30.0),
-                child: Column(
-                  children: [
-                    Form(
-                      child: Column(
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "ข้อมูลส่วนตัว",
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800]),
-                            ),
-                          ),
-                          SizedBox(height: 20),
-                          TextField(
-                            style: const TextStyle(fontSize: 14),
-                            controller: nicknameController,
-                            decoration: InputDecoration(
-                              labelText: 'ชื่อเล่น',
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30.0)),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          // จังหวัด
-                          DropdownButtonFormField<String>(
-                            value: _selectedGender,
-                            items: _gender.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedGender = newValue;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              labelText: 'เพศ',
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30.0)),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          TextField(
-                            readOnly: true,
-                            controller: _dateController,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: 'วันเกิด',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 15,
-                              ),
-                            ),
-                            onTap: () => selectDate(context),
-                          ),
-                          const SizedBox(height: 15),
-                          // จังหวัด
-                          DropdownButtonFormField<String>(
-                            value: _selectedCounty,
-                            items: _county.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedCounty = newValue;
-                              });
-                            },
-                            decoration: InputDecoration(
-                              labelText: 'จังหวัด',
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(30.0)),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 10, horizontal: 15),
-                            ),
-                          ),
-                          const SizedBox(height: 25),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "ข้อมูลติดต่อ",
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800]),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          TextField(
-                            style: const TextStyle(fontSize: 14),
-                            controller: phoneController,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: <TextInputFormatter>[
-                              FilteringTextInputFormatter.digitsOnly
-                            ],
-                            decoration: InputDecoration(
-                              labelText: 'เบอร์โทรศัพท์',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 15,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          TextField(
-                            style: const TextStyle(fontSize: 14),
-                            controller: facebookController,
-                            decoration: InputDecoration(
-                              labelText: 'Facebook',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 15,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          TextField(
-                            style: const TextStyle(fontSize: 14),
-                            controller: lineController,
-                            decoration: InputDecoration(
-                              labelText: 'Line',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10,
-                                horizontal: 15,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 25),
-                          const SizedBox(height: 30),
-                          ButtonTheme(
-                            minWidth: 300,
-                            height: 100,
-                            child: ElevatedButton(
-                              onPressed: () {},
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              child: const Text('เพิ่มข้อมูล',
-                                  style: TextStyle(fontSize: 16)),
-                            ),
-                          ),
-                        ],
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "ข้อมูลส่วนตัว",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800]),
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 20),
+                      TextFormField(
+                        style: const TextStyle(fontSize: 14),
+                        controller: nicknameController,
+                        decoration: InputDecoration(
+                          labelText: 'ชื่อเล่น',
+                          prefixIcon:
+                              Icon(LineAwesomeIcons.identification_badge),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20.0)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 15),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      DropdownButtonFormField<String>(
+                        value: _selectedGender,
+                        items: _gender.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedGender = newValue;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'เพศ',
+                          prefixIcon: Icon(LineAwesomeIcons.venus_mars),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20.0)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 15),
+                        ),
+                        validator: (value) {
+                          if (value == null) {
+                            return 'กรุณาเลือกเพศ';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      TextFormField(
+                        readOnly: true,
+                        controller: _dateController,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          labelText: 'วันเกิด',
+                          prefixIcon: Icon(LineAwesomeIcons.birthday_cake),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              LineAwesomeIcons.calendar,
+                            ),
+                            onPressed: () => selectDate(context),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                            horizontal: 15,
+                          ),
+                        ),
+                        onTap: () => selectDate(context),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'กรุณาเลือกวันเกิด';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      DropdownButtonFormField<String>(
+                        value: _selectedCounty,
+                        items: _county.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedCounty = newValue;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'จังหวัด',
+                          prefixIcon: Icon(LineAwesomeIcons.map_marked),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(20.0)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15, horizontal: 15),
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "ข้อมูลติดต่อ",
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        style: const TextStyle(fontSize: 14),
+                        controller: phoneController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'เบอร์โทรศัพท์',
+                          prefixIcon: Icon(LineAwesomeIcons.phone),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                            horizontal: 15,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'กรุณากรอกเบอร์โทรศัพท์';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      TextFormField(
+                        style: const TextStyle(fontSize: 14),
+                        controller: facebookController,
+                        decoration: InputDecoration(
+                          labelText: 'Facebook',
+                          prefixIcon: Icon(LineAwesomeIcons.facebook),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                            horizontal: 15,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'กรุณากรอก Facebook';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 15),
+                      TextFormField(
+                        style: const TextStyle(fontSize: 14),
+                        controller: lineController,
+                        decoration: InputDecoration(
+                          labelText: 'Line',
+                          prefixIcon: Icon(LineAwesomeIcons.line),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 15,
+                            horizontal: 15,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'กรุณากรอก Line';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 30),
+                      GestureDetector(
+                        onTap: () {
+                          if (_formKey.currentState!.validate()) {
+                            saveUserAdditionalData();
+                          }
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.blue,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Center(
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : const Text(
+                                      "เพิ่มข้อมูล",
+                                      style: TextStyle(
+                                          color: Colors.white, fontSize: 18),
+                                    )),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
     );
   }
 
-  //เพิ่มข้อมูลลงฐานข้อมูล
-  // void addPetToFirestore() async {
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
+  Future<void> saveUserAdditionalData() async {
+    if (_isLoading) return;
 
-  //   String userId = user!.uid;
-  //   String profileBase64 =
-  //       _profileImage != null ? base64Encode(_profileImage!) : '';
-  //   String name = _nameController.text;
-  //   String color = _colorController.text;
-  //   String birtdate = _dateController.text;
-  //   String weight = _weightController.text;
-  //   String price;
-  //   if (_priceController.text == '') {
-  //     price = '0';
-  //   } else {
-  //     price = _priceController.text;
-  //   }
+    setState(() {
+      _isLoading = true;
+    });
 
-  //   String petdegreeBase64 =
-  //       _normalImage != null ? base64Encode(_normalImage!) : '';
-  //   String description = _desController.text;
-  //   String type = _selectedType ?? '';
-  //   String breed;
-  //   String gender = _selectedGender ?? '';
-  //   String status = _selectedStatus ?? '';
+    try {
+      // ดึงข้อมูลที่ส่งมาจากหน้าก่อน
+      String email = widget.userData['email'];
+      String password = widget.userData['password'];
+      String username = widget.userData['username'];
+      String fullname = widget.userData['fullname'];
+      String image = widget.userData['image'] != null
+          ? base64Encode(widget.userData['image'])
+          : '';
 
-  //   if (_isOtherBreed) {
-  //     breed = _otherBreedController.text;
-  //   } else {
-  //     breed = _selectedBreed ?? '';
-  //   }
+      // สร้างบัญชีผู้ใช้ใน Firebase Authentication
+      UserCredential? userCredential =
+          await _authService.signUp(email, password);
 
-  //   CollectionReference pets =
-  //       FirebaseFirestore.instance.collection('Pet_User');
+      if (userCredential == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-  //   try {
-  //     DocumentReference newPetRef = await pets.add({
-  //       'user_id': userId,
-  //       'img_profile': profileBase64,
-  //       'name': name,
-  //       'color': color,
-  //       'birthdate': birtdate,
-  //       'weight': weight,
-  //       'price': price,
-  //       'pet_degree': petdegreeBase64,
-  //       'description': description,
-  //       'type_pet': type,
-  //       'breed_pet': breed,
-  //       'status': status,
-  //       'gender': gender,
-  //     });
+      // เรียกใช้ฟังก์ชัน saveUserDataToFirestore
+      await _authService.saveUserDataToFirestore(
+        userCredential.user!.uid,
+        username,
+        fullname,
+        email,
+        password,
+        image,
+        nicknameController.text,
+        phoneController.text,
+        facebookController.text,
+        lineController.text,
+        _selectedGender,
+        _dateController.text,
+        _selectedCounty,
+      );
 
-  //     String docId = newPetRef.id;
+      // แสดงข้อความที่สำเร็จ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ข้อมูลส่วนตัวถูกบันทึกเรียบร้อยแล้ว!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-  //     await newPetRef.update({'pet_id': docId});
-
-  //     // Async func to handle Futures easier; or use Future.then
-  //     SharedPreferences prefs = await SharedPreferences.getInstance();
-  //     prefs.setString(userId, docId);
-
-  //     CollectionReference usagePet =
-  //         FirebaseFirestore.instance.collection('Usage_pet');
-  //     await usagePet.doc(userId).set({
-  //       'pet_id': docId,
-  //       'user_id': userId,
-  //     });
-
-  //     setState(() {
-  //       _isLoading = false;
-  //     });
-
-  //     showDialog(
-  //       context: context,
-  //       builder: (BuildContext context) {
-  //         Future.delayed(const Duration(seconds: 1), () {
-  //           Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
-  //           Navigator.pushAndRemoveUntil(
-  //             context,
-  //             MaterialPageRoute(
-  //                 builder: (context) => const Navigator_Page(initialIndex: 0)),
-  //             (route) => false,
-  //           );
-  //         });
-  //         return const AlertDialog(
-  //           title: Text('Success'),
-  //           content: Text('เพิ่มสัตว์เลี้ยงสำเร็จ'),
-  //         );
-  //       },
-  //     );
-  //   } catch (error) {
-  //     print("Failed to add pet: $error");
-
-  //     setState(() {
-  //       _isLoading = false;
-  //     });
-  //   }
-  // }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
+      );
+    } catch (error) {
+      print("Error saving user additional data: $error");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 }

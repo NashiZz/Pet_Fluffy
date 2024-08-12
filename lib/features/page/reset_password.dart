@@ -3,6 +3,7 @@ import 'package:Pet_Fluffy/features/widgets/form_container_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้าลืมรหัสผ่าน Login
 class ResetPwd extends StatefulWidget {
@@ -94,11 +95,24 @@ class _ResetPwdState extends State<ResetPwd> {
               const SizedBox(
                 height: 30,
               ),
-              FormContainerWidget(
-                controller: _emailController,
-                hintText: "อีเมล",
-                isPasswordField: false,
-              ),
+             TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      labelText: "อีเมล",
+                      prefixIcon: Icon(
+                          LineAwesomeIcons.envelope), // เพิ่มไอคอนที่ต้องการ
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณาอีเมล';
+                      }
+                      return null;
+                    },
+                  ),
               const SizedBox(
                 height: 20,
               ),
@@ -108,10 +122,10 @@ class _ResetPwdState extends State<ResetPwd> {
                 },
                 child: Container(
                   width: double.infinity,
-                  height: 45,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(30),
                   ),
                   child: Center(
                       child: isSigningUp

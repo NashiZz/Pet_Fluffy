@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
+import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -161,6 +162,96 @@ class _EditContestPageState extends State<EditContestPage> {
           SnackBar(content: Text('เกิดข้อผิดพลาดในการอัปเดตข้อมูล')),
         );
       }
+    }
+  }
+
+  void _confirmDeleteContest() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Column(
+            children: [
+              const Icon(LineAwesomeIcons.certificate,
+                  color: Colors.deepPurple, size: 50),
+            ],
+          ),
+          content: Text(
+            "คุณต้องการลบข้อมูลการประกวดนี้?",
+            style: TextStyle(fontSize: 25),
+            textAlign: TextAlign.center,
+          ),
+          actions: <Widget>[
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยกเลิก"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+
+                        _deleteContest();
+                      },
+                      child: const Text("ยืนยัน"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteContest() {
+    _showLoadingDialog();
+    try {
+      profileService
+          .deleteAwardFromFirestore(widget.userId, widget.report['id_contest'])
+          .then((_) {
+        Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ลบข้อมูลเรียบร้อยแล้ว')),
+        );
+        Navigator.of(context).pop(true); // กลับไปหน้าเดิม
+      }).catchError((error) {
+        Navigator.of(context)
+            .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+        print("Error deleting contest data: $error");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการลบข้อมูล')),
+        );
+      });
+    } catch (e) {
+      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+      print("Error deleting contest data: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการลบข้อมูล')),
+      );
     }
   }
 
@@ -325,17 +416,45 @@ class _EditContestPageState extends State<EditContestPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton(
+                      onPressed: _confirmDeleteContest,
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Icon(
+                              LineAwesomeIcons.alternate_trash,
+                            ),
+                          ),
+                          Text(
+                            'ลบข้อมูล',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ],
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.red.shade400,
+                      ),
+                    ),
+                    TextButton(
                       onPressed: _saveOrUpdateContest,
                       child: Row(
                         children: [
-                          Icon(
-                            LineAwesomeIcons.save,
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Icon(
+                              LineAwesomeIcons.alternate_cloud_upload,
+                            ),
                           ),
                           Text(
                             widget.report == null ? 'บันทึก' : 'อัปเดต',
                             style: TextStyle(fontSize: 16),
                           ),
                         ],
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
                       ),
                     ),
                   ],

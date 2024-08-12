@@ -6,7 +6,6 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
-
 class ProfileService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -110,6 +109,20 @@ class ProfileService {
     await newData.update({'id_contest': docId});
   }
 
+  Future<void> deleteAwardFromFirestore(String userId, docId) async {
+    try {
+      await _firestore
+          .collection('contest_pet')
+          .doc(userId)
+          .collection('pet_contest')
+          .doc(docId)
+          .delete();
+    } catch (e) {
+      print('Error deleting contest data: $e');
+      throw e;
+    }
+  }
+
   Future<void> updateAward_ToFirestore({
     required String docId,
     required String userId,
@@ -197,15 +210,12 @@ class ProfileService {
     });
   }
 
-  
-
   Future<void> saveReportToFirestore({
     required String userId,
     required String petId,
     required String date,
     required String description,
   }) async {
-    
     final DateTime now = DateTime.now();
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
     final String formatted =

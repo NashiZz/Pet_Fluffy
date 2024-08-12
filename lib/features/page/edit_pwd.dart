@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 class EditPassPage extends StatefulWidget {
   const EditPassPage({Key? key}) : super(key: key);
@@ -18,85 +20,95 @@ class _EditPassPageState extends State<EditPassPage> {
   bool _isPasswordVisible = false;
   bool isSigningUp = false;
 
-  // Future<void> _changePassword() async {
-  //   String newPassword = _newPasswordController.text.trim();
-  //   String confirmPassword = _confirmPasswordController.text.trim();
-  //   String currentPassword = _currentPasswordController.text.trim();
+  Future<void> _changePassword() async {
+    String newPassword = _newPasswordController.text.trim();
+    String confirmPassword = _confirmPasswordController.text.trim();
+    String currentPassword = _currentPasswordController.text.trim();
 
-  //   if (newPassword != confirmPassword) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //     return;
-  //   }
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-  //   if (newPassword.length < 6) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //     return;
-  //   }
+    if (newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-  //   setState(() {
-  //     isSigningUp = true;
-  //   });
+    setState(() {
+      isSigningUp = true;
+    });
 
-  //   try {
-  //     User? user = FirebaseAuth.instance.currentUser;
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
 
-  //     if (user == null || user.email == null) {
-  //       throw Exception('ไม่พบข้อมูลผู้ใช้');
-  //     }
+      if (user == null || user.email == null) {
+        throw Exception('ไม่พบข้อมูลผู้ใช้');
+      }
 
-  //     // รีออธิเคทผู้ใช้
-  //     AuthCredential credential = EmailAuthProvider.credential(
-  //       email: user.email!,
-  //       password: currentPassword,
-  //     );
+      // รีออธิเคทผู้ใช้
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
 
-  //     await user.reauthenticateWithCredential(credential);
+      await user.reauthenticateWithCredential(credential);
 
-  //     // เปลี่ยนรหัสผ่าน
-  //     await user.updatePassword(newPassword);
+      // เปลี่ยนรหัสผ่าน
+      await user.updatePassword(newPassword);
 
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('รหัสผ่านเปลี่ยนแปลงเรียบร้อยแล้ว'),
-  //         backgroundColor: Colors.green,
-  //       ),
-  //     );
+      // อัปเดตใน Firestore
+      await FirebaseFirestore.instance.collection('user').doc(user.uid).update({
+        'password': newPassword,
+      });
 
-  //     Navigator.pop(context);
-  //   } catch (e) {
-  //     print('Error changing password: $e');
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: $e'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //   }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านเปลี่ยนแปลงเรียบร้อยแล้ว'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-  //   setState(() {
-  //     isSigningUp = false;
-  //   });
-  // }
+      Navigator.pop(context);
+    } catch (e) {
+      print('Error changing password: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    setState(() {
+      isSigningUp = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("เปลี่ยนรหัสผ่าน"),
+        title: const Text(
+          "เปลี่ยนรหัสผ่าน",
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
+        backgroundColor: Colors.deepPurple,
+        toolbarHeight: 70,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back,color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -112,7 +124,7 @@ class _EditPassPageState extends State<EditPassPage> {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 25.0),
                 child: Text(
-                  "เปลี่ยนรหัสผ่าน",
+                  "รหัสผ่านใหม่",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 30),
                 ),
@@ -126,7 +138,8 @@ class _EditPassPageState extends State<EditPassPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 15.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible
@@ -151,6 +164,7 @@ class _EditPassPageState extends State<EditPassPage> {
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible
@@ -175,6 +189,7 @@ class _EditPassPageState extends State<EditPassPage> {
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isPasswordVisible
@@ -191,25 +206,26 @@ class _EditPassPageState extends State<EditPassPage> {
               ),
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: () {},
+                onTap: _changePassword,
                 child: Container(
                   width: double.infinity,
-                  height: 45,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(30),
                   ),
                   child: Center(
-                      child: isSigningUp
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
-                          : const Text(
-                              "บันทึก",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            )),
+                    child: isSigningUp
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : const Text(
+                            "บันทึก",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20),
+                          ),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),

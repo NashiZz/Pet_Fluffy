@@ -1,15 +1,14 @@
 // ignore_for_file: unnecessary_null_comparison, avoid_print, use_build_context_synchronously, no_leading_underscores_for_local_identifiers
 
 import 'package:Pet_Fluffy/features/page/addDataUser.dart';
-import 'package:Pet_Fluffy/features/page/email_verifly.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:image_picker/image_picker.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้า การสมัครสมาชิก
 class SignUpPage extends StatefulWidget {
@@ -31,6 +30,20 @@ class _SignUpPageState extends State<SignUpPage> {
 
   final AuthService _authService = AuthService();
   bool isSigningUp = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscurePassword = !_obscurePassword;
+    });
+  }
+
+  void _toggleConfirmPasswordVisibility() {
+    setState(() {
+      _obscureConfirmPassword = !_obscureConfirmPassword;
+    });
+  }
 
   @override
   void dispose() {
@@ -57,8 +70,6 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("สมัครสมาชิก"),
-        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           tooltip: 'Menu Icon',
@@ -80,6 +91,11 @@ class _SignUpPageState extends State<SignUpPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  Text(
+                    "สมัครสมาชิก",
+                    style: TextStyle(fontSize: 30),
+                  ),
+                  SizedBox(height: 40),
                   Stack(
                     children: [
                       _image != null
@@ -92,150 +108,167 @@ class _SignUpPageState extends State<SignUpPage> {
                               backgroundImage: NetworkImage(tempUserImageUrl),
                             ),
                       Positioned(
-                        bottom: -10,
-                        left: 80,
-                        child: IconButton(
-                          onPressed: selectImage,
-                          icon: const Icon(Icons.add_a_photo),
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: IconButton(
+                              onPressed: selectImage,
+                              icon: const Icon(Icons.add_a_photo,
+                                  color: Colors.white),
+                              iconSize: 20,
+                            ),
+                          ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(
+                      height: 10), 
+                  const SizedBox(
                     height: 30,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColorLight,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(20))),
-                    child: TextFormField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "ชื่อผู้ใช้",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกชื่อผู้ใช้';
-                        }
-                        return null;
-                      },
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: "ชื่อผู้ใช้",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      prefixIcon: Icon(
+                          LineAwesomeIcons.user_circle), // เพิ่มไอคอนที่ต้องการ
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณากรอกชื่อผู้ใช้';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(
                     height: 10,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColorLight,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(20))),
-                    child: TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "ชื่อ - นามสกุล",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกชื่อ-นามสกุล';
-                        }
-                        return null;
-                      },
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      labelText: "ชื่อ - นามสกุล",
+                      prefixIcon: Icon(LineAwesomeIcons
+                          .identification_card), // เพิ่มไอคอนที่ต้องการ
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณากรอกชื่อ-นามสกุล';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(
                     height: 10,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColorLight,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(20))),
-                    child: TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "อีเมล",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณาอีเมล';
-                        }
-                        return null;
-                      },
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      labelText: "อีเมล",
+                      prefixIcon: Icon(
+                          LineAwesomeIcons.envelope), // เพิ่มไอคอนที่ต้องการ
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณาอีเมล';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(
                     height: 10,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColorLight,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(20))),
-                    child: TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "รหัสผ่าน",
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      labelText: "รหัสผ่าน",
+                      prefixIcon: Icon(LineAwesomeIcons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: _togglePasswordVisibility,
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกรหัสผ่าน';
-                        }
-                        return null;
-                      },
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณากรอกรหัสผ่าน';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(
                     height: 10,
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColorLight,
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(20))),
-                    child: TextFormField(
-                      controller: _compasswordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        hintText: "ยืนยันรหัสผ่าน",
+                  TextFormField(
+                    controller: _compasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20.0)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 15, horizontal: 15),
+                      labelText: "ยืนยันรหัสผ่าน",
+                      prefixIcon: Icon(LineAwesomeIcons.lock),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: _toggleConfirmPasswordVisibility,
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'กรุณากรอกยืนยันรหัสผ่าน';
-                        }
-                        return null;
-                      },
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณากรอกยืนยันรหัสผ่าน';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(
                     height: 30,
                   ),
                   GestureDetector(
                     onTap: () {
-                     _signUp();
+                      _signUp();
                     },
                     child: Container(
                       width: double.infinity,
-                      height: 45,
+                      height: 50,
                       decoration: BoxDecoration(
                         color: Colors.blue,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(30),
                       ),
                       child: Center(
                           child: isSigningUp
@@ -243,10 +276,9 @@ class _SignUpPageState extends State<SignUpPage> {
                                   color: Colors.white,
                                 )
                               : const Text(
-                                  "สมัครสมาชิก",
+                                  "ถัดไป",
                                   style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
+                                      color: Colors.white, fontSize: 18),
                                 )),
                     ),
                   ),
@@ -291,10 +323,12 @@ class _SignUpPageState extends State<SignUpPage> {
         isSigningUp = true;
       });
 
-      String email = _emailController.text;
-      String password = _passwordController.text;
-      String compass = _compasswordController.text;
+      // ใช้ trim() เพื่อกำจัดช่องว่างที่ไม่ต้องการ
+      String email = _emailController.text.trim();
+      String password = _passwordController.text.trim();
+      String compass = _compasswordController.text.trim();
 
+      // ตรวจสอบความยาวรหัสผ่านและการยืนยันรหัสผ่าน
       if (password.length < 6) {
         setState(() {
           isSigningUp = false;
@@ -321,6 +355,7 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
+      // ตรวจสอบว่าอีเมลมีการใช้งานแล้วหรือไม่
       bool emailExists = await _authService.checkDuplicateEmail(email);
       if (emailExists) {
         setState(() {
@@ -335,55 +370,40 @@ class _SignUpPageState extends State<SignUpPage> {
         return;
       }
 
-      try {
-        // สร้างบัญชีผู้ใช้ใหม่ด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-        UserCredential? userCredential =
-            await _authService.signUp(email, password);
-
-        if (userCredential == null) {
-          setState(() {
-            isSigningUp = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        await _authService.saveUserDataToFirestore(
-          userCredential.user!.uid,
-          _usernameController.text,
-          _nameController.text,
-          email,
-          password,
-          _image,
-        );
-
+      // ตรวจสอบว่าผู้ใช้ได้เพิ่มรูปภาพหรือไม่
+      if (_image == null) {
         setState(() {
           isSigningUp = false;
         });
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('กรุณายืนยันอีเมลของคุณโดยเปิดอีเมลและคลิกที่ลิงก์ยืนยัน'),
-            backgroundColor: Colors.green,
+            content: Text('กรุณาเพิ่มรูปภาพ'),
+            backgroundColor: Colors.red,
           ),
         );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
-        );
-      } catch (error) {
-        print("Error creating user: $error");
-        setState(() {
-          isSigningUp = false;
-        });
+        return;
       }
+
+      // เก็บข้อมูลที่กรอกไว้ใน shared preferences หรือ pass parameter ไปที่ addDataUser_Page
+      final Map<String, dynamic> userData = {
+        'email': email,
+        'password': password,
+        'username': _usernameController.text.trim(),
+        'fullname': _nameController.text.trim(),
+        'image': _image ?? '',
+      };
+
+      // ไปที่หน้ากรอกข้อมูลเพิ่มเติมโดยส่งข้อมูลที่เก็บไว้ไปด้วย
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => addDataUser_Page(userData: userData),
+        ),
+      );
+
+      setState(() {
+        isSigningUp = false;
+      });
     }
   }
 }

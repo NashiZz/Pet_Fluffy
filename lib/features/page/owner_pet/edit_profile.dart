@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้า แก้ไขข้อมูลผู้ใช้ปัจจุบัน
 class Edit_Profile_Page extends StatefulWidget {
@@ -26,6 +27,11 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _facebookController = TextEditingController();
   final TextEditingController _lineController = TextEditingController();
+
+  String? _selectedCounty;
+  String? _selectedGender;
+  List<String> _county = [];
+  final List<String> _gender = ['ชาย', 'หญิง', 'อื่นๆ'];
 
   bool isSigningUp = false;
 
@@ -64,6 +70,15 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
           if (photoURL != null && photoURL.isNotEmpty) {
             _image = base64Decode(photoURL);
           }
+
+          _selectedGender = userDocSnapshot['gender'];
+          String? countyFromFirestore = userDocSnapshot['county'];
+          if (countyFromFirestore != null &&
+              _county.contains(countyFromFirestore)) {
+            _selectedCounty = countyFromFirestore;
+          } else {
+            _selectedCounty = null;
+          }
         });
       } catch (e) {
         print('Error getting user data from Firestore: $e');
@@ -71,10 +86,32 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
     }
   }
 
+  // ฟังก์ชันสำหรับโหลดข้อมูลจังหวัดจากไฟล์ JSON
+  Future<void> _loadCounties() async {
+    try {
+      final String response =
+          await rootBundle.loadString('assets/counties.json');
+      final data = json.decode(response) as Map<String, dynamic>;
+      List<String> countiesFromJson = List<String>.from(data['counties'] ?? []);
+      // ลบค่าซ้ำจากรายการ
+      _county = countiesFromJson.toSet().toList();
+      setState(() {});
+      print('Counties loaded: $_county'); // ตรวจสอบค่าที่โหลดได้
+    } catch (e) {
+      print('Error loading counties: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _getUserDataFromFirestore();
+    _loadCounties().then((_) {
+      _getUserDataFromFirestore();
+      if (_county.isNotEmpty) {
+        _selectedCounty =
+            _county.contains(_selectedCounty) ? _selectedCounty : _county[0];
+      }
+    });
   }
 
   @override
@@ -123,123 +160,201 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
                             backgroundImage: NetworkImage(tempUserImageUrl),
                           ),
                     Positioned(
-                      // ignore: sort_child_properties_last
-                      child: IconButton(
-                        onPressed: selectImage,
-                        icon: const Icon(Icons.add_a_photo),
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurple,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: IconButton(
+                            onPressed: selectImage,
+                            icon: const Icon(Icons.add_a_photo,
+                                color: Colors.white),
+                            iconSize: 20,
+                          ),
+                        ),
                       ),
-                      bottom: -10,
-                      left: 80,
-                    )
+                    ),
                   ],
                 ),
                 const SizedBox(
                   height: 30,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "ชื่อ-นามสกุล",
-                    ),
+                TextFormField(
+                  controller: _nameController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 15),
+                    labelText: "ชื่อ - นามสกุล",
+                    prefixIcon: Icon(LineAwesomeIcons
+                        .identification_card), // เพิ่มไอคอนที่ต้องการ
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอกชื่อ-นามสกุล';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
+                TextFormField(
+                  style: const TextStyle(fontSize: 14),
+                  controller: _nicknameController,
+                  decoration: InputDecoration(
+                    labelText: 'ชื่อเล่น',
+                    prefixIcon: Icon(LineAwesomeIcons.identification_badge),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 15),
                   ),
                 ),
                 const SizedBox(
                   height: 10,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _nicknameController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "ชื่อเล่น",
-                    ),
+                DropdownButtonFormField<String>(
+                  value: _selectedGender,
+                  items: _gender.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedGender = newValue;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'เพศ',
+                    prefixIcon: Icon(LineAwesomeIcons.venus_mars),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 15),
+                  ),
+                  validator: (value) {
+                    if (value == null) {
+                      return 'กรุณาเลือกเพศ';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
+                DropdownButtonFormField<String>(
+                  value: _selectedCounty,
+                  items: _county
+                      .map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      })
+                      .toSet()
+                      .toList(), // ลบค่าซ้ำใน items
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedCounty = newValue;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'จังหวัด',
+                    prefixIcon: Icon(LineAwesomeIcons.map_marked),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20.0)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 15),
                   ),
                 ),
                 const SizedBox(
                   height: 10,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _genderController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "เพศ",
+                TextFormField(
+                  style: const TextStyle(fontSize: 14),
+                  controller: _phoneController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'เบอร์โทรศัพท์',
+                    prefixIcon: Icon(LineAwesomeIcons.phone),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 15,
+                      horizontal: 15,
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอกเบอร์โทรศัพท์';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(
                   height: 10,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _phoneController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "เบอร์มือถือ",
+                TextFormField(
+                  style: const TextStyle(fontSize: 14),
+                  controller: _facebookController,
+                  decoration: InputDecoration(
+                    labelText: 'Facebook',
+                    prefixIcon: Icon(LineAwesomeIcons.facebook),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 15,
+                      horizontal: 15,
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอก Facebook';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(
                   height: 10,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _facebookController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Facebook",
+                TextFormField(
+                  style: const TextStyle(fontSize: 14),
+                  controller: _lineController,
+                  decoration: InputDecoration(
+                    labelText: 'Line',
+                    prefixIcon: Icon(LineAwesomeIcons.line),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(20.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 15,
+                      horizontal: 15,
                     ),
                   ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColorLight,
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(20))),
-                  child: TextField(
-                    controller: _lineController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      hintText: "Line",
-                    ),
-                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'กรุณากรอก Line';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(
                   height: 30,

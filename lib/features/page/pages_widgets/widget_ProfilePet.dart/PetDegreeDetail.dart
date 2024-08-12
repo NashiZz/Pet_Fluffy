@@ -1,6 +1,7 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/AddPetDigree.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/EditPetDigree.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 
@@ -22,12 +23,13 @@ class PetdigreeDetailPage extends StatefulWidget {
 
 class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
   final ProfileService _profileService = ProfileService();
+  User? user = FirebaseAuth.instance.currentUser;
   String id_petdigree = '';
   String numpet = '';
   String num_pet_f = '';
   String num_pet_m = '';
   String? img_petdigree;
-  bool isLoading = true; 
+  bool isLoading = true;
 
   void showImageDialog(BuildContext context, String imageUrl) {
     showDialog(
@@ -43,14 +45,14 @@ class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
               ClipRRect(
                 borderRadius: BorderRadius.all(Radius.circular(20.0)),
                 child: InteractiveViewer(
-        panEnabled: true, // อนุญาตให้เลื่อน
-        minScale: 1,
-        maxScale: 5,
-        child: Image.memory(
-          base64Decode(imageUrl),
-          fit: BoxFit.contain, // ปรับขนาดให้พอดีกับหน้าจอ
-        ),
-      ),
+                  panEnabled: true, // อนุญาตให้เลื่อน
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Image.memory(
+                    base64Decode(imageUrl),
+                    fit: BoxFit.contain, // ปรับขนาดให้พอดีกับหน้าจอ
+                  ),
+                ),
               ),
             ],
           ),
@@ -62,6 +64,7 @@ class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
   @override
   void initState() {
     super.initState();
+    print(widget.userId);
     _loadAllPet(widget.petId, widget.userId);
   }
 
@@ -128,43 +131,45 @@ class _PetdigreeDetailPageState extends State<PetdigreeDetailPage> {
         title: Text('ข้อมูลใบเพ็ดดีกรี'),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: isLoading
-                ? null
-                : () {
-                    if (img_petdigree == null || img_petdigree!.isEmpty) {
-                      Navigator.push(
-                        context,
-                        PageRouteBuilder(
-                          pageBuilder:
-                              (context, animation, secondaryAnimation) =>
-                                  AddPetDigreePage(
-                            userId: widget.userId,
-                            petId: widget.petId,
+          if (widget.userId ==
+              user!.uid) // แสดงปุ่ม edit เฉพาะเมื่อ userId ตรงกัน
+            IconButton(
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      if (img_petdigree == null || img_petdigree!.isEmpty) {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder:
+                                (context, animation, secondaryAnimation) =>
+                                    AddPetDigreePage(
+                              userId: widget.userId,
+                              petId: widget.petId,
+                            ),
+                            transitionsBuilder: (context, animation,
+                                secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0);
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+
+                              var tween = Tween(begin: begin, end: end)
+                                  .chain(CurveTween(curve: curve));
+
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
                           ),
-                          transitionsBuilder:
-                              (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(1.0, 0.0);
-                            const end = Offset.zero;
-                            const curve = Curves.ease;
-
-                            var tween = Tween(begin: begin, end: end)
-                                .chain(CurveTween(curve: curve));
-
-                            return SlideTransition(
-                              position: animation.drive(tween),
-                              child: child,
-                            );
-                          },
-                        ),
-                      );
-                    } else {
-                      // If data exists, navigate to edit page
-                      _navigateToEditPetDigreePage();
-                    }
-                  },
-            icon: const Icon(LineAwesomeIcons.edit),
-          ),
+                        );
+                      } else {
+                        // If data exists, navigate to edit page
+                        _navigateToEditPetDigreePage();
+                      }
+                    },
+              icon: const Icon(LineAwesomeIcons.edit),
+            ),
         ],
       ),
       body: Padding(

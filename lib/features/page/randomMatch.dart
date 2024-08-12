@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -2067,8 +2068,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             await newPetMatch.update({'id_match': docId});
 
-            sendNotificationToUser(
-                userId.toString(), 'Pet fluffy', 'มีการตอบรับจากสัตว์เลี้ยง $name_petrep ที่คุณร้องขอแล้วไปดูเร็ว!!!');
+            sendNotificationToUser(userId.toString(), 'Pet fluffy',
+                'มีการตอบรับจากสัตว์เลี้ยง $name_petrep ที่คุณร้องขอแล้วไปดูเร็ว!!!');
             // match success จะให้ไปที่หน้า match
             Navigator.push(
               context,
@@ -2184,7 +2185,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         );
       },
     );
-  }
+  }  
 
   void sendNotificationToUser(String userIdd, String title, String body) async {
     try {
@@ -2225,10 +2226,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       final data = {
         "message": {
           "token": token_user,
-          "notification": {
-            "title": title, 
-            "body": body 
-          }
+          "notification": {"title": title, "body": body}
         }
       };
 
@@ -2237,7 +2235,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', 
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(data),
       );

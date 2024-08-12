@@ -29,6 +29,7 @@ Future<void> main() async {
 
   await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   await initializeDateFormatting('th_TH');
+
   runApp(const MyApp());
 }
 
