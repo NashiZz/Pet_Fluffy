@@ -85,6 +85,95 @@ class _EditVaccinePageState extends State<EditVaccinePage> {
     }
   }
 
+  void _confirmDeleteVac() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Column(
+            children: [
+              const Icon(LineAwesomeIcons.syringe,
+                  color: Colors.deepPurpleAccent, size: 50),
+            ],
+          ),
+          content: Text(
+            "คุณต้องการลบข้อมูคซีนนี้?",
+            style: TextStyle(fontSize: 20),
+            textAlign: TextAlign.center,
+          ),
+          actions: <Widget>[
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยกเลิก"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 40,
+                    width: 90,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+
+                        _deletePeriod();
+                      },
+                      child: const Text("ยืนยัน"),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deletePeriod() {
+    _showLoadingDialog();
+    try {
+      profileService
+          .deleteVaccine_MoreFromFirestore(widget.userId, widget.report['id_vacmore'])
+          .then((_) {
+        Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ลบข้อมูลเรียบร้อยแล้ว')),
+        );
+        Navigator.of(context).pop(true); // กลับไปหน้าเดิม
+      }).catchError((error) {
+        Navigator.of(context)
+            .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+        print("Error deleting vac data: $error");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการลบข้อมูล')),
+        );
+      });
+    } catch (e) {
+      Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+      print("Error deleting vac data: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการลบข้อมูล')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -116,40 +205,6 @@ class _EditVaccinePageState extends State<EditVaccinePage> {
       appBar: AppBar(
         title: Text('แก้ไขข้อมูลวัคซีน'),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () {
-              _showLoadingDialog();
-              profileService
-                  .updateVaccine_MoreToFirestore(
-                userId: widget.userId,
-                docId: widget.report['id_period'] ?? '',
-                petId: widget.report['pet_id'] ?? '',
-                vacName: _selectedVac ?? '',
-                weight: weightController.text,
-                price: priceController.text,
-                location: locationController.text,
-                date: dateController.text,
-              )
-                  .then((_) {
-                Navigator.of(context).pop(); // ปิด Dialog โหลดข้อมูล
-                Navigator.of(context).pop({
-                  'id_period': widget.report['id_period'] ?? '',
-                  'vacName': _selectedVac ?? '',
-                  'weight': weightController.text,
-                  'price': priceController.text,
-                  'location': locationController.text,
-                  'date': dateController.text,
-                });
-              }).catchError((error) {
-                Navigator.of(context)
-                    .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
-                print("Error updating vaccine data: $error");
-              });
-            },
-            icon: const Icon(LineAwesomeIcons.save),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -279,22 +334,79 @@ class _EditVaccinePageState extends State<EditVaccinePage> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(height: 30),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         TextButton(
+                          onPressed: _confirmDeleteVac,
+                          child: Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  LineAwesomeIcons.alternate_trash,
+                                ),
+                              ),
+                              Text(
+                                'ลบข้อมูล',
+                                style: TextStyle(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red.shade400,
+                          ),
+                        ),
+                        TextButton(
                           onPressed: () {
-                            Navigator.of(context).pop();
+                            _showLoadingDialog();
+                            profileService
+                                .updateVaccine_MoreToFirestore(
+                              userId: widget.userId,
+                              docId: widget.report['id_vacmore'] ?? '',
+                              petId: widget.report['pet_id'] ?? '',
+                              vacName: _selectedVac ?? '',
+                              weight: weightController.text,
+                              price: priceController.text,
+                              location: locationController.text,
+                              date: dateController.text,
+                            )
+                                .then((_) {
+                              Navigator.of(context)
+                                  .pop(); // ปิด Dialog โหลดข้อมูล
+                              Navigator.of(context).pop({
+                                'id_vacmore': widget.report['id_vacmore'] ?? '',
+                                'vacName': _selectedVac ?? '',
+                                'weight': weightController.text,
+                                'price': priceController.text,
+                                'location': locationController.text,
+                                'date': dateController.text,
+                              });
+                            }).catchError((error) {
+                              Navigator.of(context)
+                                  .pop(); // ปิด Dialog โหลดข้อมูลในกรณีเกิดข้อผิดพลาด
+                              print("Error updating vaccine data: $error");
+                            });
                           },
                           child: Row(
                             children: [
-                              IconButton(
-                                onPressed: () {},
-                                icon: const Icon(LineAwesomeIcons.trash),
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: Icon(
+                                  LineAwesomeIcons.alternate_cloud_upload,
+                                ),
                               ),
-                              Text('ลบข้อมูล'),
+                              Text(
+                                widget.report == null ? 'บันทึก' : 'อัปเดต',
+                                style: TextStyle(fontSize: 16),
+                              ),
                             ],
+                          ),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
                           ),
                         ),
                       ],

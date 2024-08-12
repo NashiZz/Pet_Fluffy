@@ -64,7 +64,7 @@ List<Map<String, String>> vaccinationDog = [
   },//3
   {
     'age': '12',
-    'vaccine': 'วัคซีนป้องกันพิษสุนัขบ้า',
+    'vaccine': 'วัคซีนป้องกันโรคพิษสุนัขบ้า',
     'dose': 'เข็มที่ 1',
   },//4
   {
@@ -74,7 +74,7 @@ List<Map<String, String>> vaccinationDog = [
   },//5
   {
     'age': '16',
-    'vaccine': 'วัคซีนป้องกันพิษสุนัขบ้า',
+    'vaccine': 'วัคซีนป้องกันโรคพิษสุนัขบ้า',
     'dose': 'เข็มที่ 2',
   },//6
 ];
@@ -169,7 +169,7 @@ List<Map<String, String>> vaccinationDog_Table = [
     'dose': 'เข็ม 2',
   },
   {
-    'vaccine': 'วัคซีนป้องกันพิษสุนัขบ้า',
+    'vaccine': 'วัคซีนป้องกันโรคพิษสุนัขบ้า',
     'dose': 'เข็ม 1',
   },
   {
@@ -177,7 +177,7 @@ List<Map<String, String>> vaccinationDog_Table = [
     'dose': 'เข็ม 3',
   },
   {
-    'vaccine': 'วัคซีนป้องกันพิษสุนัขบ้า',
+    'vaccine': 'วัคซีนป้องกันโรคพิษสุนัขบ้า',
     'dose': 'เข็ม 2',
   },
 ];

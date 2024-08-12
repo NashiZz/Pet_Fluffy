@@ -28,14 +28,14 @@ class _SetNotiandLocationState extends State<SetNotiandLocationPage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
-          "ตั้งค่าการแจ้งเตือนและตำแหน่งที่ตั้ง",
+          "ตั้งค่าการแจ้งเตือน",
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
         backgroundColor: Colors.deepPurple,
         toolbarHeight: 70,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back,color: Colors.white,),
           onPressed: () {
             Navigator.pop(context);
           },

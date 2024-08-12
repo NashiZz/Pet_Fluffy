@@ -1,10 +1,13 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NotificationHelper {
   static final _notification = FlutterLocalNotificationsPlugin();
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static init() {
     _notification.initialize(const InitializationSettings(
@@ -19,8 +22,8 @@ class NotificationHelper {
     }
   }
 
-  static Future<void> scheduledNotification(
-      String title, String body, String date, String pet_type) async {
+  static Future<void> scheduledNotification(String title, String body,
+      String date, String pet_type, String userId, String petId) async {
     print(
         'Notification Scheduled: Title: $title, Body: $body, Date: $date, Pet Type: $pet_type');
 
@@ -74,10 +77,42 @@ class NotificationHelper {
                 AndroidScheduleMode.inexactAllowWhileIdle); // เปลี่ยนโหมดตรงนี้
 
         print('Notification Scheduled Successfully');
+
+        // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
+        await _saveNotificationToFirestore(
+            userId, petId, title, body, date, pet_type);
       }
     } else {
       print(
           'The new scheduled date is not in the future. No notification will be sent.');
     }
+  }
+
+  static Future<void> _saveNotificationToFirestore(String userId, String petId,
+      String title, String body, String date, String petType) async {
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    DocumentReference notificationRef = _firestore
+        .collection('notification')
+        .doc(userId)
+        .collection('pet_notification')
+        .doc(); // สร้างเอกสารใหม่
+
+    await notificationRef.set({
+      'pet_id': petId,
+      'title': title,
+      'body': body,
+      'date': date,
+      'pet_type': petType,
+      'status': 'unread',
+      'created_at': formatted,
+      'scheduled_at': formatted, // เวลาที่การแจ้งเตือนถูกตั้งค่า
+    });
+
+    print(
+        'Notification data saved to Firestore with ID: ${notificationRef.id}');
   }
 }

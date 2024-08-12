@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
-import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
