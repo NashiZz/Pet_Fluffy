@@ -15,6 +15,7 @@ class VaccineCard extends StatelessWidget {
     final formattedDate = DateFormat('d MMM yyyy', 'th_TH').format(date);
 
     return Card(
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.0),
       ),
@@ -33,7 +34,8 @@ class VaccineCard extends StatelessWidget {
               padding: EdgeInsets.all(8),
               child: Icon(
                 LineAwesomeIcons.syringe,
-                color: Colors.black,
+                color: Colors.deepPurple,
+                size: 30,
               ),
             ),
             SizedBox(width: 12),
@@ -69,14 +71,14 @@ class VaccineCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.monitor_weight,
-                        color: Colors.black,
+                        LineAwesomeIcons.alternate_tachometer,
+                        color: Colors.deepPurple,
                         size: 16,
                       ),
                       SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'น้ำหนัก ${report['weight'] ?? 'N/A'} kg',
+                          'น้ำหนัก : ${report['weight'] ?? 'N/A'} kg',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -85,9 +87,15 @@ class VaccineCard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 10),
+                      Icon(
+                        LineAwesomeIcons.wavy_money_bill,
+                        color: Colors.deepPurple,
+                        size: 16,
+                      ),
+                      SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'ราคา ${report['price'] ?? 'N/A'} บ.',
+                          'ราคา : ${report['price'] ?? 'N/A'} บ.',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -101,14 +109,14 @@ class VaccineCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.location_on,
-                        color: Colors.black,
+                        LineAwesomeIcons.medical_clinic,
+                        color: Colors.deepPurple,
                         size: 16,
                       ),
                       SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'สถานที่ ${report['location'] ?? 'N/A'}',
+                          'สถานที่ : ${report['location'] ?? 'N/A'}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],

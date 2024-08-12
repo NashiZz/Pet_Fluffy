@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_page.dart';
+import 'package:Pet_Fluffy/features/services/age_calculator_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,11 +20,13 @@ class Pet_All_Page extends StatefulWidget {
 }
 
 class _Pet_All_PageState extends State<Pet_All_Page> {
+  final AgeCalculatorService _ageCalculatorService = AgeCalculatorService();
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
   bool isLoading = true;
   final TextEditingController _controller = TextEditingController();
   String? petId_main;
+  String age = '';
 
   @override
   void initState() {
@@ -272,6 +275,8 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   // ข้อมูลสัตว์เลี้ยงที่แสดงผล
   Widget _buildPetCard(Map<String, dynamic> petUserData) {
+    DateTime birthDate = DateTime.parse(petUserData['birthdate']);
+    age = _ageCalculatorService.calculateAge(birthDate); // คำนวณอายุที่นี่
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -282,6 +287,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         );
       },
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -295,19 +301,29 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
                 ? const ImageIcon(AssetImage('assets/default_pet_image.png'))
                 : null,
           ),
-          title: Text(
-            petUserData['name'] ?? '',
-            style: Theme.of(context).textTheme.titleLarge,
+          title: Row(
+            children: [
+              Text(
+                petUserData['name'] ?? '',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              petUserData['gender'] == 'ตัวผู้'
+                  ? const Icon(Icons.male, size: 20, color: Colors.purple)
+                  : petUserData['gender'] == 'ตัวเมีย'
+                      ? const Icon(Icons.female, size: 20, color: Colors.pink)
+                      : const Icon(Icons.help_outline,
+                          size: 20, color: Colors.black),
+            ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
+                '${petUserData['breed_pet'] ?? ''}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               Text(
-                'เพศ: ${petUserData['gender'] ?? ''}',
+                '$age',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
@@ -315,7 +331,49 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: petId_main == petUserData['pet_id']
-                ? []
+                ? [
+                    IconButton(
+                      onPressed: () {
+                        // แสดงไอคอนของสัตว์เลี้ยงเมื่อเป็นตัวหลัก
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Column(
+                                children: [
+                                  Icon(Icons.pets,
+                                      color: Colors.blue.shade800, size: 50),
+                                  SizedBox(height: 20),
+                                  Text('${petUserData['name']}',
+                                      style: TextStyle(fontSize: 25)),
+                                ],
+                              ),
+                              content: Text(
+                                "สัตว์เลี้ยงตัวนี้เป็นตัวหลักของคุณ",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              actions: <Widget>[
+                                Center(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ปิด"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      icon: Icon(Icons.pets, color: Colors.blue.shade800),
+                    ),
+                  ]
                 : [
                     IconButton(
                       onPressed: () {
@@ -323,22 +381,58 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              title: const Text("ยืนยันการลบ"),
-                              content: const Text(
-                                  "คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                              title: Column(
+                                children: [
+                                  const Icon(Icons.delete,
+                                      color: Colors.deepPurple, size: 50),
+                                  SizedBox(height: 20),
+                                  Text('คุณต้องการลบลบสัตว์เลี้ยง',
+                                      style: TextStyle(fontSize: 18)),
+                                ],
+                              ),
+                              content: Text(
+                                "${petUserData['name']}?",
+                                style: TextStyle(fontSize: 25),
+                                textAlign: TextAlign.center,
+                              ),
                               actions: <Widget>[
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text("ยกเลิก"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    _deletePetData(petUserData['pet_id']);
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text("ยืนยัน"),
+                                Center(
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      SizedBox(
+                                        height: 40,
+                                        width: 90,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text("ยกเลิก"),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            backgroundColor: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height: 40,
+                                        width: 90,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _deletePetData(
+                                                petUserData['pet_id']);
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text("ยืนยัน"),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            backgroundColor: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             );
@@ -353,22 +447,57 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              title: const Text("ยืนยันการเปลี่ยนตัวหลัก"),
-                              content: const Text(
-                                  "คุณแน่ใจหรือไม่ที่ต้องเปลี่ยนตัวหลักเป็นตัวนี้?"),
+                              title: Column(
+                                children: [
+                                  const Icon(Icons.swap_horiz,
+                                      color: Colors.green, size: 50),
+                                  SizedBox(height: 20),
+                                  Text('คุณต้องการเปลี่ยนตัวหลักเป็น',
+                                      style: TextStyle(fontSize: 18)),
+                                ],
+                              ),
+                              content: Text(
+                                "${petUserData['name']}?",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 25),
+                              ),
                               actions: <Widget>[
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text("ยกเลิก"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    _shufflePet(petUserData['pet_id']);
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text("ยืนยัน"),
+                                Center(
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      SizedBox(
+                                        height: 40,
+                                        width: 90,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text("ยกเลิก"),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            backgroundColor: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        height: 40,
+                                        width: 90,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _shufflePet(petUserData['pet_id']);
+                                            Navigator.of(context).pop();
+                                          },
+                                          child: const Text("ยืนยัน"),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white,
+                                            backgroundColor: Colors.blue,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             );

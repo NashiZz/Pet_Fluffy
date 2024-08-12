@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
 
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+
 class ImagePickerDialog extends StatefulWidget {
   final List<String> firestoreImages;
   final Function(List<Uint8List?>, List<String?>) onSaveImages;
@@ -68,7 +70,18 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('เพิ่มรูปภาพ'),
+      title: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Icon(
+              LineAwesomeIcons.image,
+              color: Colors.deepPurple,
+            ),
+          ),
+          Text('เพิ่มรูปภาพ'),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         height: 350,
@@ -104,11 +117,14 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
                       }
                       return Stack(
                         children: [
-                          Image.memory(
-                            imageData,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20.0),
+                            child: Image.memory(
+                              imageData,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
                           ),
                           Positioned(
                             top: 0,
@@ -129,12 +145,15 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
                     } else {
                       return Stack(
                         children: [
-                          Image.memory(
-                            compressedImages[
-                                index - widget.firestoreImages.length]!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(20.0),
+                            child: Image.memory(
+                              compressedImages[
+                                  index - widget.firestoreImages.length]!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
                           ),
                           Positioned(
                             top: 0,
@@ -180,7 +199,20 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
                   });
                 }
               },
-              child: Text('เลือกรูปจาก Gallery'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(LineAwesomeIcons.photo_video),
+                  ),
+                  Text('เลือกรูปจาก Gallery'),
+                ],
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.blueGrey,
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -205,27 +237,63 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
                   });
                 }
               },
-              child: Text('ถ่ายรูปจาก Camera'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(LineAwesomeIcons.camera),
+                  ),
+                  Text('ถ่ายรูปจาก Camera'),
+                ],
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.deepPurple.shade400,
+              ),
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('ยกเลิก'),
-        ),
-        TextButton(
-          onPressed: () async {
-            for (String imageBase64 in imagesToDelete) {
-              await widget.deleteImageFromFirestore(imageBase64);
-            }
-            widget.onSaveImages(compressedImages, base64Images);
-            Navigator.of(context).pop();
-          },
-          child: Text('ยืนยันการเพิ่ม'),
+      actions: <Widget>[
+        Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              SizedBox(
+                height: 40,
+                width: 90,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("ยกเลิก"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.blue,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 40,
+                width: 120,
+                child: TextButton(
+                  onPressed: () async {
+                    for (String imageBase64 in imagesToDelete) {
+                      await widget.deleteImageFromFirestore(imageBase64);
+                    }
+                    widget.onSaveImages(compressedImages, base64Images);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("ยืนยันการเพิ่ม"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.blue,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

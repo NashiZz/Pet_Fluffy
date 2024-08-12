@@ -39,7 +39,8 @@ class _EditPetDigreePageState extends State<EditPetDigreePage> {
 
   Future<void> _loadPetDigreeData() async {
     try {
-      final petData = await profileService.loadPetdigreeData(widget.petId, widget.userId);
+      final petData =
+          await profileService.loadPetdigreeData(widget.petId, widget.userId);
       setState(() {
         _numPetController.text = petData['num_pet'] ?? '';
         _numPetFController.text = petData['num_pet_f'] ?? '';
@@ -109,13 +110,14 @@ class _EditPetDigreePageState extends State<EditPetDigreePage> {
 
       try {
         await profileService.updatePetdigree_ToFirestore(
-            userId: widget.userId,
-            petId: widget.petId,
-            numPet: _numPetController.text,
-            numPetF: _numPetFController.text,
-            numPetM: _numPetMController.text,
-            img_PetDigree: _petDigreeImage != null ? base64Encode(_petDigreeImage!) : '', 
-            id_petdigree: widget.id_petdigree, 
+          userId: widget.userId,
+          petId: widget.petId,
+          numPet: _numPetController.text,
+          numPetF: _numPetFController.text,
+          numPetM: _numPetMController.text,
+          img_PetDigree:
+              _petDigreeImage != null ? base64Encode(_petDigreeImage!) : '',
+          id_petdigree: widget.id_petdigree,
         );
 
         Navigator.of(context).pop(); // Close loading dialog
@@ -269,20 +271,33 @@ class _EditPetDigreePageState extends State<EditPetDigreePage> {
                             },
                           ),
                           const SizedBox(height: 30),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              TextButton(
+                          Center(
+                            child: SizedBox(
+                              height: 40,
+                              width: 150,
+                              child: TextButton(
                                 onPressed: _savePetDigree,
-                                child: Row(
-                                  children: [
-                                    Icon(LineAwesomeIcons.save),
-                                    SizedBox(width: 8),
-                                    Text('บันทึก', style: TextStyle(fontSize: 16)),
-                                  ],
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                                child: Center(
+                                  // ใช้ Center widget เพื่อตั้งค่า Row ให้อยู่ตรงกลาง
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment
+                                        .center, // จัดให้อยู่ตรงกลางแนวนอน
+                                    children: [
+                                      Icon(LineAwesomeIcons.alternate_cloud_upload),
+                                      SizedBox(
+                                          width:
+                                              8), // เพิ่ม space ระหว่าง Icon กับ Text
+                                      Text('อัปเดตข้อมูล',
+                                          style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),

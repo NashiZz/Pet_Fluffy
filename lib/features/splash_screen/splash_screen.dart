@@ -1,5 +1,7 @@
 // ignore_for_file: camel_case_types
 
+import 'dart:async';
+
 import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
@@ -8,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class Splash_Page extends StatefulWidget {
   const Splash_Page({Key? key}) : super(key: key);
@@ -18,100 +21,129 @@ class Splash_Page extends StatefulWidget {
 
 class _SplashPageState extends State<Splash_Page> {
   bool _isMounted = false;
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    _isMounted = true; // วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
+    _isMounted = true;
+
+    // ตรวจสอบสถานะการเชื่อมต่อเริ่มต้น
+    _checkInitialConnectivity();
+
+    // ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
+      if (result != ConnectivityResult.none) {
+        // เชื่อมต่ออินเทอร์เน็ตแล้ว
+        _handleUserNavigation();
+      } else {
+        // ยังไม่เชื่อมต่ออินเทอร์เน็ต
+        if (_isMounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('ไม่มีการเชื่อมต่ออินเทอร์เน็ต'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _isMounted = false;
+    _connectivitySubscription.cancel();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
         overlays: SystemUiOverlay.values);
     super.dispose();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // ทำงานที่ต้องการ
-    FirebaseAuth.instance.authStateChanges().listen((User? user) async {
-      // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
-      await Future.delayed(const Duration(seconds: 3));
-
+  void _checkInitialConnectivity() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      // ยังไม่เชื่อมต่ออินเทอร์เน็ต
       if (_isMounted) {
-        if (user != null) {
-          if (user.isAnonymous) {
-            // ผู้ใช้เป็น Anonymous ให้เข้าสู่หน้า Navigator_Page ทันที
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => const Navigator_Page(initialIndex: 0),
-              ),
-            );
-          } else if (user.emailVerified) {
-            // ตรวจสอบว่าได้ตั้งค่าตำแหน่งหรือยัง
-            final userDocRef =
-                FirebaseFirestore.instance.collection('user').doc(user.uid);
-            final userData = await userDocRef.get();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ไม่มีการเชื่อมต่ออินเทอร์เน็ต'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
-            if (userData.exists) {
-              final lat = userData.data()?['lat'];
-              final lng = userData.data()?['lng'];
-              final status = userData.data()?['status'];
+  void _handleUserNavigation() async {
+    // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
+    await Future.delayed(const Duration(seconds: 3));
 
-              if (status == 'แอดมิน') {
-                Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const AdminHomePage(),
-                    ),
-                  );
-              } else {
-                if (lat != null && lng != null) {
-                  // หากมีค่า lat และ lng นำทางไปยังหน้า Navigator Page
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const Navigator_Page(initialIndex: 0),
-                    ),
-                  );
-                } else {
-                  // หากไม่มีค่า lat และ lng นำทางไปยังหน้า LocationSelectionPage
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const LocationSelectionPage(),
-                    ),
-                  );
-                }
-              }
-            } else {
-              // หากผู้ใช้ยังไม่มีข้อมูลใน Firestore นำทางไปยังหน้า LocationSelectionPage
+    if (_isMounted) {
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        if (user.isAnonymous) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const Navigator_Page(initialIndex: 0),
+            ),
+          );
+        } else if (user.emailVerified) {
+          final userDocRef =
+              FirebaseFirestore.instance.collection('user').doc(user.uid);
+          final userData = await userDocRef.get();
+
+          if (userData.exists) {
+            final lat = userData.data()?['lat'];
+            final lng = userData.data()?['lng'];
+            final status = userData.data()?['status'];
+
+            if (status == 'แอดมิน') {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (_) => const LocationSelectionPage(),
+                  builder: (_) => const AdminHomePage(),
                 ),
               );
+            } else {
+              if (lat != null && lng != null) {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const Navigator_Page(initialIndex: 0),
+                  ),
+                );
+              } else {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => const LocationSelectionPage(),
+                  ),
+                );
+              }
             }
           } else {
-            // หากผู้ใช้ยังไม่ได้ยืนยันอีเมล นำทางไปยังหน้า Home Page
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => const Home_Page(),
+                builder: (_) => const LocationSelectionPage(),
               ),
             );
           }
         } else {
-          // หากผู้ใช้ยังไม่ได้ล็อกอิน นำทางไปยังหน้า Home Page
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) => const Home_Page(),
             ),
           );
         }
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const Home_Page(),
+          ),
+        );
       }
-    });
+    }
   }
 
   @override

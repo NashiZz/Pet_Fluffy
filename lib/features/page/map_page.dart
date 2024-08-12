@@ -884,6 +884,20 @@ class _MapsPageState extends State<Maps_Page> {
                                               ElevatedButton(
                                                 onPressed: () {
                                                   setState(() {
+                                                    location = Location();
+                                                    _locationSubscription =
+                                                        location
+                                                            .onLocationChanged
+                                                            .listen((LocationData
+                                                                currentLocation) {
+                                                      setState(() {
+                                                        _locationData =
+                                                            currentLocation;
+                                                        _updateUserLocationMarker();
+                                                      });
+                                                    });
+                                                    getLocation(); // เรียก getLocation ที่นี่
+                                                    _getUserDataFromFirestore();
                                                     _selectedDistance =
                                                         _selectedDistance;
                                                     _selectedAge = _selectedAge;
@@ -1203,7 +1217,7 @@ class _MapsPageState extends State<Maps_Page> {
       setState(() {
         isLoading = true;
       });
-
+      bool chekDataSearch = false;
       List<Marker> markers = [];
       List<String> errors = [];
 
@@ -1328,7 +1342,6 @@ class _MapsPageState extends State<Maps_Page> {
                     }
 
                     try {
-                      // คำนวณระยะห่าง
                       String distanceStr =
                           calculateDistance(userLocation, petLocation);
                       Marker petMarker = Marker(
@@ -1455,11 +1468,9 @@ class _MapsPageState extends State<Maps_Page> {
             lat += Random().nextDouble() * 0.0002;
             lng += Random().nextDouble() * 0.0002;
             LatLng petLocation = LatLng(lat, lng);
-
             String petType = data['type_pet'] ?? '';
             String petGender = data['gender'] ?? '';
             String petStatus = data['status'] ?? '';
-
             String distanceStr = calculateDistance(userLocation, petLocation);
             bool matchDistance =
                 isDistanceRange(distanceStr, _selectedDistance.toString());
@@ -1470,14 +1481,398 @@ class _MapsPageState extends State<Maps_Page> {
 
             DateTime birthDate = DateTime.parse(data['birthdate']);
             bool matchesAge = isAgeInRange(_selectedAge.toString(), birthDate);
-
             bool matchesColor = data['color']
                 .toString()
                 .toLowerCase()
                 .contains(_otherColor.text.toLowerCase());
-
             bool matchesPrice = isPriceInRange(
                 data['price'].toString(), _selectedPrice.toString());
+
+            if (petStatus == 'พร้อมผสมพันธุ์') {
+              if (petType == pet_type && petGender != gender) {
+                print(data['name']);
+                print(matchesAge);
+                if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed &&
+                      matchesAge &&
+                      matchesColor &&
+                      matchesPrice &&
+                      matchDistance) {
+                    chekDataSearch = true;
+                  } else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesAge &&
+                      matchesColor &&
+                      matchesPrice &&
+                      matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed &&
+                      matchesColor &&
+                      matchesPrice &&
+                      matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed &&
+                      matchesAge &&
+                      matchesPrice &&
+                      matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed &&
+                      matchesAge &&
+                      matchesColor &&
+                      matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed &&
+                      matchesAge &&
+                      matchesColor &&
+                      matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesColor && matchesPrice && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesAge && matchesPrice && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesAge && matchesColor && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesColor && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesPrice && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesColor && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesColor && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesAge && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesAge && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesAge && matchesColor) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesPrice && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesColor && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesColor && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesAge && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesColor) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesColor) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesAge) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchDistance) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesPrice) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesColor) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesAge) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                } else {
+                  if (matchesBreed) {
+                    chekDataSearch = true;
+                  }else {
+                    chekDataSearch=false;
+                  }
+                }
+
+                if (chekDataSearch) {
+                  String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                  String petID = data['pet_id'] ?? '';
+                  String petName = data['name'] ?? '';
+                  String petImageBase64 = data['img_profile'] ?? '';
+                  String weight = data['weight'] ?? '0.0';
+                  String des = data['description'] ?? '';
+                  String birthdateStr = data['birthdate'] ?? '';
+                  DateTime birthdate = DateTime.parse(birthdateStr);
+                  String age = calculateAge(birthdate);
+
+                  Uint8List? bytes = markerImages[doc.id];
+                  if (bytes == null) {
+                    errors.add('Marker image not found for document ${doc.id}');
+                    return;
+                  }
+
+                  try {
+                    String distanceStr =
+                        calculateDistance(userLocation, petLocation);
+                    Marker petMarker = Marker(
+                      markerId: MarkerId(doc.id),
+                      position: petLocation,
+                      onTap: () {
+                        _showPetDetails(
+                          context,
+                          petID,
+                          petName,
+                          petImageBase64,
+                          weight,
+                          petGender,
+                          userPhotoURL,
+                          age,
+                          petType,
+                          des,
+                          distanceStr, // เพิ่มระยะห่างที่นี่
+                        );
+                      },
+                      icon:
+                          (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+                      infoWindow: InfoWindow(
+                        title: petName,
+                        snippet: distanceStr,
+                      ),
+                    );
+
+                    markers.add(petMarker);
+                  } catch (e) {
+                    errors.add(
+                        'Error creating marker for document ${doc.id}: $e');
+                  }
+                }
+              }
+            }
           }
         }
       });

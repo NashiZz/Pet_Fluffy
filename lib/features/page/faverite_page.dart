@@ -210,6 +210,7 @@ class _FaveritePageState extends State<FaveritePage> {
         );
       },
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -223,15 +224,25 @@ class _FaveritePageState extends State<FaveritePage> {
                 ? const ImageIcon(AssetImage('assets/default_pet_image.png'))
                 : null,
           ),
-          title: Text(
-            petUserData['name'] ?? '',
-            style: Theme.of(context).textTheme.titleLarge,
+          title: Row(
+            children: [
+              Text(
+                petUserData['name'] ?? '',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              petUserData['gender'] == 'ตัวผู้'
+                  ? const Icon(Icons.male, size: 20, color: Colors.purple)
+                  : petUserData['gender'] == 'ตัวเมีย'
+                      ? const Icon(Icons.female, size: 20, color: Colors.pink)
+                      : const Icon(Icons.help_outline,
+                          size: 20, color: Colors.black),
+            ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
+                '${petUserData['breed_pet'] ?? ''}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               Text(
@@ -249,22 +260,94 @@ class _FaveritePageState extends State<FaveritePage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text("ยืนยันการลบ"),
-                        content:
-                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        title: Column(
+                          children: [
+                            Icon(LineAwesomeIcons.star_1,
+                                color: Colors.yellow.shade800, size: 50),
+                            SizedBox(height: 20),
+                            Text('คุณต้องการที่จะลบการกดถูกใจ',
+                                style: TextStyle(fontSize: 18)),
+                          ],
+                        ),
+                        content: Text(
+                          "${petUserData['name']} หรือไม่?",
+                          style:
+                              TextStyle(fontSize: 30, color: Colors.deepPurple),
+                          textAlign: TextAlign.center,
+                        ),
                         actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
+                          SizedBox(
+                            height: 20,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              _deletePetData(petUserData['pet_id']);
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยืนยัน"),
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    height: 40,
+                                    width: 100,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 8),
+                                            child: Icon(
+                                              LineAwesomeIcons.times,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const Text("ยกเลิก"),
+                                        ],
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: SizedBox(
+                                    height: 40,
+                                    width: 100,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        _deletePetData(petUserData['pet_id']);
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(right: 8),
+                                            child: Icon(
+                                              LineAwesomeIcons.star,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const Text("ยืนยัน"),
+                                        ],
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       );

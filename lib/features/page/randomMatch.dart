@@ -4,13 +4,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/notification_more.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
-import 'package:Pet_Fluffy/features/page/matchSuccess.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,6 +18,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +35,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   final AuthService _authService = AuthService();
   bool isAnonymousUser = false;
   User? user = FirebaseAuth.instance.currentUser;
+  String distanceStr = '';
   String? userId;
   String? petId;
   String? petType;
@@ -64,6 +66,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
+  int unreadNotifications = 0;
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _otherBreedController = TextEditingController();
   final TextEditingController _otherColor = TextEditingController();
@@ -100,6 +103,54 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
           isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _fetchUnreadNotifications() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String userId = user.uid;
+      try {
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('notification')
+            .doc(userId)
+            .collection('pet_notification')
+            .where('status',
+                isEqualTo: 'unread') // ดึงการแจ้งเตือนที่ยังไม่ได้อ่าน
+            .get();
+
+        setState(() {
+          unreadNotifications = querySnapshot.docs.length;
+        });
+      } catch (e) {
+        print('Error fetching unread notifications: $e');
+      }
+    }
+  }
+
+  Future<void> _markAllNotificationsAsRead() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String userId = user.uid;
+      try {
+        // ดึงการแจ้งเตือนที่ยังไม่ได้อ่าน
+        QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('notification')
+            .doc(userId)
+            .collection('pet_notification')
+            .where('status', isEqualTo: 'unread')
+            .get();
+
+        for (var doc in querySnapshot.docs) {
+          // เปลี่ยนสถานะของการแจ้งเตือนเป็น "อ่านแล้ว"
+          await doc.reference.update({'status': 'read'});
+        }
+
+        // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
+        _fetchUnreadNotifications();
+      } catch (e) {
+        print('Error marking all notifications as read: $e');
       }
     }
   }
@@ -417,6 +468,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _getUsage_pet('');
     getLocation();
     _printStoredPetId();
+    _fetchUnreadNotifications();
+    _markAllNotificationsAsRead();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -766,6 +819,53 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                             color: Colors.pinkAccent,
                           ),
                         ),
+                        Stack(
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NotificationMore_Page(
+                                      idPet: petId!,
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  _fetchUnreadNotifications(); // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่านหลังจากกลับมา
+                                });
+                              },
+                              icon: Icon(
+                                Icons.notifications_rounded,
+                                color: Colors.yellow.shade800,
+                              ),
+                            ),
+                            if (unreadNotifications > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(0),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  constraints: BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$unreadNotifications',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        )
                       ],
                     ),
                     InkWell(
@@ -1046,8 +1146,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                       .where((pet) =>
                           pet['type_pet'] == petType &&
                           pet['gender'] == oppositeGender &&
-                          (pet['status'] == 'พร้อมผสมพันธุ์' ||
-                              pet['status'] == 'มีชีวิต'))
+                          pet['status'] == 'พร้อมผสมพันธุ์')
                       .toList();
                 }
 
@@ -1160,7 +1259,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                         _locationData?.longitude ?? 0.0,
                       );
 
-                      String distanceStr = '';
                       bool matchDistance = false;
                       for (var doc in petPositions) {
                         if (doc['pet_id'] == pet['pet_id']) {
@@ -1824,10 +1922,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          Colors.grey.shade300, // เปลี่ยนสีพื้นหลังของปุ่ม
+                          Colors.deepPurpleAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
                     ),
                     child: Text('ยกเลิกการส่งคำขอ',
-                        style: TextStyle(color: Colors.black)),
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ),
                 SizedBox(height: 8),
@@ -1840,10 +1938,21 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          Colors.grey.shade700, // เปลี่ยนสีพื้นหลังของปุ่ม
+                          Colors.pinkAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
                     ),
-                    child:
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            LineAwesomeIcons.paper_plane_1,
+                            color: Colors.white,
+                          ),
+                        ),
                         Text('ส่งคำขอ', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -1948,9 +2057,16 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             Future.delayed(const Duration(seconds: 2), () {
               Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
             });
-            return const AlertDialog(
-              title: Text('Error'),
-              content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('คุณมีการกดถูกใจนี้อยู่แล้ว',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
             );
           },
         );
@@ -1972,9 +2088,16 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             Future.delayed(const Duration(seconds: 1), () {
               Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
             });
-            return const AlertDialog(
-              title: Text('Success'),
-              content: Text('เพิ่มลงรายการโปรดสำเร็จ'),
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('เพิ่มการกดถูกใจเรียบร้อย',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
             );
           },
         );
@@ -2052,36 +2175,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 );
               },
             );
-          } else {
-            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-            DocumentReference newPetMatch = await petMatchRef.add({
-              'created_at': formatted,
-              'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
-              'status': 'จับคู่แล้ว',
-              'updates_at': formatted
-            });
-
-            String docId = newPetMatch.id;
-
-            await newPetMatch.update({'id_match': docId});
-
-            sendNotificationToUser(
-                userId.toString(), 'Pet fluffy', 'มีการตอบรับจากสัตว์เลี้ยง $name_petrep ที่คุณร้องขอแล้วไปดูเร็ว!!!');
-            // match success จะให้ไปที่หน้า match
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => Matchsuccess_Page(
-                    pet_request: petImg.toString(), // รูปสัตว์คนที่กด หัวใจ
-                    pet_respone: img_profile, // รูปสัตว์คนที่โดนกด
-                    idUser_pet: userIdd, // id user ที่โดนกดหัวใจ
-                    pet_request_name: petName.toString(),
-                    pet_respone_name: name_petrep,
-                    idUser_petReq: userId.toString()), // id user ที่กดหัวใจ
-              ),
-            );
           }
         } catch (error) {
           print("Failed to add pet: $error");
@@ -2138,8 +2231,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             sendNotificationToUser(
                 userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+                pet_respone,
                 "คุณมีคำขอใหม่!",
-                "สัตว์เลี้ยงของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
             setState(() {
               isLoading = false;
             });
@@ -2186,7 +2280,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     );
   }
 
-  void sendNotificationToUser(String userIdd, String title, String body) async {
+  void sendNotificationToUser(String userIdd,String petRespone, String title, String body) async {
     try {
       // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
       if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
@@ -2202,6 +2296,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         if (fcmToken != null) {
           // ส่งการแจ้งเตือนโดยเรียกใช้ฟังก์ชัน sendPushMessage
           await sendPushMessage(fcmToken, title, body);
+
+          // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
+          await _saveNotificationToFirestore(userIdd,petRespone, title, body);
         } else {
           print("FCM Token is null, unable to send notification");
         }
@@ -2211,6 +2308,37 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       }
     } catch (error) {
       print("Error sending notification to user: $error");
+    }
+  }
+
+  Future<void> _saveNotificationToFirestore(
+      String userId, String petId, String title, String body) async {
+    try {
+      // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+      final DateTime now = DateTime.now();
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      final String formattedDate =
+          formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+      // อ้างอิงถึงคอลเลกชัน notifications ในเอกสาร userId
+      CollectionReference notificationsRef = FirebaseFirestore.instance
+          .collection('notification')
+          .doc(userId)
+          .collection('pet_notification');
+
+      // เพิ่มเอกสารใหม่ลงในคอลเลกชัน notifications
+      await notificationsRef.add({
+        'pet_id': petId, // เพิ่มข้อมูล pet_id
+        'title': title,
+        'body': body,
+        'status': 'unread', // สถานะเริ่มต้นเป็น 'unread'
+        'created_at': formattedDate,
+        'scheduled_at': formattedDate, // เวลาที่การแจ้งเตือนถูกตั้งค่า
+      });
+
+      print("Notification saved to Firestore successfully");
+    } catch (error) {
+      print("Error saving notification to Firestore: $error");
     }
   }
 
@@ -2225,10 +2353,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       final data = {
         "message": {
           "token": token_user,
-          "notification": {
-            "title": title, 
-            "body": body 
-          }
+          "notification": {"title": title, "body": body}
         }
       };
 
@@ -2237,7 +2362,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', 
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(data),
       );

@@ -28,6 +28,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final TextEditingController _controller = TextEditingController();
   String? petId_main;
   String typePet = '5yWv1hawXz6Gh15gEed1';
+  bool isDog = true; // ตัวแปรสถานะเริ่มต้นเป็นสุนัข
 
   @override
   void initState() {
@@ -317,8 +318,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   ],
                 ),
           floatingActionButton: FloatingActionButton(
+            backgroundColor: Colors.deepPurple,
             onPressed: () {
               setState(() {
+                isDog = !isDog;
                 if (typePet == '5yWv1hawXz6Gh15gEed1') {
                   typePet = 'Qy38o0xCXKQlIngPz9jb';
                 } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
@@ -328,7 +331,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 _getVaccines_petData(_controller.text);
               });
             },
-            child: const Icon(Icons.swipe_vertical_rounded),
+            child: Icon(
+              isDog
+                  ? LineAwesomeIcons.cat
+                  : LineAwesomeIcons.dog, // ใช้ไอคอนสุนัขหรือแมวตามสถานะ
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -374,7 +382,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
                             return AlertDialog(
                               title: Text(
                                 'เพิ่มประเภทสัตว์เลี้ยง',
-                                style: Theme.of(context).textTheme.titleMedium,
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
                               content: TextField(
                                 controller: _nameTypeController,
@@ -430,7 +438,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
             return AlertDialog(
               title: Text(
                 'แก้ไขประเภทสัตว์เลี้ยง',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               content: TextField(
                 controller: _nameTypeController,
@@ -471,21 +479,55 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text("ยืนยันการลบ"),
-                        content:
-                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        title: Column(
+                          children: [
+                            const Icon(LineAwesomeIcons.trash,
+                                color: Colors.deepPurple, size: 50),
+                            SizedBox(height: 20),
+                            Text('คุณต้องการลบข้อมูลประเภทสัตว์เลี้ยง',
+                                style: TextStyle(fontSize: 18)),
+                          ],
+                        ),
+                        content: Text(
+                          "${TypePetData['name']}?",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 25),
+                        ),
                         actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              deleteType(TypePetData['id_type_pet']);
-                            },
-                            child: const Text("ยืนยัน"),
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ยกเลิก"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      deleteType(TypePetData['id_type_pet']);
+                                    },
+                                    child: const Text("ยืนยัน"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       );
@@ -543,30 +585,32 @@ class _AdminHomePageState extends State<AdminHomePage> {
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text(
-                                'เพิ่มพันธุ์สัตว์เลี้ยงของ$nameTypePet',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              content: TextField(
-                                controller: _nameGeneController,
-                                decoration: const InputDecoration(
-                                    hintText: "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
-                              ),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: const Text("ยกเลิก"),
+                            return Center(
+                              child: AlertDialog(
+                                title: Text(
+                                  'เพิ่มพันธุ์สัตว์เลี้ยงของ$nameTypePet',
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
-                                TextButton(
-                                  onPressed: () {
-                                    addGene();
-                                  },
-                                  child: const Text("บันทึก"),
+                                content: TextField(
+                                  controller: _nameGeneController,
+                                  decoration: const InputDecoration(
+                                      hintText: "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
                                 ),
-                              ],
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ยกเลิก"),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      addGene();
+                                    },
+                                    child: const Text("บันทึก"),
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         );
@@ -602,7 +646,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
             return AlertDialog(
               title: Text(
                 'แก้ไขพันธุ์สัตว์เลี้ยง',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
               content: TextField(
                 controller: _nameGeneController,
@@ -643,21 +687,55 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text("ยืนยันการลบ"),
-                        content:
-                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        title: Column(
+                          children: [
+                            const Icon(LineAwesomeIcons.trash,
+                                color: Colors.deepPurple, size: 50),
+                            SizedBox(height: 20),
+                            Text('คุณต้องการลบข้อมูลพันธ์',
+                                style: TextStyle(fontSize: 18)),
+                          ],
+                        ),
+                        content: Text(
+                          "${genePetData['name']}?",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 25),
+                        ),
                         actions: <Widget>[
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text("ยกเลิก"),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              deleteGene(genePetData['id_gene_pet']);
-                            },
-                            child: const Text("ยืนยัน"),
+                          Center(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: const Text("ยกเลิก"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 40,
+                                  width: 90,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      deleteGene(genePetData['id_gene_pet']);
+                                    },
+                                    child: const Text("ยืนยัน"),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.white,
+                                      backgroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       );
@@ -720,29 +798,29 @@ class _AdminHomePageState extends State<AdminHomePage> {
                             return AlertDialog(
                               title: Text(
                                 'เพิ่มพันธุ์สัตว์เลี้ยงของ$nameTypePet',
-                                style: Theme.of(context).textTheme.titleMedium,
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
                               content: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                TextField(
-                                  controller: _nameVaccController,
-                                  decoration: const InputDecoration(
-                                      hintText:
-                                          "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
-                                ),
-                                TextField(
-                                  controller: _nameAgeController,
-                                  decoration: const InputDecoration(
-                                      hintText:
-                                          "กรุณากรอกช่วงอายุที่ต้องฉีดวัคซีน"),
-                                ),
-                                TextField(
-                                  controller: _nameDoseController,
-                                  decoration: const InputDecoration(
-                                      hintText: "กรุณากรอกเข็มที่เท่าไหร่"),
-                                ),
-                              ]),
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextField(
+                                      controller: _nameVaccController,
+                                      decoration: const InputDecoration(
+                                          hintText:
+                                              "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                                    ),
+                                    TextField(
+                                      controller: _nameAgeController,
+                                      decoration: const InputDecoration(
+                                          hintText:
+                                              "กรุณากรอกช่วงอายุที่ต้องฉีดวัคซีน"),
+                                    ),
+                                    TextField(
+                                      controller: _nameDoseController,
+                                      decoration: const InputDecoration(
+                                          hintText: "กรุณากรอกเข็มที่เท่าไหร่"),
+                                    ),
+                                  ]),
                               actions: <Widget>[
                                 TextButton(
                                   onPressed: () {
@@ -794,7 +872,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
               return AlertDialog(
                   title: Text(
                     'แก้ไขเกณฑ์การฉีดวัคซีนสัตว์เลี้ยง',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                   content: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -862,21 +940,57 @@ class _AdminHomePageState extends State<AdminHomePage> {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: const Text("ยืนยันการลบ"),
-                          content: const Text(
-                              "คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                          title: Column(
+                            children: [
+                              const Icon(LineAwesomeIcons.trash,
+                                  color: Colors.deepPurple, size: 50),
+                              SizedBox(height: 20),
+                              Text('คุณต้องการลบข้อมูลวัคซีน',
+                                  style: TextStyle(fontSize: 18)),
+                            ],
+                          ),
+                          content: Text(
+                            "${VaccPetData['vaccine']}?",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 20),
+                          ),
                           actions: <Widget>[
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: const Text("ยกเลิก"),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                deleteVacc(VaccPetData['id_pet_vaccines']);
-                              },
-                              child: const Text("ยืนยัน"),
+                            Center(
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  SizedBox(
+                                    height: 40,
+                                    width: 90,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text("ยกเลิก"),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: 40,
+                                    width: 90,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        deleteVacc(
+                                            VaccPetData['id_pet_vaccines']);
+                                      },
+                                      child: const Text("ยืนยัน"),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         );
@@ -986,8 +1100,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   void addVacc() async {
     bool chek = false;
-    int id_table_vacc = vaccinePetDatas.last['id_table_vacc']+1;
-    
+    int id_table_vacc = vaccinePetDatas.last['id_table_vacc'] + 1;
+
     for (var element in vaccinePetDatas) {
       if (element['vaccine'] == _nameVaccController.text &&
           element['dose'] == _nameDoseController.text) {
@@ -1023,7 +1137,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
           'vaccine': _nameVaccController.text,
           'age': _nameAgeController.text,
           'dose': _nameDoseController.text,
-          'id_table_vacc':id_table_vacc
+          'id_table_vacc': id_table_vacc
         });
         String docId = newGeneRef.id;
         await newGeneRef.update({'id_pet_vaccines': docId});

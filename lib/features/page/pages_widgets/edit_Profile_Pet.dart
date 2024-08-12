@@ -46,13 +46,13 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
 
   final TextEditingController _otherBreedController = TextEditingController();
   bool _isOtherBreed = false;
+  bool _isLoading = false;
 
   final List<String> _genders = ['ตัวผู้', 'ตัวเมีย'];
   final List<String> _status = [
-    'มีชีวิต',
     'เสียชีวิต',
     'พร้อมผสมพันธุ์',
-    'ไม่พร้อมผสมพันธุ์'
+    'ไม่พร้อมผสมพันธ์ุ'
   ];
   final List<String> _types = [];
   final List<String> _breedsOfType1 = [];
@@ -188,7 +188,7 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
     return Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: Text("เพิ่มข้อมูลสัตว์เลี้ยง",
+          title: Text("แก้ไขข้อมูล ${widget.petUserData['name']}",
               style: Theme.of(context).textTheme.headlineMedium),
           centerTitle: true,
           leading: IconButton(
@@ -199,290 +199,326 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
           ),
           systemOverlayStyle: SystemUiOverlayStyle.light,
         ),
-        body: SingleChildScrollView(
-            child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                children: [
-                  _profileImage != null
-                      ? CircleAvatar(
-                          radius: 64,
-                          backgroundImage: MemoryImage(_profileImage!),
-                        )
-                      : const CircleAvatar(
-                          radius: 64,
-                          backgroundImage: NetworkImage(tempPetImageUrl),
-                        ),
-                  Positioned(
-                    // ignore: sort_child_properties_last
-                    child: IconButton(
-                      onPressed: selectImage,
-                      icon: const Icon(Icons.add_a_photo),
-                    ),
-                    bottom: -10,
-                    left: 80,
-                  )
-                ],
-              ),
-              const SizedBox(
-                height: 30,
-              ),
-              Form(
-                  child: Column(
-                children: [
-                  TextField(
-                    style: const TextStyle(fontSize: 14),
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'ชื่อสัตว์เลี้ยง',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30.0)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 15),
-                    ),
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedType,
-                          items: _types.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child:
-                                  Text(value, style: TextStyle(fontSize: 14)),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedType = newValue;
-                              _selectedBreed = null;
-                              _isOtherBreed = false;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'ประเภทสัตว์เลี้ยง',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 10),
-                          ),
-                        ),
-                      ),
-                      const Padding(padding: EdgeInsets.all(5)),
-                      if (_selectedType != null)
-                        Expanded(
-                          child: TextField(
-                            style: const TextStyle(fontSize: 14),
-                            controller: _otherBreedController,
-                            decoration: InputDecoration(
-                              labelText: 'ป้อนพันธุ์สัตว์เลี้ยงเอง',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0),
+        body: _isLoading
+            ? const Center(
+                child:
+                    CircularProgressIndicator(), // แสดงสัญลักษณ์การโหลดข้อมูล
+              )
+            : SingleChildScrollView(
+                child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      children: [
+                        _profileImage != null
+                            ? CircleAvatar(
+                                radius: 64,
+                                backgroundImage: MemoryImage(_profileImage!),
+                              )
+                            : const CircleAvatar(
+                                radius: 64,
+                                backgroundImage: NetworkImage(tempPetImageUrl),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 5, horizontal: 8),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 35,
+                            height: 35,
+                            decoration: BoxDecoration(
+                              color: Colors.deepPurple,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: IconButton(
+                                onPressed: selectImage,
+                                icon: const Icon(Icons.add_a_photo,
+                                    color: Colors.white),
+                                iconSize: 15,
+                              ),
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedGender,
-                          items: _genders.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child:
-                                  Text(value, style: TextStyle(fontSize: 14)),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedGender = newValue;
-                            });
-                          },
+                      ],
+                    ),
+                    const SizedBox(
+                      height: 30,
+                    ),
+                    Form(
+                        child: Column(
+                      children: [
+                        TextField(
+                          style: const TextStyle(fontSize: 14),
+                          controller: _nameController,
                           decoration: InputDecoration(
-                            labelText: 'เพศ',
+                            labelText: 'ชื่อสัตว์เลี้ยง',
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(30.0)),
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 15),
                           ),
                         ),
-                      ),
-                      const Padding(padding: EdgeInsets.all(5)),
-                      Expanded(
-                        child: TextField(
-                          style: const TextStyle(fontSize: 14),
-                          controller: _colorController,
-                          decoration: InputDecoration(
-                            labelText: 'สี',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 15),
-                          ),
+                        const SizedBox(
+                          height: 15,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          readOnly: true,
-                          controller: _dateController,
-                          style: const TextStyle(fontSize: 14),
-                          decoration: InputDecoration(
-                            labelText: 'วันเกิด',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedType,
+                                items: _types.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value,
+                                        style: TextStyle(fontSize: 14)),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedType = newValue;
+                                    _selectedBreed = null;
+                                    _isOtherBreed = false;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'ประเภทสัตว์เลี้ยง',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 10),
+                                ),
+                              ),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 15,
-                            ),
-                          ),
-                          onTap:
-                              selectDate, // เรียกใช้ฟังก์ชัน selectDate เมื่อกดที่ TextField
-                        ),
-                      ),
-                      const Padding(padding: EdgeInsets.all(5)),
-                      Expanded(
-                        child: TextField(
-                          style: const TextStyle(fontSize: 14),
-                          controller: _weightController,
-                          keyboardType: TextInputType
-                              .number, // กำหนดให้แสดงช่องใส่เฉพาะตัวเลข
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter
-                                .digitsOnly // จำกัดให้ใส่เฉพาะตัวเลข
+                            const Padding(padding: EdgeInsets.all(5)),
+                            if (_selectedType != null)
+                              Expanded(
+                                child: TextField(
+                                  style: const TextStyle(fontSize: 14),
+                                  controller: _otherBreedController,
+                                  decoration: InputDecoration(
+                                    labelText: 'ป้อนพันธุ์สัตว์เลี้ยงเอง',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 5, horizontal: 8),
+                                  ),
+                                ),
+                              ),
                           ],
-                          decoration: InputDecoration(
-                            labelText: 'น้ำหนัก',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 15,
-                            ),
-                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          style: const TextStyle(fontSize: 14),
-                          controller: _priceController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly
+                        const SizedBox(
+                          height: 15,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedGender,
+                                items: _genders.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value,
+                                        style: TextStyle(fontSize: 14)),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedGender = newValue;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'เพศ',
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(30.0)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 15),
+                                ),
+                              ),
+                            ),
+                            const Padding(padding: EdgeInsets.all(5)),
+                            Expanded(
+                              child: TextField(
+                                style: const TextStyle(fontSize: 14),
+                                controller: _colorController,
+                                decoration: InputDecoration(
+                                  labelText: 'สี',
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(30.0)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 15),
+                                ),
+                              ),
+                            ),
                           ],
+                        ),
+                        const SizedBox(
+                          height: 15,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                readOnly: true,
+                                controller: _dateController,
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  labelText: 'วันเกิด',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 15,
+                                  ),
+                                ),
+                                onTap:
+                                    selectDate, // เรียกใช้ฟังก์ชัน selectDate เมื่อกดที่ TextField
+                              ),
+                            ),
+                            const Padding(padding: EdgeInsets.all(5)),
+                            Expanded(
+                              child: TextField(
+                                style: const TextStyle(fontSize: 14),
+                                controller: _weightController,
+                                keyboardType: TextInputType
+                                    .number, // กำหนดให้แสดงช่องใส่เฉพาะตัวเลข
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter
+                                      .digitsOnly // จำกัดให้ใส่เฉพาะตัวเลข
+                                ],
+                                decoration: InputDecoration(
+                                  labelText: 'น้ำหนัก',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(
+                          height: 15,
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                style: const TextStyle(fontSize: 14),
+                                controller: _priceController,
+                                keyboardType: TextInputType.number,
+                                inputFormatters: <TextInputFormatter>[
+                                  FilteringTextInputFormatter.digitsOnly
+                                ],
+                                decoration: InputDecoration(
+                                  labelText: 'ราคา (ค่าผสมพันธุ์)',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30.0),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                    horizontal: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _selectedStatus,
+                                items: _status.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value,
+                                        style: TextStyle(fontSize: 14)),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedStatus = newValue;
+                                  });
+                                },
+                                decoration: InputDecoration(
+                                  labelText: 'สถานะ',
+                                  border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(30.0)),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 15),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 15),
+                        TextField(
+                          style: const TextStyle(
+                            fontSize: 18,
+                          ),
+                          textAlign: TextAlign.left,
+                          controller: _desController,
                           decoration: InputDecoration(
-                            labelText: 'ราคา (ค่าผสมพันธุ์)',
+                            labelText: 'รายละเอียดเพิ่มเติม',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(30.0),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 15,
+                            contentPadding:
+                                const EdgeInsets.fromLTRB(10, 40, 15, 10),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        ButtonTheme(
+                          minWidth: 300,
+                          height: 100,
+                          child: GestureDetector(
+                            onTap: () {
+                              updatePetInFirestore(
+                                  widget.petUserData['pet_id']);
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Center(
+                                  child: _isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: Colors.white,
+                                        )
+                                      : const Text(
+                                          "บันทึก",
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18),
+                                        )),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedStatus,
-                          items: _status.map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child:
-                                  Text(value, style: TextStyle(fontSize: 14)),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedStatus = newValue;
-                            });
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'สถานะ',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 15),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 15),
-                  TextField(
-                    style: const TextStyle(
-                      fontSize: 18,
-                    ),
-                    textAlign: TextAlign.left,
-                    controller: _desController,
-                    decoration: InputDecoration(
-                      labelText: 'รายละเอียดเพิ่มเติม',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                      ),
-                      contentPadding: const EdgeInsets.fromLTRB(10, 40, 15, 10),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  ButtonTheme(
-                    minWidth: 300,
-                    height: 100,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        updatePetInFirestore(widget.petUserData['pet_id']);
-                      },
-                      // ignore: sort_child_properties_last
-                      child:
-                          const Text('บันทึก', style: TextStyle(fontSize: 16)),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ))
-            ],
-          ),
-        )));
+                      ],
+                    ))
+                  ],
+                ),
+              )));
   }
 
   void updatePetInFirestore(String petId) {

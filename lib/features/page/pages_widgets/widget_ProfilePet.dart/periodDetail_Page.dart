@@ -1,4 +1,5 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/editPeriod_Page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +21,7 @@ class PeriodDetailPage extends StatefulWidget {
 }
 
 class _PeriodDetailPageState extends State<PeriodDetailPage> {
+  User? user = FirebaseAuth.instance.currentUser;
   late Map<String, dynamic> _report;
 
   @override
@@ -33,9 +35,7 @@ class _PeriodDetailPageState extends State<PeriodDetailPage> {
       context,
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            EditPeriodPage(
-                report: _report,
-                userId: widget.userId),
+            EditPeriodPage(report: _report, userId: widget.userId),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           const begin = Offset(1.0, 0.0);
           const end = Offset.zero;
@@ -59,7 +59,7 @@ class _PeriodDetailPageState extends State<PeriodDetailPage> {
     }
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     final date = DateTime.parse(_report['date']);
     final formattedDate = DateFormat('d MMM yyyy', 'th_TH').format(date);
@@ -70,10 +70,11 @@ class _PeriodDetailPageState extends State<PeriodDetailPage> {
         title: Text('ข้อมูลประจำเดือน'),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () => _navigateToEditPeriodPage(),
-            icon: const Icon(LineAwesomeIcons.edit),
-          ),
+          if (widget.userId == user!.uid)
+            IconButton(
+              onPressed: () => _navigateToEditPeriodPage(),
+              icon: const Icon(LineAwesomeIcons.edit),
+            ),
         ],
       ),
       body: Padding(
@@ -174,7 +175,8 @@ class _PeriodDetailPageState extends State<PeriodDetailPage> {
             ),
             Positioned(
               top: 0,
-              left: MediaQuery.of(context).size.width / 2 - 55, // ปรับให้ตรงกลาง
+              left:
+                  MediaQuery.of(context).size.width / 2 - 55, // ปรับให้ตรงกลาง
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.pinkAccent,

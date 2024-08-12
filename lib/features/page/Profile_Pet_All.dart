@@ -139,28 +139,51 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
   }
 
   void showImageDialog(BuildContext context, String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(20.0)),
-                child: Image.memory(
-                  base64Decode(imageUrl),
-                  fit: BoxFit.cover,
+    try {
+      final decodedImage = base64Decode(imageUrl);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                  child: Image.memory(
+                    decodedImage,
+                    fit: BoxFit.cover,
+                  ),
                 ),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error decoding base64 image: $e');
+      // แสดงภาพพื้นฐานหรือข้อความข้อผิดพลาด
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('Could not decode image.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
             ],
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
 
   String calculateAge(DateTime birthdate) {
@@ -193,6 +216,11 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
   // ดึงข้อมูล Vac_table ที่บันทึกลงไป
   Future<void> _fetchVaccinationData() async {
+    if (pet_user.isEmpty || pet_id.isEmpty) {
+      print('Pet user or Pet ID is empty.');
+      return;
+    }
+
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('vac_history')
@@ -437,7 +465,10 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                       title: "การประกวด",
                       icon: LineAwesomeIcons.certificate,
                       onPress: () => showContestDialog(
-                          context: context, userId: pet_user, petId: pet_id)),
+                          context: context,
+                          userId: pet_user,
+                          petId: pet_id,
+                          userPet: userId ?? '')),
                   MenuPetWidget(
                     title: "ใบเพ็ดดีกรี",
                     icon: LineAwesomeIcons.dna,
@@ -966,8 +997,6 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
     Color getStatusColor(String status) {
       switch (status) {
-        case 'มีชีวิต':
-          return Colors.green;
         case 'เสียชีวิต':
           return Colors.red;
         case 'พร้อมผสมพันธ์':
@@ -1034,31 +1063,27 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              petName,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              ' ($status)',
-                              style: TextStyle(
-                                color: getStatusColor(status),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          petName,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           type,
                           style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '($status)',
+                          style: TextStyle(
+                            color: getStatusColor(status),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],

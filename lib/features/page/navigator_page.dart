@@ -21,6 +21,8 @@ class Navigator_Page extends StatefulWidget {
 class _NavigatorPageState extends State<Navigator_Page> {
   int currentIndex = 0;
   bool isAnonymousUser = false;
+  DateTime? _lastPressedAt;
+  final int _backButtonPressThreshold = 2;
 
   final AuthService _authService = AuthService();
 
@@ -40,16 +42,6 @@ class _NavigatorPageState extends State<Navigator_Page> {
 
   bool shouldShowNavigationBar(int index) {
     return index != 3;
-  }
-
-  @override
-  void didUpdateWidget(covariant Navigator_Page oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialIndex != widget.initialIndex) {
-      setState(() {
-        currentIndex = widget.initialIndex;
-      });
-    }
   }
 
   void _navigateToPage(int index) {
@@ -86,51 +78,76 @@ class _NavigatorPageState extends State<Navigator_Page> {
     }
   }
 
+  Future<bool> _onWillPop() async {
+    final DateTime now = DateTime.now();
+    final bool backButtonHasNotBeenPressedOrSnackBarHasBeenClosed =
+        _lastPressedAt == null ||
+            now.difference(_lastPressedAt!) > const Duration(seconds: 2);
+
+    if (backButtonHasNotBeenPressedOrSnackBarHasBeenClosed) {
+      _lastPressedAt = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กดปุ่มกลับอีกครั้งเพื่อออกจากแอป'),
+        ),
+      );
+      return Future.value(false);
+    }
+
+    return Future.value(true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: widgetOption.elementAt(currentIndex),
-      ),
-      bottomNavigationBar: Visibility(
-        visible: shouldShowNavigationBar(currentIndex),
-        child: NavigationBar(
-          height: 80,
-          elevation: 0,
-          destinations: [
-            const NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-            const NavigationDestination(
-                icon: Icon(Icons.map_outlined), label: 'Maps'),
-            const NavigationDestination(icon: Icon(Icons.pets), label: 'Pets'),
-            const NavigationDestination(
-                icon: Icon(Icons.settings), label: 'Setting'),
-          ],
-          selectedIndex: currentIndex,
-          onDestinationSelected: (int index) {
-            _navigateToPage(index);
-          },
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: Center(
+          child: widgetOption.elementAt(currentIndex),
         ),
+        bottomNavigationBar: Visibility(
+          visible: shouldShowNavigationBar(currentIndex),
+          child: NavigationBar(
+            height: 80,
+            elevation: 0,
+            destinations: [
+              const NavigationDestination(
+                  icon: Icon(Icons.home), label: 'Home'),
+              const NavigationDestination(
+                  icon: Icon(Icons.map_outlined), label: 'Maps'),
+              const NavigationDestination(
+                  icon: Icon(Icons.pets), label: 'Pets'),
+              const NavigationDestination(
+                  icon: Icon(Icons.settings), label: 'Setting'),
+            ],
+            selectedIndex: currentIndex,
+            onDestinationSelected: (int index) {
+              _navigateToPage(index);
+            },
+          ),
+        ),
+        floatingActionButton: isAnonymousUser
+            ? FloatingActionButton.extended(
+                onPressed: () async {
+                  User? user = FirebaseAuth.instance.currentUser;
+                  try {
+                    await user?.delete();
+                    print("Anonymous account deleted");
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const Home_Page()),
+                      (Route<dynamic> route) => false,
+                    );
+                  } catch (e) {
+                    print("Error deleting anonymous account: $e");
+                  }
+                },
+                label: const Text('สมัครสมาชิก/เข้าสู่ระบบ'),
+                icon: const Icon(Icons.login),
+              )
+            : null,
       ),
-      floatingActionButton: isAnonymousUser
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                User? user = FirebaseAuth.instance.currentUser;
-                try {
-                  await user?.delete();
-                  print("Anonymous account deleted");
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (context) => const Home_Page()),
-                    (Route<dynamic> route) => false,
-                  );
-                } catch (e) {
-                  print("Error deleting anonymous account: $e");
-                }
-              },
-              label: const Text('สมัครสมาชิก/เข้าสู่ระบบ'),
-              icon: const Icon(Icons.login),
-            )
-          : null,
     );
   }
 }

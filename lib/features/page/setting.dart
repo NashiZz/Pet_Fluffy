@@ -6,6 +6,7 @@ import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
+import 'package:Pet_Fluffy/features/page/setNotiandLocation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -49,8 +50,6 @@ class _Setting_PageState extends State<Setting_Page> {
         });
       } else {
         try {
-
-
           DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
               .collection('user')
               .doc(userId)
@@ -228,6 +227,15 @@ class _Setting_PageState extends State<Setting_Page> {
                       icon: LineAwesomeIcons.lock,
                       onPress: () {
                         Get.to(() => const EditPassPage());
+                      },
+                      isAnonymous: isAnonymous,
+                    ),
+                    const SizedBox(height: 10),
+                    MenuWidget(
+                      title: "ตั้งค่าอื่นๆ",
+                      icon: LineAwesomeIcons.toggle_on,
+                      onPress: () {
+                        Get.to(() => const SetNotiandLocationPage());
                       },
                       isAnonymous: isAnonymous,
                     ),
