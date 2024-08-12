@@ -1093,7 +1093,10 @@ class _MapsPageState extends State<Maps_Page> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                             ),
-                            child: const Text('ยืนยันตำแหน่ง',style: TextStyle(color: Colors.white),),
+                            child: const Text(
+                              'ยืนยันตำแหน่ง',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ),
                       SizedBox(
@@ -1553,6 +1556,51 @@ class _MapsPageState extends State<Maps_Page> {
               .toLowerCase()
               .contains(_otherColor.text.toLowerCase());
 
+          bool matchesPrice = isPriceInRange(
+              data['price'].toString(), _selectedPrice.toString());
+
+          if (matchDistance &&
+              matchesBreed &&
+              matchesAge &&
+              matchesColor &&
+              matchesPrice) {
+            print('Match found: ${data['name']}');
+            // Add marker code here as necessary
+          } else {
+            print('No match for filters: ${data['name']}');
+
+            if (data['user_id'] == user?.uid) {
+              return;
+            }
+            DocumentSnapshot userSnapshot =
+                await ApiUserService.getUserData(data['user_id']);
+
+            double lat = userSnapshot['lat'] ?? 0.0;
+            double lng = userSnapshot['lng'] ?? 0.0;
+            lat += Random().nextDouble() * 0.0002;
+            lng += Random().nextDouble() * 0.0002;
+            LatLng petLocation = LatLng(lat, lng);
+
+            String petType = data['type_pet'] ?? '';
+            String petGender = data['gender'] ?? '';
+            String petStatus = data['status'] ?? '';
+
+            String distanceStr = calculateDistance(userLocation, petLocation);
+            bool matchDistance =
+                isDistanceRange(distanceStr, _selectedDistance.toString());
+            bool matchesBreed = data['breed_pet']
+                .toString()
+                .toLowerCase()
+                .contains(_otherBreedController.text.toLowerCase());
+
+            DateTime birthDate = DateTime.parse(data['birthdate']);
+            bool matchesAge = isAgeInRange(_selectedAge.toString(), birthDate);
+
+            bool matchesColor = data['color']
+                .toString()
+                .toLowerCase()
+                .contains(_otherColor.text.toLowerCase());
+
             bool matchesPrice = isPriceInRange(
                 data['price'].toString(), _selectedPrice.toString());
             if (petStatus == 'พร้อมผสมพันธุ์') {
@@ -1581,7 +1629,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesAge &&
                       matchesColor &&
                       matchesPrice &&
-                      matchDistance) {try {
+                      matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1617,7 +1666,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
                     _otherColor.text != '' &&
@@ -1626,7 +1676,8 @@ class _MapsPageState extends State<Maps_Page> {
                   if (matchesAge &&
                       matchesColor &&
                       matchesPrice &&
-                      matchDistance) {try {
+                      matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1662,7 +1713,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
                     _otherColor.text != '' &&
@@ -1671,7 +1723,8 @@ class _MapsPageState extends State<Maps_Page> {
                   if (matchesBreed &&
                       matchesColor &&
                       matchesPrice &&
-                      matchDistance) {try {
+                      matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1707,7 +1760,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
                     _otherColor.text == '' &&
@@ -1716,7 +1770,8 @@ class _MapsPageState extends State<Maps_Page> {
                   if (matchesBreed &&
                       matchesAge &&
                       matchesPrice &&
-                      matchDistance) {try {
+                      matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1752,7 +1807,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
                     _otherColor.text != '' &&
@@ -1761,7 +1817,8 @@ class _MapsPageState extends State<Maps_Page> {
                   if (matchesBreed &&
                       matchesAge &&
                       matchesColor &&
-                      matchDistance) {try {
+                      matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1797,7 +1854,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
                     _otherColor.text != '' &&
@@ -1806,7 +1864,8 @@ class _MapsPageState extends State<Maps_Page> {
                   if (matchesBreed &&
                       matchesAge &&
                       matchesColor &&
-                      matchesPrice) {try {
+                      matchesPrice) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1842,13 +1901,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
                     _otherColor.text != '' &&
                     _selectedPrice != null &&
                     _selectedDistance != null) {
-                  if (matchesColor && matchesPrice && matchDistance) {try {
+                  if (matchesColor && matchesPrice && matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1884,13 +1945,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
                     _otherColor.text == '' &&
                     _selectedPrice != null &&
                     _selectedDistance != null) {
-                  if (matchesAge && matchesPrice && matchDistance) {try {
+                  if (matchesAge && matchesPrice && matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -1926,559 +1989,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge != null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance != null) {
-                  if (matchesAge && matchesColor && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge != null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance == null) {
-                  if (matchesAge && matchesColor && matchesPrice) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge == null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance != null) {
-                  if (matchesBreed && matchesPrice && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge == null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance != null) {
-                  if (matchesBreed && matchesColor && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge == null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance == null) {
-                  if (matchesBreed && matchesColor && matchesPrice) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge != null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance != null) {
-                  if (matchesBreed && matchesAge && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge != null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance == null) {
-                  if (matchesBreed && matchesAge && matchesPrice) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text != '' &&
-                    _selectedAge != null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance == null) {
-                  if (matchesBreed && matchesAge && matchesColor) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge == null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance != null) {
-                  if (matchesPrice && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge == null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance != null) {
-                  if (matchesColor && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge == null &&
-                    _otherColor.text != '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance == null) {
-                  if (matchesColor && matchesPrice) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge != null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice == null &&
-                    _selectedDistance != null) {
-                  if (matchesAge && matchDistance) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
-                } else if (_otherBreedController.text == '' &&
-                    _selectedAge != null &&
-                    _otherColor.text == '' &&
-                    _selectedPrice != null &&
-                    _selectedDistance == null) {
-                  if (matchesAge && matchesPrice) {try {
-                      print(petName);
-                      // คำนวณระยะห่าง
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
                     _otherColor.text != '' &&
                     _selectedPrice == null &&
-                    _selectedDistance == null) {
-                  if (matchesAge && matchesColor) {try {
+                    _selectedDistance != null) {
+                  if (matchesAge && matchesColor && matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2514,13 +2033,587 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesColor && matchesPrice) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesPrice && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesColor && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesColor && matchesPrice) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesBreed && matchesAge && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesAge && matchesPrice) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text != '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesBreed && matchesAge && matchesColor) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance != null) {
+                  if (matchesPrice && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesColor && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge == null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesColor && matchesPrice) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance != null) {
+                  if (matchesAge && matchDistance) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text == '' &&
+                    _selectedPrice != null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesPrice) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else if (_otherBreedController.text == '' &&
+                    _selectedAge != null &&
+                    _otherColor.text != '' &&
+                    _selectedPrice == null &&
+                    _selectedDistance == null) {
+                  if (matchesAge && matchesColor) {
+                    try {
+                      print(petName);
+                      // คำนวณระยะห่าง
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
                     _otherColor.text == '' &&
                     _selectedPrice == null &&
                     _selectedDistance != null) {
-                  if (matchesBreed && matchDistance) {try {
+                  if (matchesBreed && matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2556,13 +2649,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
                     _otherColor.text == '' &&
                     _selectedPrice != null &&
                     _selectedDistance == null) {
-                  if (matchesBreed && matchesPrice) {try {
+                  if (matchesBreed && matchesPrice) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2598,13 +2693,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
                     _otherColor.text != '' &&
                     _selectedPrice == null &&
                     _selectedDistance == null) {
-                  if (matchesBreed && matchesColor) {try {
+                  if (matchesBreed && matchesColor) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2640,13 +2737,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
                     _otherColor.text == '' &&
                     _selectedPrice == null &&
                     _selectedDistance == null) {
-                  if (matchesBreed && matchesAge) {try {
+                  if (matchesBreed && matchesAge) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2682,13 +2781,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
                     _otherColor.text == '' &&
                     _selectedPrice == null &&
                     _selectedDistance != null) {
-                  if (matchDistance) {try {
+                  if (matchDistance) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2724,13 +2825,15 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
                     _otherColor.text == '' &&
                     _selectedPrice != null &&
                     _selectedDistance == null) {
-                  if (matchesPrice) {try {
+                  if (matchesPrice) {
+                    try {
                       print(petName);
                       // คำนวณระยะห่าง
                       String distanceStr =
@@ -2766,7 +2869,8 @@ class _MapsPageState extends State<Maps_Page> {
                     } catch (e) {
                       errors.add(
                           'Error creating marker for document ${doc.id}: $e');
-                    }}
+                    }
+                  }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
                     _otherColor.text != '' &&
