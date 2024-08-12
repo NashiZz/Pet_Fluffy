@@ -68,7 +68,7 @@ class AuthService {
         User? user = userCredential.user;
 
         await saveUserGoogle(user!);
-        
+
         return user;
       }
     } catch (error) {
@@ -139,9 +139,20 @@ class AuthService {
   }
 
   // Save Data User
-  Future<void> saveUserDataToFirestore(String userId, String username,
-      String name, String email, String password, Uint8List? image) async {
-    String img = uint8ListToBase64(image!);
+  Future<void> saveUserDataToFirestore(
+      String userId,
+      String username,
+      String name,
+      String email,
+      String password,
+      String? imageBase64, // เปลี่ยนชื่อเป็น imageBase64 เพื่อชัดเจน
+      String nickname,
+      String phone,
+      String facebook,
+      String line,
+      String? gender,
+      String? birthdate,
+      String? county) async {
     DocumentReference userRef = _firestore.collection('user').doc(userId);
 
     await userRef.set({
@@ -150,14 +161,14 @@ class AuthService {
       'fullname': name,
       'email': email,
       'password': password,
-      'photoURL': img,
-      'phone': '',
-      'nickname': '',
-      'gender': '',
-      'birthdate': '',
-      'country': '',
-      'facebook': '',
-      'line': '',
+      'photoURL': imageBase64 ?? '', // ใช้ค่าว่างถ้า imageBase64 เป็น null
+      'phone': phone,
+      'nickname': nickname,
+      'gender': gender ?? '',
+      'birthdate': birthdate ?? '',
+      'county': county ?? '',
+      'facebook': facebook,
+      'line': line,
       'status': 'สมาชิก'
     }).then((_) {
       print("User data added to Firestore");
@@ -204,23 +215,24 @@ class AuthService {
     }
   }
 }
+
 class FirebaseAccessToken {
   static String firebaseMsgScope =
       "https://www.googleapis.com/auth/firebase/firebase.messaging";
   Future<String> getToken() async {
     try {
       final credentials = ServiceAccountCredentials.fromJson({
-         "type": "service_account",
-          "project_id": "",
-          "private_key_id": " ",
-          "private_key":"",
-          "client_email":"",
-          "client_id": "",
-          "auth_uri": "",
-          "token_uri": "",
-          "auth_provider_x509_cert_url":"",
-          "client_x509_cert_url":"",
-          "universe_domain": "googleapis.com"
+        "type": "service_account",
+        "project_id": "",
+        "private_key_id": " ",
+        "private_key": "",
+        "client_email": "",
+        "client_id": "",
+        "auth_uri": "",
+        "token_uri": "",
+        "auth_provider_x509_cert_url": "",
+        "client_x509_cert_url": "",
+        "universe_domain": "googleapis.com"
       });
       List<String> scopes = [
         "https://www.googleapis.com/auth/firebase.messaging"
