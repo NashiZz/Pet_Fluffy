@@ -22,7 +22,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-
 //หน้า Profile ของ สัตว์เลี้ยง
 class Profile_pet_Page extends StatefulWidget {
   final String petId;
@@ -94,7 +93,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   @override
   void initState() {
     super.initState();
-    
+
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _refreshHomePage();
@@ -492,7 +491,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว')),
       );
-      
 
       // scheduleNotification(dateSend);
 
@@ -504,8 +502,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       );
     }
   }
-
- 
 
   @override
   Widget build(BuildContext context) {
@@ -546,9 +542,10 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       appBar: AppBar(
         title: Text(
           "โปรไฟล์สัตว์เลี้ยง",
-          style: Theme.of(context).textTheme.headlineMedium,
+          style: TextStyle(color: Color.fromARGB(255, 49, 42, 42)),
         ),
         centerTitle: true,
+        toolbarHeight: 70,
         actions: [
           PopupMenuButton(
             itemBuilder: (BuildContext context) {
@@ -592,7 +589,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         'description': des,
                         'price': price,
                         'birthdate': birthdateStr,
-                        'type_pet': pet_type
+                        'type_pet': pet_type,
+                        'status': status
                       }),
                     ));
               } else if (value == 'menu2') {}
@@ -759,7 +757,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                       onPress: () => showContestDialog(
                           context: context,
                           userId: userId ?? '',
-                          petId: pet_id)),
+                          petId: pet_id,
+                          userPet: pet_user)),
                   MenuPetWidget(
                     title: "ใบเพ็ดดีกรี",
                     icon: LineAwesomeIcons.dna,
@@ -1303,8 +1302,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
     Color getStatusColor(String status) {
       switch (status) {
-        case 'มีชีวิต':
-          return Colors.green;
         case 'เสียชีวิต':
           return Colors.red;
         case 'พร้อมผสมพันธ์':
@@ -1371,31 +1368,27 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              petName,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              ' ($status)',
-                              style: TextStyle(
-                                color: getStatusColor(status),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          petName,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           type,
                           style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          ' ($status)',
+                          style: TextStyle(
+                            color: getStatusColor(status),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -1662,7 +1655,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildStatusOption(context, 'มีชีวิต', currentStatus),
               _buildStatusOption(context, 'เสียชีวิต', currentStatus),
               _buildStatusOption(context, 'พร้อมผสมพันธ์', currentStatus),
               _buildStatusOption(context, 'ไม่พร้อมผสมพันธ์', currentStatus),
@@ -1767,7 +1759,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           firstDate: DateTime(2000),
                           lastDate: DateTime(2101),
                         );
-                
+
                         if (pickedDate != null) {
                           setState(() {
                             _dateController.text =
@@ -1809,10 +1801,13 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                     SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () {
-                        
                         if (_formKey.currentState!.validate()) {
-                          NotificationHelper.scheduledNotification('Pet fluffy', '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว', _dateController.text,pet_type);
-                          _saveReportToFirestore();  
+                          NotificationHelper.scheduledNotification(
+                              'Pet fluffy',
+                              '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
+                              _dateController.text,
+                              pet_type);
+                          _saveReportToFirestore();
                           Navigator.of(context).pop();
                         }
                       },

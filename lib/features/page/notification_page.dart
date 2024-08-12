@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/historyMatch.dart';
+import 'package:Pet_Fluffy/features/page/matchSuccess.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
@@ -15,7 +20,8 @@ class Notification_Page extends StatefulWidget {
   State<Notification_Page> createState() => _Notification_PageState();
 }
 
-class _Notification_PageState extends State<Notification_Page> {
+class _Notification_PageState extends State<Notification_Page>
+    with SingleTickerProviderStateMixin {
   late List<Map<String, dynamic>> petUserDataList_wait = [];
   late List<Map<String, dynamic>> petUserDataList_pair = [];
   late List<Map<String, dynamic>> getPetDataList = [];
@@ -24,10 +30,82 @@ class _Notification_PageState extends State<Notification_Page> {
   late String id_fav;
   bool isLoading = true;
 
+  late AnimationController _animationController;
+  late Animation<double> _opacityAnimation;
+  late List<Offset> _randomOffsets;
+  bool _isAnimating = false;
+
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
+
   @override
   void initState() {
     super.initState();
     _getPetUserDataFromMatch_wait();
+    _setTokenfirebaseMassag();
+
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    // กำหนด Animation สำหรับ opacity
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+  }
+
+  //สร้าง fcm_token
+  Future<void> _setTokenfirebaseMassag() async {
+    userId = user!.uid;
+    final userDocRef =
+        FirebaseFirestore.instance.collection('user').doc(userId);
+    final userData = await userDocRef.get();
+    if (userData.exists) {
+      String? token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('user').doc(userId).update({
+          'fcm_token': token,
+        });
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPetDetails(String petId) async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('Pet_User')
+          .where('pet_id', isEqualTo: petId)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final petData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+        return {
+          'name': petData['name'], // หรือชื่อฟิลด์ที่ใช้เก็บชื่อสัตว์เลี้ยง
+          'img_profile':
+              petData['img_profile'] // หรือชื่อฟิลด์ที่ใช้เก็บ URL ของรูปภาพ
+        };
+      }
+    } catch (error) {
+      print("Failed to get pet details: $error");
+    }
+    return null;
+  }
+
+  Future<String?> getPetName(String petId) async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('Pet_User')
+          .where('pet_id', isEqualTo: petId)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final petData = querySnapshot.docs.first.data() as Map<String, dynamic>;
+        return petData['name']; // หรือชื่อฟิลด์ที่ใช้เก็บชื่อสัตว์เลี้ยง
+      }
+    } catch (error) {
+      print("Failed to get pet name: $error");
+    }
+    return null;
   }
 
   //ดึงข้อมูลจาก firebase
@@ -104,7 +182,14 @@ class _Notification_PageState extends State<Notification_Page> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () {
-            Navigator.of(context).pop();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => Historymatch_Page(
+                        idPet: widget.idPet,
+                        idUser: userId,
+                      )),
+            );
           },
           icon: const Icon(LineAwesomeIcons.angle_left),
         ),
@@ -130,6 +215,32 @@ class _Notification_PageState extends State<Notification_Page> {
               )
             : _buildPetList(allPetDataList_wait),
       ),
+      floatingActionButton: _isAnimating
+          ? AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return Stack(
+                  children: List.generate(30, (index) {
+                    return Positioned(
+                      top: _randomOffsets[index].dy,
+                      right: _randomOffsets[index].dx,
+                      child: Opacity(
+                        opacity: _opacityAnimation.value,
+                        child: Transform.translate(
+                          offset: Offset(0, -50 * _opacityAnimation.value),
+                          child: Icon(
+                            Icons.favorite,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
+            )
+          : null,
     );
   }
 
@@ -172,7 +283,6 @@ class _Notification_PageState extends State<Notification_Page> {
         );
       },
       child: Card(
-        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -232,7 +342,19 @@ class _Notification_PageState extends State<Notification_Page> {
                             child: const Text("ปฏิเสธการจับคู่"),
                           ),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              String petIdd = petUserData['pet_id'] as String;
+                              String userIdd = petUserData['user_id'] as String;
+                              String img_profile =
+                                  petUserData['img_profile'] as String;
+                              String name_petrep =
+                                  petUserData['name'] as String;
+                              String des = petUserData['description'] as String;
+
+                              add_match(petIdd, userIdd, img_profile,
+                                  name_petrep, des);
+                              Navigator.of(context).pop();
+                            },
                             child: const Text("ยืนยันการจับคู่"),
                           ),
                         ],
@@ -331,6 +453,236 @@ class _Notification_PageState extends State<Notification_Page> {
       }
     } catch (e) {
       print('Error deleting pet data: $e');
+    }
+  }
+
+  void _showHeartAnimation() {
+    setState(() {
+      _isAnimating = true;
+      _animationController.forward().then((_) {
+        Future.delayed(const Duration(seconds: 1), () {
+          _animationController.reverse();
+          setState(() {
+            _isAnimating = false;
+          });
+        });
+      });
+    });
+  }
+
+  Future<void> add_match(String petIdd, String userIdd, String img_profile,
+      String name_petrep, String des) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? petId = prefs.getString(userId.toString());
+    String pet_request = petId.toString();
+    String pet_respone = petIdd.toString();
+
+    print(pet_request);
+    print(pet_respone);
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    CollectionReference petMatchRef =
+        FirebaseFirestore.instance.collection('match');
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petMatchRef
+          .where('pet_request', isEqualTo: pet_respone)
+          .where('pet_respone', isEqualTo: pet_request)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว ให้ทำการอัพเดตเอกสารนั้น
+        querySnapshot.docs.forEach((doc) async {
+          await doc.reference
+              .update({'status': 'จับคู่แล้ว', 'updates_at': formatted});
+        });
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ดึงข้อมูลของ pet_request
+            Map<String, dynamic>? petRequestDetails =
+                await getPetDetails(pet_request);
+
+            // ถ้าไม่สามารถดึงข้อมูลได้ ให้ตั้งค่าค่าพื้นฐาน
+            String petName = petRequestDetails?['name'] ?? 'Unknown';
+            String petImg = petRequestDetails?['img_profile'] ?? '';
+
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': des,
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'จับคู่แล้ว',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            sendNotificationToUser(
+                userIdd, 'Pet fluffy', 'You have a new pet match!');
+            // match success จะให้ไปที่หน้า match
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Matchsuccess_Page(
+                    pet_request: petImg, // รูปสัตว์คนที่กด หัวใจ
+                    pet_respone: img_profile, // รูปสัตว์คนที่โดนกด
+                    idUser_pet: userIdd, // id user ที่โดนกดหัวใจ
+                    pet_request_name: petName,
+                    pet_respone_name: name_petrep,
+                    idUser_petReq: userId.toString()), // id user ที่กดหัวใจ
+              ),
+            );
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      } else {
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': des,
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'กำลังรอ',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            setState(() {
+              isLoading = false;
+            });
+            _showHeartAnimation();
+          }
+
+          _getPetUserDataFromMatch_wait();
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void sendNotificationToUser(String userIdd, String title, String body) async {
+    DocumentSnapshot userDoc =
+        await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
+    String? fcmToken = userDoc['fcm_token'];
+
+    if (fcmToken != null) {
+      await sendPushMessage(fcmToken, title, body);
+    }
+  }
+
+  Future<void> sendPushMessage(
+      String token_user, String title, String body) async {
+    print(token_user);
+    String token = await firebaseAccessToken.getToken();
+    final data = {
+      "message": {
+        "token": token_user,
+        "notification": {
+          "body": "Pet Fluffy",
+          "title": "มีการตอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
+        }
+      }
+    };
+    try {
+      final response = await http.post(
+        Uri.parse(
+            'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token, // ใส่ Server Key ที่ถูกต้องที่นี่
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        print("Notification sent successfully");
+      } else {
+        print("Failed to send notification");
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (error) {
+      print("Error sending notification: $error");
     }
   }
 }

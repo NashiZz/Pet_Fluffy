@@ -1,4 +1,5 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/editVacDetail_Page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
@@ -20,6 +21,7 @@ class VaccineDetailPage extends StatefulWidget {
 }
 
 class _VaccineDetailPageState extends State<VaccineDetailPage> {
+  User? user = FirebaseAuth.instance.currentUser;
   late Map<String, dynamic> _report;
 
   @override
@@ -71,10 +73,11 @@ class _VaccineDetailPageState extends State<VaccineDetailPage> {
         title: Text('ข้อมูลวัคซีน'),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: _navigateToEditVaccinePage,
-            icon: const Icon(LineAwesomeIcons.edit),
-          ),
+          if (widget.userId == user!.uid)
+            IconButton(
+              onPressed: _navigateToEditVaccinePage,
+              icon: const Icon(LineAwesomeIcons.edit),
+            ),
         ],
       ),
       body: Padding(

@@ -45,18 +45,27 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
   }
 
   Future<void> getPetId() async {
-    // ดึงข้อมูลจาก SharedPreferences
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    petId = prefs.getString(userId) ?? '';
-
-    if (petId.isEmpty) {
-      // หาก petId ไม่ได้จาก SharedPreferences ให้ดึงจาก Firestore
+    try {
+      // ดึงข้อมูลจาก Firestore
       DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
           .collection('Usage_pet')
           .doc(userId)
           .get();
 
-      petId = petDocSnapshot['pet_id'] ?? '';
+      // ตรวจสอบว่าข้อมูลผู้ใช้มีอยู่
+      if (petDocSnapshot.exists) {
+        // ดึง petId จาก Firestore
+        petId = petDocSnapshot['pet_id'] ?? '';
+        print('Pet ID from Firestore: $petId');
+      } else {
+        // หากเอกสารไม่พบ ตั้งค่า petId เป็นค่าเริ่มต้น
+        petId = '';
+        print('No document found for userId: $userId');
+      }
+    } catch (e) {
+      // จัดการข้อผิดพลาด
+      print('Error getting pet ID from Firestore: $e');
+      petId = ''; // ตั้งค่า petId เป็นค่าเริ่มต้นในกรณีเกิดข้อผิดพลาด
     }
   }
 
@@ -365,14 +374,16 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
                   ],
                 ),
               )
-            : TabBarView(
-                children: [
-                  //สุนัข
-                  _buildPetList(allPetDataList_wait),
-                  //แมว
-                  _buildPetList(allPetDataList_pair),
-                ],
-              ),
+            : (petId == null || petId.isEmpty)
+                ? Center(
+                    child: Text('คุณยังไม่มีข้อมูลสัตว์เลี้ยง'),
+                  )
+                : TabBarView(
+                    children: [
+                      _buildPetList(allPetDataList_wait),
+                      _buildPetList(allPetDataList_pair),
+                    ],
+                  ),
       ),
     );
   }

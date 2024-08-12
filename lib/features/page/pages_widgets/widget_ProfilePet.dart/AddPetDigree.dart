@@ -252,21 +252,32 @@ class _AddPetDigreePageState extends State<AddPetDigreePage> {
                       },
                     ),
                     const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        TextButton(
+                    Center(
+                      child: SizedBox(
+                        height: 40,
+                        width: 120,
+                        child: TextButton(
                           onPressed: _savePetDigree,
-                          child: Row(
-                            children: [
-                              Icon(
-                                LineAwesomeIcons.save,
-                              ),
-                              Text('บันทึก', style: TextStyle(fontSize: 16)),
-                            ],
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.blue,
+                          ),
+                          child: Center(
+                            // ใช้ Center widget เพื่อตั้งค่า Row ให้อยู่ตรงกลาง
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment
+                                  .center, // จัดให้อยู่ตรงกลางแนวนอน
+                              children: [
+                                Icon(LineAwesomeIcons.save),
+                                SizedBox(
+                                    width:
+                                        8), // เพิ่ม space ระหว่าง Icon กับ Text
+                                Text('บันทึก', style: TextStyle(fontSize: 16)),
+                              ],
+                            ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),

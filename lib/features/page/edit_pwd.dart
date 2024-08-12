@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-//หน้า ลืมรหัสผ่าน ตอน Login
 class EditPassPage extends StatefulWidget {
   const EditPassPage({Key? key}) : super(key: key);
 
@@ -13,65 +12,87 @@ class EditPassPage extends StatefulWidget {
 }
 
 class _EditPassPageState extends State<EditPassPage> {
-  late User? user;
-  late String userId;
-  late Map<String, dynamic> userData = {};
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  bool _isPasswordVisible = false;
   bool isSigningUp = false;
 
-  late String userEmail = '';
+  Future<void> _changePassword() async {
+    String newPassword = _newPasswordController.text.trim();
+    String confirmPassword = _confirmPasswordController.text.trim();
+    String currentPassword = _currentPasswordController.text.trim();
 
-  @override
-  void initState() {
-    super.initState();
-    user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      userId = user!.uid;
-      _getUserDataFromFirestore();
-    }
-  }
-
-  Future<void> _getUserDataFromFirestore() async {
-    try {
-      DocumentSnapshot userDocSnapshot =
-          await FirebaseFirestore.instance.collection('user').doc(userId).get();
-
-      setState(() {
-        userData = userDocSnapshot.data() as Map<String, dynamic>;
-        userEmail = userData['email'] ?? '';
-      });
-    } catch (e) {
-      print('Error getting user data from Firestore: $e');
-    }
-  }
-
-  Future passwordReset() async {
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: userEmail);
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          Future.delayed(const Duration(seconds: 5), () {
-            Navigator.of(context).pop(true);
-            Navigator.pop(context); 
-          });
-          return const AlertDialog(
-            title: Text('Success'),
-            content: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.0),
-              child: Text(
-                  'ส่งลิงค์เปลี่ยนรหัสผ่านไปให้คุณแล้ว กรุณาเข้าไปตรวจสอบที่อีเมลของคุณ'),
-            ),
-          );
-        },
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน'),
+          backgroundColor: Colors.red,
+        ),
       );
-    } on FirebaseAuthException catch (e) {
-      print(e);
-      showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(content: Text(e.message!));
-          });
+      return;
     }
+
+    if (newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      isSigningUp = true;
+    });
+
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user == null || user.email == null) {
+        throw Exception('ไม่พบข้อมูลผู้ใช้');
+      }
+
+      // รีออธิเคทผู้ใช้
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // เปลี่ยนรหัสผ่าน
+      await user.updatePassword(newPassword);
+
+      // อัปเดตใน Firestore
+      await FirebaseFirestore.instance.collection('user').doc(user.uid).update({
+        'password': newPassword,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('รหัสผ่านเปลี่ยนแปลงเรียบร้อยแล้ว'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      print('Error changing password: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    setState(() {
+      isSigningUp = false;
+    });
   }
 
   @override
@@ -79,59 +100,135 @@ class _EditPassPageState extends State<EditPassPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("เปลี่ยนรหัสผ่าน"),
+        title: const Text(
+          "เปลี่ยนรหัสผ่าน",
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
+        backgroundColor: Colors.deepPurple,
+        toolbarHeight: 70,
         leading: IconButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            icon: const Icon(LineAwesomeIcons.angle_left)),
+          icon: const Icon(Icons.arrow_back,color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40.0),
+                padding: EdgeInsets.symmetric(horizontal: 25.0),
                 child: Text(
-                  "กรุณากดปุ่ม เพื่อส่งลิงค์การเปลี่ยนรหัสผ่านไปที่ Email ของคุณ",
+                  "รหัสผ่านใหม่",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 30),
                 ),
               ),
-              const SizedBox(
-                height: 20,
+              const SizedBox(height: 30),
+              TextField(
+                controller: _currentPasswordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: "รหัสผ่านปัจจุบัน",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 15.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
               ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _newPasswordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: "รหัสผ่านใหม่",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: !_isPasswordVisible,
+                decoration: InputDecoration(
+                  labelText: "ยืนยันรหัสผ่านใหม่",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  prefixIcon: Icon(LineAwesomeIcons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               GestureDetector(
-                onTap: () {
-                  passwordReset();
-                },
+                onTap: _changePassword,
                 child: Container(
                   width: double.infinity,
-                  height: 45,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(30),
                   ),
                   child: Center(
-                      child: isSigningUp
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
-                          : const Text(
-                              "ส่ง",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            )),
+                    child: isSigningUp
+                        ? const CircularProgressIndicator(
+                            color: Colors.white,
+                          )
+                        : const Text(
+                            "บันทึก",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20),
+                          ),
+                  ),
                 ),
               ),
-              const SizedBox(
-                height: 20,
-              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

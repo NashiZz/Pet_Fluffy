@@ -11,6 +11,7 @@ void showContestDialog({
   required BuildContext context,
   required String userId,
   required String petId,
+  required String userPet,
 }) {
   showDialog(
     context: context,
@@ -71,50 +72,51 @@ void showContestDialog({
                         textAlign: TextAlign.start,
                       ),
                       Spacer(),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              pageBuilder:
-                                  (context, animation, secondaryAnimation) =>
-                                      AddContestPage(
-                                userId: userId,
-                                petId: petId,
+                      if (userId == userPet)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder:
+                                    (context, animation, secondaryAnimation) =>
+                                        AddContestPage(
+                                  userId: userId,
+                                  petId: petId,
+                                ),
+                                transitionsBuilder: (context, animation,
+                                    secondaryAnimation, child) {
+                                  const begin = Offset(1.0, 0.0);
+                                  const end = Offset.zero;
+                                  const curve = Curves.ease;
+
+                                  var tween = Tween(begin: begin, end: end)
+                                      .chain(CurveTween(curve: curve));
+
+                                  return SlideTransition(
+                                    position: animation.drive(tween),
+                                    child: child,
+                                  );
+                                },
                               ),
-                              transitionsBuilder: (context, animation,
-                                  secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0);
-                                const end = Offset.zero;
-                                const curve = Curves.ease;
-
-                                var tween = Tween(begin: begin, end: end)
-                                    .chain(CurveTween(curve: curve));
-
-                                return SlideTransition(
-                                  position: animation.drive(tween),
-                                  child: child,
-                                );
-                              },
-                            ),
-                          ).then((_) {
-                            // Refresh data after returning from AddContestPage
-                            setState(() {
-                              _future = FirebaseFirestore.instance
-                                  .collection('contest_pet')
-                                  .doc(userId)
-                                  .collection('pet_contest')
-                                  .where('pet_id', isEqualTo: petId)
-                                  .get();
+                            ).then((_) {
+                              // Refresh data after returning from AddContestPage
+                              setState(() {
+                                _future = FirebaseFirestore.instance
+                                    .collection('contest_pet')
+                                    .doc(userId)
+                                    .collection('pet_contest')
+                                    .where('pet_id', isEqualTo: petId)
+                                    .get();
+                              });
                             });
-                          });
-                        },
-                        child: Text(
-                          'เพิ่ม',
-                          style:
-                              TextStyle(color: Colors.blueAccent, fontSize: 16),
+                          },
+                          child: Text(
+                            'เพิ่ม',
+                            style: TextStyle(
+                                color: Colors.blueAccent, fontSize: 16),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   Expanded(
@@ -141,6 +143,9 @@ void showContestDialog({
                                   reportDoc.data() as Map<String, dynamic>;
 
                               final base64String = report['img_1'];
+                              final hasImage = base64String != null &&
+                                  base64String.isNotEmpty;
+
                               final date = DateTime.parse(report['date']);
                               final idContest = reportDoc.id;
 
@@ -207,7 +212,7 @@ void showContestDialog({
                                                 BorderRadius.circular(10),
                                           ),
                                           padding: EdgeInsets.all(2),
-                                          child: base64String != null
+                                          child: hasImage
                                               ? ClipRRect(
                                                   borderRadius:
                                                       BorderRadius.circular(10),
@@ -218,6 +223,8 @@ void showContestDialog({
                                                     fit: BoxFit.cover,
                                                     errorBuilder: (context,
                                                         error, stackTrace) {
+                                                      print(
+                                                          'Error displaying image: $error');
                                                       return Icon(
                                                         LineAwesomeIcons
                                                             .certificate,
@@ -229,6 +236,7 @@ void showContestDialog({
                                               : Icon(
                                                   LineAwesomeIcons.certificate,
                                                   color: Colors.grey[600],
+                                                  size: 50,
                                                 ),
                                         ),
                                         SizedBox(width: 12),

@@ -69,7 +69,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
   void initState() {
     super.initState();
     user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (user != null && widget.petId.isNotEmpty) {
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
       _fetchVaccinationData();
@@ -97,6 +97,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
         });
       }
     }
+    print(userId);
   }
 
   Future<void> _loadAllPet(String petId) async {
@@ -138,28 +139,51 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
   }
 
   void showImageDialog(BuildContext context, String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(20.0)),
-                child: Image.memory(
-                  base64Decode(imageUrl),
-                  fit: BoxFit.cover,
+    try {
+      final decodedImage = base64Decode(imageUrl);
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                  child: Image.memory(
+                    decodedImage,
+                    fit: BoxFit.cover,
+                  ),
                 ),
+              ],
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      print('Error decoding base64 image: $e');
+      // แสดงภาพพื้นฐานหรือข้อความข้อผิดพลาด
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Error'),
+            content: Text('Could not decode image.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
               ),
             ],
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
 
   String calculateAge(DateTime birthdate) {
@@ -192,10 +216,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
   // ดึงข้อมูล Vac_table ที่บันทึกลงไป
   Future<void> _fetchVaccinationData() async {
+    if (pet_user.isEmpty || pet_id.isEmpty) {
+      print('Pet user or Pet ID is empty.');
+      return;
+    }
+
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('vac_history')
-          .doc(userId)
+          .doc(pet_user)
           .collection('vac_pet')
           .where('pet_id', isEqualTo: pet_id)
           .get();
@@ -431,16 +460,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                       title: "ประวัติการจับคู่",
                       icon: LineAwesomeIcons.history,
                       onPress: () => showHistoryDialog(
-                          context: context,
-                          userId: userId ?? '',
-                          petId: pet_id)),
+                          context: context, userId: pet_user, petId: pet_id)),
                   MenuPetWidget(
                       title: "การประกวด",
                       icon: LineAwesomeIcons.certificate,
                       onPress: () => showContestDialog(
                           context: context,
-                          userId: userId ?? '',
-                          petId: pet_id)),
+                          userId: pet_user,
+                          petId: pet_id,
+                          userPet: userId ?? '')),
                   MenuPetWidget(
                     title: "ใบเพ็ดดีกรี",
                     icon: LineAwesomeIcons.dna,
@@ -451,7 +479,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                           pageBuilder:
                               (context, animation, secondaryAnimation) =>
                                   PetdigreeDetailPage(
-                            userId: userId ?? '',
+                            userId: pet_user,
                             petId: pet_id,
                           ),
                           transitionsBuilder:
@@ -611,13 +639,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
           SizedBox(height: 10),
           // แสดงข้อมูลบันทึกประจำเดือน
           FutureBuilder<QuerySnapshot>(
-            future: FirebaseFirestore.instance
-                .collection('report_period')
-                .doc(userId)
-                .collection('period_pet')
-                .where('pet_id', isEqualTo: widget.petId)
-                .orderBy('date', descending: true) // เรียงลำดับจากวันที่ใหม่สุด
-                .get(),
+            future: (pet_user.isNotEmpty)
+                ? FirebaseFirestore.instance
+                    .collection('report_period')
+                    .doc(pet_user)
+                    .collection('period_pet')
+                    .where('pet_id', isEqualTo: widget.petId)
+                    .orderBy('date', descending: true)
+                    .get()
+                : null,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const CircularProgressIndicator();
@@ -651,7 +681,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                                 (context, animation, secondaryAnimation) =>
                                     PeriodDetailPage(
                               report: report,
-                              userId: userId ?? '',
+                              userId: pet_user,
                               idPeriod: idPeriod,
                             ),
                             transitionsBuilder: (context, animation,
@@ -891,13 +921,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
               const SizedBox(height: 5),
               // แสดงข้อมูลบันทึกวัคซีน
               FutureBuilder<QuerySnapshot>(
-                future: FirebaseFirestore.instance
-                    .collection('vac_more')
-                    .doc(userId)
-                    .collection('vac_pet')
-                    .where('pet_id', isEqualTo: widget.petId)
-                    .orderBy('date', descending: true)
-                    .get(),
+                future: (pet_user.isNotEmpty)
+                    ? FirebaseFirestore.instance
+                        .collection('vac_more')
+                        .doc(pet_user)
+                        .collection('vac_pet')
+                        .where('pet_id', isEqualTo: widget.petId)
+                        .orderBy('date', descending: true)
+                        .get()
+                    : null,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -924,7 +956,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                                     (context, animation, secondaryAnimation) =>
                                         VaccineDetailPage(
                                   report: report,
-                                  userId: userId ?? '',
+                                  userId: pet_user,
                                   pet_type: pet_type,
                                 ),
                                 transitionsBuilder: (context, animation,
@@ -965,8 +997,6 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
     Color getStatusColor(String status) {
       switch (status) {
-        case 'มีชีวิต':
-          return Colors.green;
         case 'เสียชีวิต':
           return Colors.red;
         case 'พร้อมผสมพันธ์':
@@ -1033,31 +1063,27 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              petName,
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              ' ($status)',
-                              style: TextStyle(
-                                color: getStatusColor(status),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          petName,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         Text(
                           type,
                           style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          '($status)',
+                          style: TextStyle(
+                            color: getStatusColor(status),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -1075,13 +1101,13 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                       child: GestureDetector(
                         onTap: () {
                           print(pet_user);
-                          print(userId.toString());
+                          print(pet_user);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ProfileAllUserPage(
                                 userId: pet_user,
-                                userId_req: userId.toString(),
+                                userId_req: pet_user,
                               ),
                             ),
                           );

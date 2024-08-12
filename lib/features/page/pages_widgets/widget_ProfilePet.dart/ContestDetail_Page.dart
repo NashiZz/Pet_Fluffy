@@ -1,4 +1,5 @@
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/EditContest_Page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
@@ -21,6 +22,7 @@ class ContestDetailPage extends StatefulWidget {
 }
 
 class _ContestDetailPageState extends State<ContestDetailPage> {
+  User? user = FirebaseAuth.instance.currentUser;
   late Map<String, dynamic> _report;
   late List<String> _imageBase64Strings;
 
@@ -89,10 +91,11 @@ class _ContestDetailPageState extends State<ContestDetailPage> {
         title: Text('ข้อมูลการประกวด'),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () => _navigateToEditContestPage(),
-            icon: const Icon(LineAwesomeIcons.edit),
-          ),
+          if (widget.userId == user!.uid)
+            IconButton(
+              onPressed: () => _navigateToEditContestPage(),
+              icon: const Icon(LineAwesomeIcons.edit),
+            ),
         ],
       ),
       body: Padding(
