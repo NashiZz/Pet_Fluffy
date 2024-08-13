@@ -231,15 +231,6 @@ class _Setting_PageState extends State<Setting_Page> {
                       isAnonymous: isAnonymous,
                     ),
                     const SizedBox(height: 10),
-                    MenuWidget(
-                      title: "ตั้งค่าอื่นๆ",
-                      icon: LineAwesomeIcons.toggle_on,
-                      onPress: () {
-                        Get.to(() => const SetNotiandLocationPage());
-                      },
-                      isAnonymous: isAnonymous,
-                    ),
-                    const SizedBox(height: 10),
                     const Divider(color: Colors.grey),
                     const SizedBox(height: 10),
                     MenuWidget(

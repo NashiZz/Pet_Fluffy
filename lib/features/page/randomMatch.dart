@@ -61,8 +61,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
   late List<Offset> _randomOffsets;
+  late Future<List<Map<String, dynamic>>> _futurePets;
   bool _offsetsInitialized = false;
   bool hasPrimaryPet = false;
+  final ScrollController _scrollController = ScrollController();
+  bool _hasScrolledToTop = false;
+  bool _isAtTop = true; // ตรวจสอบว่าอยู่ที่ตำแหน่งบนสุดหรือไม่
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
@@ -470,6 +474,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _printStoredPetId();
     _fetchUnreadNotifications();
     _markAllNotificationsAsRead();
+    _futurePets = _getPets();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -479,6 +484,42 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     // กำหนด Animation สำหรับ opacity
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasScrolledToTop) {
+        _scrollToTop();
+        setState(() {
+          _hasScrolledToTop = true;
+        });
+      }
+    });
+    _scrollController.addListener(() {
+      // ตรวจสอบว่า ScrollController อยู่ที่ตำแหน่งบนสุดหรือไม่
+      if (_scrollController.offset <=
+              _scrollController.position.minScrollExtent &&
+          !_scrollController.position.outOfRange) {
+        if (!_isAtTop) {
+          setState(() {
+            _isAtTop = true;
+          });
+        }
+      } else {
+        if (_isAtTop) {
+          setState(() {
+            _isAtTop = false;
+          });
+        }
+      }
+    });
+  }
+
+  void _scrollToTop() {
+    // การเลื่อนที่นุ่มนวล
+    _scrollController.animateTo(
+      0,
+      duration: Duration(milliseconds: 500), // ระยะเวลาในการเลื่อน
+      curve: Curves.easeInOut, // รูปแบบการเคลื่อนไหว
     );
   }
 
@@ -738,436 +779,411 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
+  Future<void> _refreshData() async {
+    // ทำการดึงข้อมูลใหม่
+    setState(() {
+      // รีเซ็ตข้อมูล หรือทำการเรียก Future ใหม่เพื่อดึงข้อมูลใหม่
+      // สมมติว่า _getPets() เป็น Future ที่ดึงข้อมูลใหม่
+      // ทำให้ FutureBuilder เรียก Future ใหม่เมื่อรีเฟรช
+      _futurePets = _getPets();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _initializeOffsets(context);
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Card(
-              elevation: 4,
-              margin: const EdgeInsets.all(10),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.transparent,
-                          child: ClipOval(
-                            child: GestureDetector(
-                              onTap: () {
-                                if (petImg != null) {
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (scrollNotification) {
+          // ใช้สำหรับตรวจสอบเมื่อผู้ใช้เลื่อนขึ้นสุด
+          if (scrollNotification is ScrollUpdateNotification) {
+            if (_scrollController.offset <=
+                _scrollController.position.minScrollExtent) {
+              // การรีเฟรชข้อมูลหรือการทำงานที่ต้องการเมื่อเลื่อนขึ้นสุด
+              print('Reached the top');
+            }
+          }
+          return false;
+        },
+        child: SafeArea(
+          child: Column(
+            children: [
+              Card(
+                elevation: 4,
+                margin: const EdgeInsets.all(10),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Colors.transparent,
+                            child: ClipOval(
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (petImg != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            Profile_pet_Page(petId: petId!),
+                                      ),
+                                    );
+                                  } else {
+                                    print('User image is not available');
+                                  }
+                                },
+                                child: FutureBuilder(
+                                  future:
+                                      _getImage(), // Future function to get the image
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      // Show a loading indicator while waiting
+                                      return Center(
+                                          child: CircularProgressIndicator());
+                                    } else if (snapshot.hasError) {
+                                      // Handle errors, e.g., image not found
+                                      return Icon(Icons.error, size: 40);
+                                    } else {
+                                      // Show the image when done
+                                      return snapshot.data as Widget;
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _controller,
+                              decoration: InputDecoration(
+                                hintText: 'ค้นหา',
+                                border: InputBorder.none,
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.search),
+                                  onPressed: _logSearchValue,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: isAnonymousUser
+                                ? null
+                                : () {
+                                    historyMatch();
+                                  },
+                            icon: const Icon(
+                              Icons.favorite,
+                              color: Colors.pinkAccent,
+                            ),
+                          ),
+                          Stack(
+                            children: [
+                              IconButton(
+                                onPressed: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          Profile_pet_Page(petId: petId!),
-                                    ),
-                                  );
-                                } else {
-                                  print('User image is not available');
-                                }
-                              },
-                              child: FutureBuilder(
-                                future:
-                                    _getImage(), // Future function to get the image
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    // Show a loading indicator while waiting
-                                    return Center(
-                                        child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    // Handle errors, e.g., image not found
-                                    return Icon(Icons.error, size: 40);
-                                  } else {
-                                    // Show the image when done
-                                    return snapshot.data as Widget;
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            decoration: InputDecoration(
-                              hintText: 'ค้นหา',
-                              border: InputBorder.none,
-                              suffixIcon: IconButton(
-                                icon: const Icon(Icons.search),
-                                onPressed: _logSearchValue,
-                              ),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: isAnonymousUser
-                              ? null
-                              : () {
-                                  historyMatch();
-                                },
-                          icon: const Icon(
-                            Icons.favorite,
-                            color: Colors.pinkAccent,
-                          ),
-                        ),
-                        Stack(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NotificationMore_Page(
-                                      idPet: petId!,
-                                    ),
-                                  ),
-                                ).then((_) {
-                                  _fetchUnreadNotifications(); // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่านหลังจากกลับมา
-                                });
-                              },
-                              icon: Icon(
-                                Icons.notifications_rounded,
-                                color: Colors.yellow.shade800,
-                              ),
-                            ),
-                            if (unreadNotifications > 0)
-                              Positioned(
-                                right: 6,
-                                top: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.all(0),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  constraints: BoxConstraints(
-                                    minWidth: 16,
-                                    minHeight: 16,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '$unreadNotifications',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
+                                          NotificationMore_Page(
+                                        idPet: petId!,
                                       ),
                                     ),
-                                  ),
+                                  ).then((_) {
+                                    _fetchUnreadNotifications(); // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่านหลังจากกลับมา
+                                  });
+                                },
+                                icon: Icon(
+                                  Icons.notifications_rounded,
+                                  color: Colors.yellow.shade800,
                                 ),
                               ),
-                          ],
-                        )
-                      ],
-                    ),
-                    InkWell(
-                      onTap: () {
-                        showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled:
-                              true, // เพิ่มการตั้งค่านี้เพื่อให้สามารถเลื่อนขึ้นลงได้
-                          builder: (BuildContext context) {
-                            return SizedBox(
-                              height: MediaQuery.of(context).size.height *
-                                  0.8, // ปรับขนาดความสูงตามต้องการ
-                              child: SingleChildScrollView(
-                                // เพิ่ม SingleChildScrollView เพื่อให้สามารถเลื่อนขึ้นลงได้
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      const Text('การค้นหาขั้นสูง',
-                                          style: TextStyle(fontSize: 20)),
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child:
-                                                DropdownButtonFormField<String>(
-                                              value: _selectedDistance,
-                                              items:
-                                                  _Distance.map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _selectedDistance = newValue;
-                                                });
-                                              },
-                                              decoration: InputDecoration(
-                                                labelText: 'ระยะความห่าง',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          30.0),
-                                                ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 10,
-                                                  horizontal: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child:
-                                                DropdownButtonFormField<String>(
-                                              value: _selectedAge,
-                                              items: _Age.map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _selectedAge = newValue;
-                                                });
-                                              },
-                                              decoration: InputDecoration(
-                                                labelText: 'ช่วงอายุ',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          30.0),
-                                                ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 10,
-                                                  horizontal: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: TextField(
-                                              style:
-                                                  const TextStyle(fontSize: 15),
-                                              controller: _otherBreedController,
-                                              decoration: InputDecoration(
-                                                labelText: 'สายพันธุ์',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          30.0),
-                                                ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 10,
-                                                  horizontal: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: TextField(
-                                              style:
-                                                  const TextStyle(fontSize: 15),
-                                              controller: _otherColor,
-                                              decoration: InputDecoration(
-                                                labelText: 'สี',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          30.0),
-                                                ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 10,
-                                                  horizontal: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 15),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child:
-                                                DropdownButtonFormField<String>(
-                                              value: _selectedPrice,
-                                              items: _Price.map((String value) {
-                                                return DropdownMenuItem<String>(
-                                                  value: value,
-                                                  child: Text(value),
-                                                );
-                                              }).toList(),
-                                              onChanged: (String? newValue) {
-                                                setState(() {
-                                                  _selectedPrice = newValue;
-                                                });
-                                              },
-                                              decoration: InputDecoration(
-                                                labelText:
-                                                    'ราคา (ค่าผสมพันธุ์)',
-                                                border: OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          30.0),
-                                                ),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 10,
-                                                  horizontal: 15,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 15),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _selectedDistance =
-                                                _selectedDistance;
-                                            _selectedAge = _selectedAge;
-                                            _otherBreedController.text =
-                                                _otherBreedController.text;
-                                            _otherColor.text = _otherColor.text;
-                                            _selectedPrice = _selectedPrice;
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(30),
-                                          ),
+                              if (unreadNotifications > 0)
+                                Positioned(
+                                  right: 6,
+                                  top: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '$unreadNotifications',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
                                         ),
-                                        child: const Text('ค้นหา',
-                                            style: TextStyle(fontSize: 16)),
                                       ),
-                                    ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        // ใช้ขนาดที่จำเป็นเท่านั้น
-                        children: [
-                          Text(
-                            'ค้นหาขั้นสูง',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: const Color.fromARGB(
-                                  255, 110, 110, 110), // สีของตัวอักษร
-                            ),
-                          ),
-                          const SizedBox(
-                              width: 8.0), // ระยะห่างระหว่าง Text และ Icon
-                          Icon(
-                            Icons.keyboard_arrow_down_sharp,
-                            color: const Color.fromARGB(
-                                255, 110, 110, 110), // สีของไอคอน
-                          ),
+                            ],
+                          )
                         ],
                       ),
-                    )
-                  ],
+                      InkWell(
+                        onTap: () {
+                          showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled:
+                                true, // เพิ่มการตั้งค่านี้เพื่อให้สามารถเลื่อนขึ้นลงได้
+                            builder: (BuildContext context) {
+                              return SizedBox(
+                                height: MediaQuery.of(context).size.height *
+                                    0.8, // ปรับขนาดความสูงตามต้องการ
+                                child: SingleChildScrollView(
+                                  // เพิ่ม SingleChildScrollView เพื่อให้สามารถเลื่อนขึ้นลงได้
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(20.0),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        const Text('การค้นหาขั้นสูง',
+                                            style: TextStyle(fontSize: 20)),
+                                        const SizedBox(height: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: DropdownButtonFormField<
+                                                  String>(
+                                                value: _selectedDistance,
+                                                items: _Distance.map(
+                                                    (String value) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: value,
+                                                    child: Text(value),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  setState(() {
+                                                    _selectedDistance =
+                                                        newValue;
+                                                  });
+                                                },
+                                                decoration: InputDecoration(
+                                                  labelText: 'ระยะความห่าง',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0),
+                                                  ),
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    vertical: 10,
+                                                    horizontal: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: DropdownButtonFormField<
+                                                  String>(
+                                                value: _selectedAge,
+                                                items: _Age.map((String value) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: value,
+                                                    child: Text(value),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  setState(() {
+                                                    _selectedAge = newValue;
+                                                  });
+                                                },
+                                                decoration: InputDecoration(
+                                                  labelText: 'ช่วงอายุ',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0),
+                                                  ),
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    vertical: 10,
+                                                    horizontal: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextField(
+                                                style: const TextStyle(
+                                                    fontSize: 15),
+                                                controller:
+                                                    _otherBreedController,
+                                                decoration: InputDecoration(
+                                                  labelText: 'สายพันธุ์',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0),
+                                                  ),
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    vertical: 10,
+                                                    horizontal: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextField(
+                                                style: const TextStyle(
+                                                    fontSize: 15),
+                                                controller: _otherColor,
+                                                decoration: InputDecoration(
+                                                  labelText: 'สี',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0),
+                                                  ),
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    vertical: 10,
+                                                    horizontal: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 15),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: DropdownButtonFormField<
+                                                  String>(
+                                                value: _selectedPrice,
+                                                items:
+                                                    _Price.map((String value) {
+                                                  return DropdownMenuItem<
+                                                      String>(
+                                                    value: value,
+                                                    child: Text(value),
+                                                  );
+                                                }).toList(),
+                                                onChanged: (String? newValue) {
+                                                  setState(() {
+                                                    _selectedPrice = newValue;
+                                                  });
+                                                },
+                                                decoration: InputDecoration(
+                                                  labelText:
+                                                      'ราคา (ค่าผสมพันธุ์)',
+                                                  border: OutlineInputBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30.0),
+                                                  ),
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                    vertical: 10,
+                                                    horizontal: 15,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 15),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedDistance =
+                                                  _selectedDistance;
+                                              _selectedAge = _selectedAge;
+                                              _otherBreedController.text =
+                                                  _otherBreedController.text;
+                                              _otherColor.text =
+                                                  _otherColor.text;
+                                              _selectedPrice = _selectedPrice;
+                                            });
+                                            Navigator.pop(context);
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(30),
+                                            ),
+                                          ),
+                                          child: const Text('ค้นหา',
+                                              style: TextStyle(fontSize: 16)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          // ใช้ขนาดที่จำเป็นเท่านั้น
+                          children: [
+                            Text(
+                              'ค้นหาขั้นสูง',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: const Color.fromARGB(
+                                    255, 110, 110, 110), // สีของตัวอักษร
+                              ),
+                            ),
+                            const SizedBox(
+                                width: 8.0), // ระยะห่างระหว่าง Text และ Icon
+                            Icon(
+                              Icons.keyboard_arrow_down_sharp,
+                              color: const Color.fromARGB(
+                                  255, 110, 110, 110), // สีของไอคอน
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _getPets(), // ใช้ Future ที่คงที่
-              builder: (BuildContext context,
-                  AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 15),
-                        Text('กำลังโหลดข้อมูล...')
-                      ],
-                    ),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return Text('Error: ${snapshot.error}');
-                }
-
-                if (snapshot.data == null || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Text('ไม่พบข้อมูลสัตว์เลี้ยง'),
-                  );
-                }
-
-                // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
-                bool isAnonymousUser =
-                    FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
-
-                // กำหนดเพศตรงข้าม
-                List<Map<String, dynamic>> filteredPetData;
-                if (isAnonymousUser) {
-                  // หากเป็นผู้ใช้ Anonymous ให้แสดงข้อมูลสัตว์เลี้ยงทั้งหมด
-                  filteredPetData = snapshot.data!;
-                } else {
-                  // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
-                  String oppositeGender =
-                      (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
-                  filteredPetData = snapshot.data!
-                      .where((pet) =>
-                          pet['type_pet'] == petType &&
-                          pet['gender'] == oppositeGender &&
-                          pet['status'] == 'พร้อมผสมพันธุ์')
-                      .toList();
-                }
-
-                // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
-                if (filteredPetData.isEmpty) {
-                  // หากว่างเปล่า ให้แสดงสัตว์เลี้ยงทั้งหมด
-                  filteredPetData = snapshot.data!;
-                }
-
-                return FutureBuilder<List<Map<String, dynamic>>>(
-                    future: () async {
-                  List<Map<String, dynamic>> uniquePetDataMatch =
-                      await filterUniquePetsAsync(
-                          filteredPetData, petDataMatchList, isSamePet);
-                  return await filterUniquePetsAsync(
-                      uniquePetDataMatch, petDataFavoriteList, isSamePet);
-                }(), builder: (context,
-                        AsyncSnapshot<List<Map<String, dynamic>>>
-                            filteredSnapshot) {
-                  if (filteredSnapshot.connectionState ==
-                      ConnectionState.waiting) {
+              // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _futurePets, // ใช้ Future ที่คงที่
+                builder: (BuildContext context,
+                    AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1179,647 +1195,742 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                       ),
                     );
                   }
-                  if (filteredSnapshot.hasError) {
-                    return Text('Error: ${filteredSnapshot.error}');
+                  if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
                   }
-                  if (filteredSnapshot.data == null ||
-                      filteredSnapshot.data!.isEmpty) {
+
+                  if (snapshot.data == null || snapshot.data!.isEmpty) {
                     return Center(
-                      child: Text('คุณได้จับคู่หมดแล้ว'),
+                      child: Text('ไม่พบข้อมูลสัตว์เลี้ยง'),
                     );
                   }
 
-                  List<Map<String, dynamic>> filteredData =
-                      filteredSnapshot.data!;
-                  if (_selectedDistance == null &&
-                      _selectedAge == null &&
-                      _otherBreedController.text == '' &&
-                      _otherColor.text == '' &&
-                      _selectedPrice == null) {
-                    if (search.toString() != 'null') {
+                  // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
+                  bool isAnonymousUser =
+                      FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
+
+                  // กำหนดเพศตรงข้าม
+                  List<Map<String, dynamic>> filteredPetData;
+                  if (isAnonymousUser) {
+                    // หากเป็นผู้ใช้ Anonymous ให้แสดงข้อมูลสัตว์เลี้ยงทั้งหมด
+                    filteredPetData = snapshot.data!;
+                  } else {
+                    // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
+                    String oppositeGender =
+                        (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                    filteredPetData = snapshot.data!
+                        .where((pet) =>
+                            pet['type_pet'] == petType &&
+                            pet['gender'] == oppositeGender &&
+                            pet['status'] == 'พร้อมผสมพันธุ์')
+                        .toList();
+                  }
+
+                  // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
+                  if (filteredPetData.isEmpty) {
+                    // หากว่างเปล่า ให้แสดงสัตว์เลี้ยงทั้งหมด
+                    filteredPetData = snapshot.data!;
+                  }
+
+                  return FutureBuilder<List<Map<String, dynamic>>>(
+                      future: () async {
+                    List<Map<String, dynamic>> uniquePetDataMatch =
+                        await filterUniquePetsAsync(
+                            filteredPetData, petDataMatchList, isSamePet);
+                    return await filterUniquePetsAsync(
+                        uniquePetDataMatch, petDataFavoriteList, isSamePet);
+                  }(), builder: (context,
+                          AsyncSnapshot<List<Map<String, dynamic>>>
+                              filteredSnapshot) {
+                    if (filteredSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 15),
+                            Text('กำลังโหลดข้อมูล...')
+                          ],
+                        ),
+                      );
+                    }
+                    if (filteredSnapshot.hasError) {
+                      return Text('Error: ${filteredSnapshot.error}');
+                    }
+                    if (filteredSnapshot.data == null ||
+                        filteredSnapshot.data!.isEmpty) {
+                      return Center(
+                        child: Text('คุณได้จับคู่หมดแล้ว'),
+                      );
+                    }
+
+                    List<Map<String, dynamic>> filteredData =
+                        filteredSnapshot.data!;
+                    if (_selectedDistance == null &&
+                        _selectedAge == null &&
+                        _otherBreedController.text == '' &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null) {
+                      if (search.toString() != 'null') {
+                        List<Map<String, dynamic>> filteredPets =
+                            filteredData.where((pet) {
+                          // log(search.toString().toLowerCase());
+                          bool matchesName = pet['name']
+                              .toString()
+                              .toLowerCase()
+                              .contains(search.toString().toLowerCase());
+
+                          DateTime birthDate = DateTime.parse(pet['birthdate']);
+                          DateTime now = DateTime.now();
+                          int yearsDifference = now.year - birthDate.year;
+                          int monthsDifference = now.month - birthDate.month;
+
+                          if (now.day < birthDate.day) {
+                            monthsDifference--;
+                          }
+
+                          if (monthsDifference < 0) {
+                            yearsDifference--;
+                            monthsDifference += 12;
+                          }
+
+                          String ageDifference =
+                              '$yearsDifferenceปี$monthsDifferenceเดือน';
+
+                          bool matchesAge = ageDifference
+                              .toLowerCase()
+                              .contains(search.toString().toLowerCase());
+
+                          bool matchesBreed = pet['breed_pet']
+                              .toString()
+                              .toLowerCase()
+                              .contains(search.toString().toLowerCase());
+
+                          bool matchesGender = pet['gender']
+                              .toString()
+                              .toLowerCase()
+                              .contains(search.toString().toLowerCase());
+
+                          bool matchesColor = pet['color']
+                              .toString()
+                              .toLowerCase()
+                              .contains(search.toString().toLowerCase());
+
+                          return matchesName ||
+                              matchesAge ||
+                              matchesBreed ||
+                              matchesGender ||
+                              matchesColor;
+                        }).toList();
+                        petUserDataList = filteredPets;
+                      } else {
+                        petUserDataList = filteredData;
+                      }
+                    } else {
                       List<Map<String, dynamic>> filteredPets =
                           filteredData.where((pet) {
-                        // log(search.toString().toLowerCase());
-                        bool matchesName = pet['name']
-                            .toString()
-                            .toLowerCase()
-                            .contains(search.toString().toLowerCase());
+                        LatLng userLocation = LatLng(
+                          _locationData?.latitude ?? 0.0,
+                          _locationData?.longitude ?? 0.0,
+                        );
 
-                        DateTime birthDate = DateTime.parse(pet['birthdate']);
-                        DateTime now = DateTime.now();
-                        int yearsDifference = now.year - birthDate.year;
-                        int monthsDifference = now.month - birthDate.month;
-
-                        if (now.day < birthDate.day) {
-                          monthsDifference--;
+                        bool matchDistance = false;
+                        for (var doc in petPositions) {
+                          if (doc['pet_id'] == pet['pet_id']) {
+                            double lat =
+                                double.tryParse(doc['lat'].toString()) ?? 0.0;
+                            double lng =
+                                double.tryParse(doc['lng'].toString()) ?? 0.0;
+                            LatLng petLocation = LatLng(lat, lng);
+                            distanceStr =
+                                calculateDistance(userLocation, petLocation);
+                            print(pet['name']);
+                            print(pet['pet_id']);
+                            print(distanceStr);
+                            print(_selectedDistance);
+                            matchDistance = isDistanceRange(
+                                distanceStr, _selectedDistance.toString());
+                            print(matchDistance);
+                            break;
+                          }
                         }
-
-                        if (monthsDifference < 0) {
-                          yearsDifference--;
-                          monthsDifference += 12;
-                        }
-
-                        String ageDifference =
-                            '$yearsDifferenceปี$monthsDifferenceเดือน';
-
-                        bool matchesAge = ageDifference
-                            .toLowerCase()
-                            .contains(search.toString().toLowerCase());
 
                         bool matchesBreed = pet['breed_pet']
                             .toString()
                             .toLowerCase()
-                            .contains(search.toString().toLowerCase());
+                            .contains(_otherBreedController.text.toLowerCase());
 
-                        bool matchesGender = pet['gender']
-                            .toString()
-                            .toLowerCase()
-                            .contains(search.toString().toLowerCase());
+                        DateTime birthDate = DateTime.parse(pet['birthdate']);
+                        bool matchesAge =
+                            isAgeInRange(_selectedAge.toString(), birthDate);
 
                         bool matchesColor = pet['color']
                             .toString()
                             .toLowerCase()
-                            .contains(search.toString().toLowerCase());
+                            .contains(_otherColor.text.toLowerCase());
 
-                        return matchesName ||
-                            matchesAge ||
-                            matchesBreed ||
-                            matchesGender ||
-                            matchesColor;
+                        bool matchesPrice = isPriceInRange(
+                            pet['price'].toString(), _selectedPrice.toString());
+
+                        // return matchesPrice;
+                        if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesBreed &&
+                              matchesAge &&
+                              matchesColor &&
+                              matchesPrice &&
+                              matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesAge &&
+                              matchesColor &&
+                              matchesPrice &&
+                              matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesBreed &&
+                              matchesColor &&
+                              matchesPrice &&
+                              matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesBreed &&
+                              matchesAge &&
+                              matchesPrice &&
+                              matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesBreed &&
+                              matchesAge &&
+                              matchesColor &&
+                              matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesBreed &&
+                              matchesAge &&
+                              matchesColor &&
+                              matchesPrice;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesColor && matchesPrice && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesAge && matchesPrice && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesAge && matchesColor && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesAge && matchesColor && matchesPrice;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesBreed && matchesPrice && matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesBreed && matchesColor && matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesColor && matchesPrice;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesBreed && matchesAge && matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesAge && matchesPrice;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesAge && matchesColor;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance != null) {
+                          return matchesPrice && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesColor && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesColor && matchesPrice;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesAge && matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesAge && matchesPrice;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesAge && matchesColor;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchesBreed && matchDistance;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesPrice;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesColor;
+                        } else if (_otherBreedController.text != '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesBreed && matchesAge;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance != null) {
+                          return matchDistance;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice != null &&
+                            _selectedDistance == null) {
+                          return matchesPrice;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge == null &&
+                            _otherColor.text != '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesColor;
+                        } else if (_otherBreedController.text == '' &&
+                            _selectedAge != null &&
+                            _otherColor.text == '' &&
+                            _selectedPrice == null &&
+                            _selectedDistance == null) {
+                          return matchesAge;
+                        } else {
+                          return matchesBreed;
+                        }
                       }).toList();
                       petUserDataList = filteredPets;
-                    } else {
-                      petUserDataList = filteredData;
                     }
-                  } else {
-                    List<Map<String, dynamic>> filteredPets =
-                        filteredData.where((pet) {
-                      LatLng userLocation = LatLng(
-                        _locationData?.latitude ?? 0.0,
-                        _locationData?.longitude ?? 0.0,
-                      );
 
-                      bool matchDistance = false;
-                      for (var doc in petPositions) {
-                        if (doc['pet_id'] == pet['pet_id']) {
-                          double lat =
-                              double.tryParse(doc['lat'].toString()) ?? 0.0;
-                          double lng =
-                              double.tryParse(doc['lng'].toString()) ?? 0.0;
-                          LatLng petLocation = LatLng(lat, lng);
-                          distanceStr =
-                              calculateDistance(userLocation, petLocation);
-                          print(pet['name']);
-                          print(pet['pet_id']);
-                          print(distanceStr);
-                          print(_selectedDistance);
-                          matchDistance = isDistanceRange(
-                              distanceStr, _selectedDistance.toString());
-                          print(matchDistance);
-                          break;
-                        }
-                      }
+                    return Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _refreshData,
+                        //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          itemCount: petUserDataList.length,
+                          itemBuilder: (context, index) {
+                            Map<String, dynamic> petData =
+                                petUserDataList[index];
+                            DateTime birthDate =
+                                DateTime.parse(petData['birthdate']);
+                            final now = DateTime.now();
+                            int years = now.year - birthDate.year;
+                            int months = now.month - birthDate.month;
 
-                      bool matchesBreed = pet['breed_pet']
-                          .toString()
-                          .toLowerCase()
-                          .contains(_otherBreedController.text.toLowerCase());
-
-                      DateTime birthDate = DateTime.parse(pet['birthdate']);
-                      bool matchesAge =
-                          isAgeInRange(_selectedAge.toString(), birthDate);
-
-                      bool matchesColor = pet['color']
-                          .toString()
-                          .toLowerCase()
-                          .contains(_otherColor.text.toLowerCase());
-
-                      bool matchesPrice = isPriceInRange(
-                          pet['price'].toString(), _selectedPrice.toString());
-
-                      // return matchesPrice;
-                      if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesBreed &&
-                            matchesAge &&
-                            matchesColor &&
-                            matchesPrice &&
-                            matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesAge &&
-                            matchesColor &&
-                            matchesPrice &&
-                            matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesBreed &&
-                            matchesColor &&
-                            matchesPrice &&
-                            matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesBreed &&
-                            matchesAge &&
-                            matchesPrice &&
-                            matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesBreed &&
-                            matchesAge &&
-                            matchesColor &&
-                            matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesBreed &&
-                            matchesAge &&
-                            matchesColor &&
-                            matchesPrice;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesColor && matchesPrice && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesAge && matchesPrice && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesAge && matchesColor && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesAge && matchesColor && matchesPrice;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesBreed && matchesPrice && matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesBreed && matchesColor && matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesColor && matchesPrice;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesBreed && matchesAge && matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesAge && matchesPrice;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesAge && matchesColor;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance != null) {
-                        return matchesPrice && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesColor && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesColor && matchesPrice;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesAge && matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesAge && matchesPrice;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesAge && matchesColor;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchesBreed && matchDistance;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesPrice;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesColor;
-                      } else if (_otherBreedController.text != '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesBreed && matchesAge;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance != null) {
-                        return matchDistance;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice != null &&
-                          _selectedDistance == null) {
-                        return matchesPrice;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge == null &&
-                          _otherColor.text != '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesColor;
-                      } else if (_otherBreedController.text == '' &&
-                          _selectedAge != null &&
-                          _otherColor.text == '' &&
-                          _selectedPrice == null &&
-                          _selectedDistance == null) {
-                        return matchesAge;
-                      } else {
-                        return matchesBreed;
-                      }
-                    }).toList();
-                    petUserDataList = filteredPets;
-                  }
-
-                  return Expanded(
-                    //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
-                    child: ListView.builder(
-                      itemCount: petUserDataList.length,
-                      itemBuilder: (context, index) {
-                        Map<String, dynamic> petData = petUserDataList[index];
-                        DateTime birthDate =
-                            DateTime.parse(petData['birthdate']);
-                        final now = DateTime.now();
-                        int years = now.year - birthDate.year;
-                        int months = now.month - birthDate.month;
-
-                        if (now.day < birthDate.day) {
-                          months--;
-                        }
-
-                        if (months < 0) {
-                          years--;
-                          months += 12;
-                        }
-
-                        String ageString = '';
-                        if (years > 0) {
-                          ageString += '$years ปี';
-                          if (months > 0) {
-                            ageString += ' ';
-                          }
-                        }
-                        if (months > 0 || years == 0) {
-                          if (years == 0 && months == 0) {
-                            ageString = 'ไม่ถึง 1 เดือน';
-                          } else {
-                            ageString += '$months เดือน';
-                          }
-                        }
-
-                        //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
-                        return FutureBuilder<DocumentSnapshot>(
-                          future:
-                              ApiUserService.getUserData(petData['user_id']),
-                          builder: (BuildContext context,
-                              AsyncSnapshot<DocumentSnapshot> userSnapshot) {
-                            if (userSnapshot.hasError) {
-                              return Text('Error: ${userSnapshot.error}');
+                            if (now.day < birthDate.day) {
+                              months--;
                             }
-                            if (!userSnapshot.hasData ||
-                                !userSnapshot.data!.exists) {
-                              return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
-                            }
-                            //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา
-                            Map<String, dynamic> userData = userSnapshot.data!
-                                .data() as Map<String, dynamic>;
-                            String? userImageURL = userData['photoURL'];
 
-                            return Card(
-                              elevation: 4,
-                              margin: const EdgeInsets.all(10),
-                              child: Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                Profile_pet_AllPage(
-                                                    petId: petData['pet_id']),
-                                          ),
-                                        );
-                                      },
-                                      child: SizedBox(
-                                        width: 150,
-                                        height: 120,
-                                        child: AspectRatio(
-                                          aspectRatio: 1.5,
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8.0),
-                                            child: Image.memory(
-                                              base64Decode(
-                                                  petData['img_profile']),
-                                              fit: BoxFit.cover,
+                            if (months < 0) {
+                              years--;
+                              months += 12;
+                            }
+
+                            String ageString = '';
+                            if (years > 0) {
+                              ageString += '$years ปี';
+                              if (months > 0) {
+                                ageString += ' ';
+                              }
+                            }
+                            if (months > 0 || years == 0) {
+                              if (years == 0 && months == 0) {
+                                ageString = 'ไม่ถึง 1 เดือน';
+                              } else {
+                                ageString += '$months เดือน';
+                              }
+                            }
+
+                            //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
+                            return FutureBuilder<DocumentSnapshot>(
+                              future: ApiUserService.getUserData(
+                                  petData['user_id']),
+                              builder: (BuildContext context,
+                                  AsyncSnapshot<DocumentSnapshot>
+                                      userSnapshot) {
+                                if (userSnapshot.hasError) {
+                                  return Text('Error: ${userSnapshot.error}');
+                                }
+                                if (!userSnapshot.hasData ||
+                                    !userSnapshot.data!.exists) {
+                                  return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
+                                }
+                                //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา
+                                Map<String, dynamic> userData =
+                                    userSnapshot.data!.data()
+                                        as Map<String, dynamic>;
+                                String? userImageURL = userData['photoURL'];
+
+                                return Card(
+                                  elevation: 4,
+                                  margin: const EdgeInsets.all(10),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    Profile_pet_AllPage(
+                                                        petId:
+                                                            petData['pet_id']),
+                                              ),
+                                            );
+                                          },
+                                          child: SizedBox(
+                                            width: 150,
+                                            height: 120,
+                                            child: AspectRatio(
+                                              aspectRatio: 1.5,
+                                              child: ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(8.0),
+                                                child: Image.memory(
+                                                  base64Decode(
+                                                      petData['img_profile']),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    petData['name'],
+                                                    style: const TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 5),
+                                                  Icon(
+                                                    petData['gender'] ==
+                                                            'ตัวผู้'
+                                                        ? Icons.male
+                                                        : petData['gender'] ==
+                                                                'ตัวเมีย'
+                                                            ? Icons.female
+                                                            : Icons
+                                                                .help_outline,
+                                                    size: 20,
+                                                    color: petData['gender'] ==
+                                                            'ตัวผู้'
+                                                        ? Colors.purple
+                                                        : petData['gender'] ==
+                                                                'ตัวเมีย'
+                                                            ? Colors.pink
+                                                            : Colors.black,
+                                                  ),
+                                                ],
+                                              ),
                                               Text(
-                                                petData['name'],
+                                                petData['breed_pet'],
                                                 style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black54,
+                                                  fontSize: 16,
                                                 ),
                                               ),
-                                              const SizedBox(width: 5),
-                                              Icon(
-                                                petData['gender'] == 'ตัวผู้'
-                                                    ? Icons.male
-                                                    : petData['gender'] ==
-                                                            'ตัวเมีย'
-                                                        ? Icons.female
-                                                        : Icons.help_outline,
-                                                size: 20,
-                                                color: petData['gender'] ==
-                                                        'ตัวผู้'
-                                                    ? Colors.purple
-                                                    : petData['gender'] ==
-                                                            'ตัวเมีย'
-                                                        ? Colors.pink
-                                                        : Colors.black,
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            petData['breed_pet'],
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          Text(
-                                            ageString,
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          SizedBox(height: 10),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
-                                              GestureDetector(
-                                                onTap: (hasPrimaryPet &&
-                                                        !user!
-                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                                                    ? () {
-                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                                                        add_Faverite(
-                                                            petData['pet_id']);
-                                                      }
-                                                    : () {
-                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                                                        if (user!.isAnonymous) {
-                                                          _showSignInDialog(
-                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                                                        } else {
-                                                          _showNoPrimaryPetDialog(
-                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
-                                                        }
-                                                      },
-                                                child: Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.blue.shade600
-                                                            .withOpacity(0.8)
-                                                        : Colors.grey,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.grey
-                                                            .withOpacity(0.5),
-                                                        spreadRadius: 1,
-                                                        blurRadius: 3,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.star_rounded,
-                                                    color: Colors.yellow,
-                                                    size: 20,
-                                                  ),
+                                              Text(
+                                                ageString,
+                                                style: const TextStyle(
+                                                  color: Colors.black54,
+                                                  fontSize: 16,
                                                 ),
                                               ),
-                                              GestureDetector(
-                                                onTap: () => {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          ProfileAllUserPage(
-                                                        userId:
-                                                            petData['user_id'],
-                                                        userId_req:
-                                                            userId.toString(),
+                                              SizedBox(height: 10),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
+                                                  GestureDetector(
+                                                    onTap: (hasPrimaryPet &&
+                                                            !user!
+                                                                .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
+                                                        ? () {
+                                                            // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                                            add_Faverite(
+                                                                petData[
+                                                                    'pet_id']);
+                                                          }
+                                                        : () {
+                                                            // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                            if (user!
+                                                                .isAnonymous) {
+                                                              _showSignInDialog(
+                                                                  context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                            } else {
+                                                              _showNoPrimaryPetDialog(
+                                                                  context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                            }
+                                                          },
+                                                    child: Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        color: (hasPrimaryPet &&
+                                                                !user!
+                                                                    .isAnonymous)
+                                                            ? Colors
+                                                                .blue.shade600
+                                                                .withOpacity(
+                                                                    0.8)
+                                                            : Colors.grey,
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.grey
+                                                                .withOpacity(
+                                                                    0.5),
+                                                            spreadRadius: 1,
+                                                            blurRadius: 3,
+                                                            offset:
+                                                                const Offset(
+                                                                    0, 2),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ),
-                                                  )
-                                                },
-                                                child: Container(
-                                                  width: 50,
-                                                  height: 50,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey.shade500
-                                                        .withOpacity(0.5),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            40),
-                                                  ),
-                                                  child: Center(
-                                                    child: CircleAvatar(
-                                                      radius: 40,
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      child: ClipOval(
-                                                        child: userImageURL !=
-                                                                null
-                                                            ? Image.memory(
-                                                                base64Decode(
-                                                                    userImageURL),
-                                                                width: 40,
-                                                                height: 40,
-                                                                fit: BoxFit
-                                                                    .cover,
-                                                              )
-                                                            : const Icon(
-                                                                Icons.person,
-                                                                size: 40,
-                                                              ),
+                                                      child: Icon(
+                                                        Icons.star_rounded,
+                                                        color: Colors.yellow,
+                                                        size: 20,
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: (hasPrimaryPet &&
-                                                        !user!
-                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                                                    ? () {
-                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                                                        _showRequestDialog(
-                                                            context,
-                                                            petData['name'],
-                                                            petData['pet_id'],
-                                                            petData['user_id'],
-                                                            petData[
-                                                                'img_profile']);
-                                                      }
-                                                    : () {
-                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                                                        if (user!.isAnonymous) {
-                                                          _showSignInDialog(
-                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                                                        } else {
-                                                          _showNoPrimaryPetDialog(
-                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
-                                                        }
-                                                      },
-                                                child: Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.white
-                                                        : Colors
-                                                            .grey, // สีปุ่มเปลี่ยนตามสถานะ
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.grey
+                                                  GestureDetector(
+                                                    onTap: () => {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              ProfileAllUserPage(
+                                                            userId: petData[
+                                                                'user_id'],
+                                                            userId_req: userId
+                                                                .toString(),
+                                                          ),
+                                                        ),
+                                                      )
+                                                    },
+                                                    child: Container(
+                                                      width: 50,
+                                                      height: 50,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors
+                                                            .grey.shade500
                                                             .withOpacity(0.5),
-                                                        spreadRadius: 1,
-                                                        blurRadius: 3,
-                                                        offset:
-                                                            const Offset(0, 2),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(40),
                                                       ),
-                                                    ],
+                                                      child: Center(
+                                                        child: CircleAvatar(
+                                                          radius: 40,
+                                                          backgroundColor:
+                                                              Colors
+                                                                  .transparent,
+                                                          child: ClipOval(
+                                                            child:
+                                                                userImageURL !=
+                                                                        null
+                                                                    ? Image
+                                                                        .memory(
+                                                                        base64Decode(
+                                                                            userImageURL),
+                                                                        width:
+                                                                            40,
+                                                                        height:
+                                                                            40,
+                                                                        fit: BoxFit
+                                                                            .cover,
+                                                                      )
+                                                                    : const Icon(
+                                                                        Icons
+                                                                            .person,
+                                                                        size:
+                                                                            40,
+                                                                      ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
-                                                  child: Icon(
-                                                    Icons.favorite,
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.pinkAccent
-                                                        : Colors.white,
-                                                    size: 20,
+                                                  GestureDetector(
+                                                    onTap: (hasPrimaryPet &&
+                                                            !user!
+                                                                .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
+                                                        ? () {
+                                                            // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                                            _showRequestDialog(
+                                                                context,
+                                                                petData['name'],
+                                                                petData[
+                                                                    'pet_id'],
+                                                                petData[
+                                                                    'user_id'],
+                                                                petData[
+                                                                    'img_profile']);
+                                                          }
+                                                        : () {
+                                                            // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                            if (user!
+                                                                .isAnonymous) {
+                                                              _showSignInDialog(
+                                                                  context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                            } else {
+                                                              _showNoPrimaryPetDialog(
+                                                                  context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                            }
+                                                          },
+                                                    child: Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        color: (hasPrimaryPet &&
+                                                                !user!
+                                                                    .isAnonymous)
+                                                            ? Colors.white
+                                                            : Colors
+                                                                .grey, // สีปุ่มเปลี่ยนตามสถานะ
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.grey
+                                                                .withOpacity(
+                                                                    0.5),
+                                                            spreadRadius: 1,
+                                                            blurRadius: 3,
+                                                            offset:
+                                                                const Offset(
+                                                                    0, 2),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      child: Icon(
+                                                        Icons.favorite,
+                                                        color: (hasPrimaryPet &&
+                                                                !user!
+                                                                    .isAnonymous)
+                                                            ? Colors.pinkAccent
+                                                            : Colors.white,
+                                                        size: 20,
+                                                      ),
+                                                    ),
                                                   ),
-                                                ),
+                                                ],
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                  );
-                });
-              },
-            ),
-          ],
+                        ),
+                      ),
+                    );
+                  });
+                },
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: _isAnimating
@@ -1847,7 +1958,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 );
               },
             )
-          : null,
+          : FloatingActionButton(
+              onPressed: _scrollToTop,
+              child: Icon(Icons.arrow_upward),
+            ),
     );
   }
 
@@ -2280,7 +2394,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     );
   }
 
-  void sendNotificationToUser(String userIdd,String petRespone, String title, String body) async {
+  void sendNotificationToUser(
+      String userIdd, String petRespone, String title, String body) async {
     try {
       // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
       if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
@@ -2298,7 +2413,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           await sendPushMessage(fcmToken, title, body);
 
           // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
-          await _saveNotificationToFirestore(userIdd,petRespone, title, body);
+          await _saveNotificationToFirestore(userIdd, petRespone, title, body);
         } else {
           print("FCM Token is null, unable to send notification");
         }
