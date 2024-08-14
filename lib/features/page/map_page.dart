@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui' as ui;
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
@@ -12,6 +11,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -44,7 +44,6 @@ class _MapsPageState extends State<Maps_Page> {
   late String petId;
   String petImg = '';
   late String pet_type;
-  late String petName;
   late String gender;
   late String userId;
   late String userImageBase64;
@@ -94,27 +93,15 @@ class _MapsPageState extends State<Maps_Page> {
   void initState() {
     super.initState();
     location = Location();
-
     _locationSubscription =
         location.onLocationChanged.listen((LocationData currentLocation) {
-      _locationData = currentLocation;
-      _updateUserLocationMarker();
-      _loadSelectedLocation();
+      setState(() {
+        _locationData = currentLocation;
+        _updateUserLocationMarker();
+      });
     });
-
-    // แยกการโหลดข้อมูลเป็นครั้งๆ
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      getLocation();
-      _loadPetDataAsync();
-    });
-  }
-
-  void _loadPetDataAsync() async {
-    // ทำการโหลดข้อมูลสัตว์เลี้ยง
+    getLocation(); // เรียก getLocation ที่นี่
     _getUserDataFromFirestore();
-
-    // โหลดข้อมูลแยกกันเพื่อไม่ให้หนักไปในครั้งเดียว
-    _loadAllPetLocations(context);
   }
 
   @override
@@ -149,7 +136,6 @@ class _MapsPageState extends State<Maps_Page> {
           petImg = petDocSnapshot['img_profile'];
           pet_type = petDocSnapshot['type_pet'];
           gender = petDocSnapshot['gender'];
-          petName = petDocSnapshot['name'] ?? '';
 
           Map<String, dynamic>? userMap =
               await ApiUserService.getUserDataFromFirestore(userId);
@@ -291,17 +277,15 @@ class _MapsPageState extends State<Maps_Page> {
   }
 
   void _createUserLocationMarker() {
-    if (_locationData != null) {
-      _markers.add(Marker(
-        markerId: const MarkerId('currentLocation'),
-        position: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-        icon: BitmapDescriptor.defaultMarker,
-        infoWindow: const InfoWindow(
-          title: 'ตำแหน่งของคุณ',
-          snippet: 'อยู่ที่นี่',
-        ),
-      ));
-    }
+    _markers.add(Marker(
+      markerId: const MarkerId('currentLocation'),
+      position: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+      icon: BitmapDescriptor.defaultMarker,
+      infoWindow: const InfoWindow(
+        title: 'ตำแหน่งของคุณ',
+        snippet: 'อยู่ที่นี่',
+      ),
+    ));
   }
 
   void _updateUserLocationMarker() {
@@ -314,19 +298,19 @@ class _MapsPageState extends State<Maps_Page> {
 
   void getLocation() async {
     _locationData = await location.getLocation();
-    if (_locationData != null) {
-      setState(() {
-        _initialCameraPosition = CameraPosition(
-          bearing: 192.8334901395799,
-          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-          tilt: 59.4407176971435555,
-          zoom: 19.151926040649414,
-        );
-        _createUserLocationMarker();
-        _isMapInitialized = true;
-      });
-      _goToTheLake();
-    }
+    setState(() {
+      _initialCameraPosition = CameraPosition(
+        bearing: 192.8334901395799,
+        target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+        tilt: 59.4407176971435555,
+        zoom: 19.151926040649414,
+      );
+      _createUserLocationMarker();
+      _isMapInitialized =
+          true; // ตั้งค่าเป็น true เมื่อกำหนดค่าตำแหน่งเสร็จสิ้น
+    });
+    _goToTheLake();
+    _loadAllPetLocations(context);
   }
 
   void _logSearchValue() {
@@ -340,6 +324,7 @@ class _MapsPageState extends State<Maps_Page> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controllerSearch.text;
       search = searchValue.toString();
+      // _getUsage_pet();
       location = Location();
       _locationSubscription =
           location.onLocationChanged.listen((LocationData currentLocation) {
@@ -348,7 +333,7 @@ class _MapsPageState extends State<Maps_Page> {
           _updateUserLocationMarker();
         });
       });
-      getLocation();
+      getLocation(); // เรียก getLocation ที่นี่
       _getUserDataFromFirestore();
     });
   }
@@ -1011,316 +996,61 @@ class _MapsPageState extends State<Maps_Page> {
         .animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
   }
 
-  // ฟังก์ชันโหลดภาพจาก bytes
-  Future<ui.Image> _loadImage(Uint8List imgBytes) async {
-    final Completer<ui.Image> completer = Completer();
-    ui.decodeImageFromList(imgBytes, (ui.Image img) {
-      if (img != null) {
-        completer.complete(img);
-      } else {
-        completer.completeError('Failed to decode image');
-      }
-    });
-    return completer.future;
-  }
-
-  Future<BitmapDescriptor> _createCustomMarker(Uint8List imageBytes) async {
-    final double markerSize = 120; // ขนาดของ Marker
-    final double triangleHeight = 30; // ความสูงของสามเหลี่ยม
-
-    // สร้าง ui.Image จาก bytes
-    ui.Image image = await _loadImage(Uint8List.fromList(imageBytes));
-
-    // ขนาดที่แท้จริงของ Canvas ที่รองรับทั้ง Marker และสามเหลี่ยม
-    final double canvasWidth = markerSize;
-    final double canvasHeight = markerSize + triangleHeight;
-
-    // สร้าง Canvas สำหรับการวาดภาพ
-    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(pictureRecorder,
-        Rect.fromLTWH(0, 0, canvasWidth, canvasHeight)); // กำหนดขนาดของ Canvas
-
-    // วาดพื้นหลังกลม
-    final Paint circlePaint = Paint()
-      ..color = Colors.blueAccent // สีพื้นหลัง
-      ..style = PaintingStyle.fill; // เปลี่ยนเป็น fill สำหรับการเติมสี
-    canvas.drawCircle(
-        Offset(markerSize / 2, markerSize / 2), markerSize / 2, circlePaint);
-
-    // วาดเงา
-    final Paint shadowPaint = Paint()
-      ..color = Colors.black26
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(Offset(markerSize / 2, markerSize / 2 + 2),
-        markerSize / 2, shadowPaint);
-
-    // สร้าง Path เป็นรูปวงกลมเพื่อตัดภาพ (Clip)
-    final Path clipPath = Path()
-      ..addOval(Rect.fromCircle(
-          center: Offset(markerSize / 2, markerSize / 2),
-          radius: markerSize / 2 - 8)); // ใช้ borderWidth เพื่อ Clip
-
-    canvas.clipPath(clipPath);
-
-    // วาดรูปภาพที่เป็น marker
-    final double imageSize = markerSize - 16; // ลดขนาดให้เข้ากับขอบ
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(8, 8, imageSize, imageSize),
-      Paint(),
-    );
-
-    // วาด Polygon ที่มุมล่างให้เป็นรูปสามเหลี่ยมชี้ลง
-    final Paint trianglePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill; // เปลี่ยนเป็น fill สำหรับการเติมสี
-    final Path trianglePath = Path()
-      ..moveTo(markerSize / 2 - 20, markerSize) // จุดซ้ายล่างของสามเหลี่ยม
-      ..lineTo(markerSize / 2 + 20, markerSize) // จุดขวาล่างของสามเหลี่ยม
-      ..lineTo(
-          markerSize / 2, markerSize + triangleHeight) // จุดล่างสุดที่ชี้ลง
-      ..close();
-
-    // วาด Polygon
-    canvas.drawPath(trianglePath, trianglePaint);
-
-    // เพิ่มเงาให้กับสามเหลี่ยม
-    canvas.drawPath(
-        trianglePath.shift(Offset(0, 2)),
-        Paint()
-          ..color = Colors.black26
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4));
-
-    // แปลง Canvas เป็น BitmapDescriptor
-    final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-          canvasWidth.toInt(),
-          canvasHeight.toInt(),
-        );
-
-    final ByteData? byteData = await markerAsImage.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-
-    final Uint8List markerBytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.fromBytes(markerBytes);
-  }
-
-  Future<void> _loadSelectedLocation() async {
-    User? userData = FirebaseAuth.instance.currentUser;
-    if (userData != null) {
-      String userId = userData.uid;
-
-      try {
-        // ระบุคอลเลคชันที่จะใช้ใน Firestore
-        DocumentReference userDocRef =
-            FirebaseFirestore.instance.collection('user').doc(userId);
-
-        DocumentSnapshot userDoc = await userDocRef.get();
-
-        if (userDoc.exists) {
-          // ดึงข้อมูล lat และ lng จาก Firestore
-          double lat = userDoc.get('lat');
-          double lng = userDoc.get('lng');
-
-          // เก็บตำแหน่งใน _selectedLocation
-          setState(() {
-            _selectedLocation = LatLng(lat, lng);
-          });
-
-          // เพิ่ม Marker บนแผนที่
-          await _addExistingMarker(LatLng(lat,
-              lng)); // ใช้ await เพื่อให้แน่ใจว่า Marker ถูกเพิ่มก่อนที่จะอัปเดต UI
-        }
-      } catch (e) {
-        print('Error loading location from Firestore: $e');
-      }
-    }
-  }
-
-  void _debugBase64Image(String base64String) {
-    if (base64String == null || base64String.isEmpty) {
-      print('Base64 string is null or empty');
-    } else {
-      print('Base64 string length: ${base64String.length}');
-    }
-  }
-
-  Uint8List _base64ToUint8List(String base64String) {
-    try {
-      return base64Decode(base64String);
-    } catch (e) {
-      print('Error decoding Base64 string: $e');
-      return Uint8List(0); // ส่งกลับ Uint8List ว่างเปล่า
-    }
-  }
-
-  Future<void> _addExistingMarker(LatLng position) async {
-    try {
-      // ตรวจสอบ Base64 string
-      _debugBase64Image(petImg);
-
-      // แปลง Base64 string เป็น Uint8List
-      Uint8List imageBytes = _base64ToUint8List(petImg);
-
-      // ตรวจสอบว่าภาพถูกถอดรหัสอย่างถูกต้อง
-      if (imageBytes.isEmpty) {
-        throw Exception('Decoded image data is empty');
-      }
-
-      // สร้าง BitmapDescriptor ที่สวยงาม
-      final BitmapDescriptor customIcon = await _createCustomMarker(imageBytes);
-
-      // สร้าง Marker
-      final Marker existingMarker = Marker(
-        markerId: const MarkerId('userSelectedLocation'),
-        position: position,
-        icon: customIcon, // ใช้ไอคอนที่กำหนดเอง
-        infoWindow: InfoWindow(
-          title: '$petName',
-          snippet: 'สัตว์เลี้ยงของคุณอยู่ที่นี่', // ข้อความเพิ่มเติม
-        ),
-      );
-
-      setState(() {
-        // ลบ Marker ที่มีอยู่ก่อนหน้าออกจากแผนที่
-        _markers.removeWhere(
-            (marker) => marker.markerId.value == 'userSelectedLocation');
-        // เพิ่ม Marker ใหม่ที่ตำแหน่งใหม่
-        _markers.add(existingMarker);
-      });
-    } catch (e) {
-      print('Error loading pet icon: $e');
-    }
-  }
-
-  void _startSelectingLocation() async {
-    // สร้างตัวแปรเพื่อเก็บค่า markerId
-    final String markerId = 'selected-location';
-
+  //เลือกตำแหน่งแสดงผลสัตว์เลี้ยง
+  void _startSelectingLocation() {
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            contentPadding: EdgeInsets.zero,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.only(top: 20, right: 20, left: 20),
-                  alignment: Alignment.center,
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(5.0),
-                        child: Icon(
-                          Icons.location_on_rounded,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const Text(
-                        'เลือกตำแหน่งที่จะแสดงผลสัตว์เลี้ยง',
-                        style:
-                            TextStyle(fontSize: 18, color: Colors.deepPurple),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: double.maxFinite,
-                  height: 500,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: _selectedLocation ??
-                            LatLng(
-                              _locationData!.latitude!,
-                              _locationData!.longitude!,
-                            ),
-                        zoom: 14.4746,
-                      ),
-                      onTap: (LatLng location) async {
-                        setState(() {
-                          _selectedLocation = location;
-
-                          // เพิ่ม Marker แบบปกติที่ตำแหน่งที่เลือก
-                          _markers.removeWhere(
-                              (marker) => marker.markerId.value == markerId);
-                          _markers.add(
-                            Marker(
-                              markerId: MarkerId(markerId),
-                              position: _selectedLocation!,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(
-                                  BitmapDescriptor
-                                      .hueBlue), // Marker แบบปกติแต่เป็นสีฟ้า
-                            ),
-                          );
-                        });
-                      },
-                      markers: Set<Marker>.of(_markers),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 500,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(
+                          _locationData!.latitude!, _locationData!.longitude!),
+                      zoom: 14.4746,
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    children: [
-                      if (_selectedLocation != null)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              // อัปเดต Marker รูปสัตว์เลี้ยงที่ตำแหน่งใหม่
-                              final Uint8List imageBytes = base64Decode(petImg);
-                              final BitmapDescriptor customIcon =
-                                  await _createCustomMarker(imageBytes);
-
-                              setState(() {
-                                // อัปเดต Marker รูปสัตว์เลี้ยงที่ตำแหน่งใหม่
-                                _markers.removeWhere((marker) =>
-                                    marker.markerId.value == markerId);
-                                _markers.add(
-                                  Marker(
-                                    markerId: MarkerId(markerId),
-                                    position: _selectedLocation!,
-                                    icon: customIcon,
-                                  ),
-                                );
-                              });
-
-                              _selectLocation(_selectedLocation!);
-                              Navigator.of(context).pop();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
+                    onTap: (LatLng location) {
+                      setState(() {
+                        _selectedLocation = location;
+                      });
+                    },
+                    markers: _selectedLocation == null
+                        ? {}
+                        : {
+                            Marker(
+                              markerId: const MarkerId('selected-location'),
+                              position: _selectedLocation!,
                             ),
-                            child: const Text(
-                              'ยืนยันตำแหน่ง',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // ลบ Marker สีฟ้าออกจากแผนที่เมื่อปิด Dialog
-                            setState(() {
-                              _markers.removeWhere((marker) =>
-                                  marker.markerId.value == markerId);
-                            });
-                            Navigator.pop(context);
                           },
-                          child: const Text('ยกเลิก'),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-              ],
+                  if (_selectedLocation != null)
+                    Positioned(
+                      bottom: 10,
+                      child: Column(
+                        children: [
+                          Text('Selected Location: $_selectedLocation'),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _markers.add(Marker(
+                                markerId: const MarkerId('selected-location'),
+                                position: _selectedLocation!,
+                              ));
+                              _selectedLocation = null;
+                            },
+                            child: const Text('Confirm Location'),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         },
@@ -1357,6 +1087,21 @@ class _MapsPageState extends State<Maps_Page> {
 
   //เก็บตำแหน่งที่เลือกมาเก็บไว้ในนี้และ บันทึกลงฐานข้อมูล
   void _selectLocation(LatLng position) {
+    final Marker newMarker = Marker(
+      markerId: const MarkerId('userSelectedLocation'),
+      position: position,
+    );
+
+    setState(() {
+      _markers.add(newMarker);
+      _initialCameraPosition = CameraPosition(
+        target: position,
+        zoom: 14.0,
+      );
+      _isSelectingLocation = false;
+    });
+
+    _goToTheLake();
     _addLocationToFirestore(position);
   }
 
@@ -1411,7 +1156,7 @@ class _MapsPageState extends State<Maps_Page> {
         color: Colors.white,
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white,
+          color: Colors.grey.shade700,
           width: 6,
         ),
         boxShadow: [
@@ -1759,7 +1504,7 @@ class _MapsPageState extends State<Maps_Page> {
                       matchDistance) {
                     chekDataSearch = true;
                   } else {
-                    chekDataSearch = false;
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1771,8 +1516,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesPrice &&
                       matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -1784,8 +1529,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesPrice &&
                       matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1797,8 +1542,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesPrice &&
                       matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1810,8 +1555,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesColor &&
                       matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1823,8 +1568,8 @@ class _MapsPageState extends State<Maps_Page> {
                       matchesColor &&
                       matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -1833,8 +1578,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesColor && matchesPrice && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1843,8 +1588,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesAge && matchesPrice && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1853,8 +1598,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesAge && matchesColor && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1863,8 +1608,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesAge && matchesColor && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -1873,8 +1618,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesBreed && matchesPrice && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -1883,8 +1628,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesBreed && matchesColor && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -1893,8 +1638,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesColor && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1903,8 +1648,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesBreed && matchesAge && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1913,8 +1658,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesAge && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -1923,8 +1668,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesAge && matchesColor) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -1933,8 +1678,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesPrice && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -1943,8 +1688,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesColor && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -1953,8 +1698,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesColor && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1963,8 +1708,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesAge && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1973,8 +1718,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesAge && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -1983,8 +1728,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesAge && matchesColor) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -1993,8 +1738,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchesBreed && matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -2003,8 +1748,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge == null &&
@@ -2013,8 +1758,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesColor) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
@@ -2023,8 +1768,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesBreed && matchesAge) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -2033,8 +1778,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance != null) {
                   if (matchDistance) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -2043,8 +1788,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesPrice) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge == null &&
@@ -2053,8 +1798,8 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesColor) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else if (_otherBreedController.text == '' &&
                     _selectedAge != null &&
@@ -2063,14 +1808,14 @@ class _MapsPageState extends State<Maps_Page> {
                     _selectedDistance == null) {
                   if (matchesAge) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 } else {
                   if (matchesBreed) {
                     chekDataSearch = true;
-                  } else {
-                    chekDataSearch = false;
+                  }else {
+                    chekDataSearch=false;
                   }
                 }
 
