@@ -94,16 +94,27 @@ class _MapsPageState extends State<Maps_Page> {
   void initState() {
     super.initState();
     location = Location();
+
     _locationSubscription =
         location.onLocationChanged.listen((LocationData currentLocation) {
-      setState(() {
-        _locationData = currentLocation;
-        _updateUserLocationMarker();
-        _loadSelectedLocation();
-      });
+      _locationData = currentLocation;
+      _updateUserLocationMarker();
+      _loadSelectedLocation();
     });
-    getLocation(); // เรียก getLocation ที่นี่
+
+    // แยกการโหลดข้อมูลเป็นครั้งๆ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      getLocation();
+      _loadPetDataAsync();
+    });
+  }
+
+  void _loadPetDataAsync() async {
+    // ทำการโหลดข้อมูลสัตว์เลี้ยง
     _getUserDataFromFirestore();
+
+    // โหลดข้อมูลแยกกันเพื่อไม่ให้หนักไปในครั้งเดียว
+    _loadAllPetLocations(context);
   }
 
   @override
@@ -315,7 +326,6 @@ class _MapsPageState extends State<Maps_Page> {
         _isMapInitialized = true;
       });
       _goToTheLake();
-      _loadAllPetLocations(context);
     }
   }
 
@@ -1004,8 +1014,12 @@ class _MapsPageState extends State<Maps_Page> {
   // ฟังก์ชันโหลดภาพจาก bytes
   Future<ui.Image> _loadImage(Uint8List imgBytes) async {
     final Completer<ui.Image> completer = Completer();
-    ui.decodeImageFromList(Uint8List.fromList(imgBytes), (ui.Image img) {
-      completer.complete(img);
+    ui.decodeImageFromList(imgBytes, (ui.Image img) {
+      if (img != null) {
+        completer.complete(img);
+      } else {
+        completer.completeError('Failed to decode image');
+      }
     });
     return completer.future;
   }
@@ -1124,10 +1138,35 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
+  void _debugBase64Image(String base64String) {
+    if (base64String == null || base64String.isEmpty) {
+      print('Base64 string is null or empty');
+    } else {
+      print('Base64 string length: ${base64String.length}');
+    }
+  }
+
+  Uint8List _base64ToUint8List(String base64String) {
+    try {
+      return base64Decode(base64String);
+    } catch (e) {
+      print('Error decoding Base64 string: $e');
+      return Uint8List(0); // ส่งกลับ Uint8List ว่างเปล่า
+    }
+  }
+
   Future<void> _addExistingMarker(LatLng position) async {
     try {
+      // ตรวจสอบ Base64 string
+      _debugBase64Image(petImg);
+
       // แปลง Base64 string เป็น Uint8List
-      Uint8List imageBytes = base64Decode(petImg);
+      Uint8List imageBytes = _base64ToUint8List(petImg);
+
+      // ตรวจสอบว่าภาพถูกถอดรหัสอย่างถูกต้อง
+      if (imageBytes.isEmpty) {
+        throw Exception('Decoded image data is empty');
+      }
 
       // สร้าง BitmapDescriptor ที่สวยงาม
       final BitmapDescriptor customIcon = await _createCustomMarker(imageBytes);
