@@ -142,42 +142,16 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
         ),
         centerTitle: true,
         actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'menu1',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('แก้ไขข้อมูลส่วนตัว'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'menu2',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem),
-                      SizedBox(width: 8),
-                      Text('รายงานปัญหา'),
-                    ],
-                  ),
-                ),
-              ];
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const Edit_Profile_Page()));
             },
-            onSelected: (value) {
-              // เมื่อเลือกเมนู
-              if (value == 'menu1') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Edit_Profile_Page()));
-              } else if (value == 'menu2') {
-                _showNotification();
-              }
-            },
+            icon: const Icon(
+              Icons.edit,
+            ),
           ),
         ],
       ),

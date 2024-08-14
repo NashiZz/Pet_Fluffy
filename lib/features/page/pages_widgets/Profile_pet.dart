@@ -554,57 +554,33 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           centerTitle: true,
           toolbarHeight: 70,
           actions: [
-            PopupMenuButton(
-              itemBuilder: (BuildContext context) {
-                return [
-                  const PopupMenuItem(
-                    value: 'menu1',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit),
-                        SizedBox(width: 8),
-                        Text('แก้ไขข้อมูลส่วนตัว'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'menu2',
-                    child: Row(
-                      children: [
-                        Icon(Icons.report_problem),
-                        SizedBox(width: 8),
-                        Text('รายงานปัญหา'),
-                      ],
-                    ),
-                  ),
-                ];
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Edit_Pet_Page(petUserData: {
+                        'pet_id': pet_id,
+                        'name': petName,
+                        'breed_pet': type,
+                        'img_profile': petImageBase64,
+                        'color': color,
+                        'weight': weight,
+                        'gender': gender,
+                        'description': des,
+                        'price': price,
+                        'birthdate': birthdateStr,
+                        'type_pet': pet_type,
+                        'status': status
+                      }),
+                    )).then((_) {
+                  // Refresh data after returning from Edit_Pet_Page
+                  _refreshHomePage();
+                });
               },
-              onSelected: (value) {
-                // เมื่อเลือกเมนู
-                if (value == 'menu1') {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Edit_Pet_Page(petUserData: {
-                          'pet_id': pet_id,
-                          'name': petName,
-                          'breed_pet': type,
-                          'img_profile': petImageBase64,
-                          'color': color,
-                          'weight': weight,
-                          'gender': gender,
-                          'description': des,
-                          'price': price,
-                          'birthdate': birthdateStr,
-                          'type_pet': pet_type,
-                          'status': status
-                        }),
-                      )).then((_) {
-                    // Refresh data after returning from Edit_Pet_Page
-                    _refreshHomePage();
-                  });
-                } else if (value == 'menu2') {}
-              },
+              icon: const Icon(
+                Icons.edit,
+              ),
             ),
           ],
         ),

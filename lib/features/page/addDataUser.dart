@@ -316,7 +316,7 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
                                       color: Colors.white,
                                     )
                                   : const Text(
-                                      "เพิ่มข้อมูล",
+                                      "สมัครสมาชิก",
                                       style: TextStyle(
                                           color: Colors.white, fontSize: 18),
                                     )),

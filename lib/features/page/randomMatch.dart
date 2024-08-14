@@ -61,8 +61,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   late AnimationController _animationController;
   late Animation<double> _opacityAnimation;
   late List<Offset> _randomOffsets;
+  late Future<List<Map<String, dynamic>>> _futurePets;
   bool _offsetsInitialized = false;
   bool hasPrimaryPet = false;
+  final ScrollController _scrollController = ScrollController();
+  bool _hasScrolledToTop = false;
+  bool _isAtTop = true; // ตรวจสอบว่าอยู่ที่ตำแหน่งบนสุดหรือไม่
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
@@ -382,51 +386,40 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
   Future<List<Map<String, dynamic>>> _getPets() async {
     try {
-      // รับ UID ของผู้ใช้ปัจจุบัน
       String currentUserId = FirebaseAuth.instance.currentUser!.uid;
-
-      // ดึงข้อมูลสัตว์เลี้ยงจาก Firestore
       QuerySnapshot<Map<String, dynamic>> petUserDocsSnapshot =
           await FirebaseFirestore.instance
               .collection('Pet_User')
               .where('user_id', isNotEqualTo: currentUserId)
               .get();
-
       List<Map<String, dynamic>> petList = [];
-
       for (var doc in petUserDocsSnapshot.docs) {
         Map<String, dynamic> data = doc.data();
-
-        // ดึงข้อมูลผู้ใช้
         DocumentSnapshot userSnapshot =
             await ApiUserService.getUserData(data['user_id']);
-
         double lat = userSnapshot['lat'] ?? 0.0;
         double lng = userSnapshot['lng'] ?? 0.0;
-
-        // เพิ่มความสุ่มเล็กน้อย
         lat += Random().nextDouble() * 0.0002;
         lng += Random().nextDouble() * 0.0002;
-
-        // สร้าง Map ของตำแหน่ง
         Map<String, String> petPosition_ = {
           'lat': lat.toString(),
           'lng': lng.toString(),
           'user_id': data['user_id'] as String,
           'pet_id': data['pet_id'] as String,
         };
-
-        // เพิ่ม petPosition_ ลงใน List
         petPositions.add(petPosition_);
         petList.add(data);
       }
-
       petList.shuffle();
-
+      if (mounted) {
+        setState(() {
+          // Update your UI with the fetched petList
+        });
+      }
       return petList;
     } catch (e) {
       print('Error loading pet locations from Firestore: $e');
-      return []; // คืนค่าเป็น List ว่างในกรณีที่เกิดข้อผิดพลาด
+      return [];
     }
   }
 
@@ -470,6 +463,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _printStoredPetId();
     _fetchUnreadNotifications();
     _markAllNotificationsAsRead();
+    _futurePets = _getPets();
     // กำหนด AnimationController
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -480,12 +474,50 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasScrolledToTop) {
+        if (_scrollController.hasClients) {
+          _scrollToTop();
+        }
+        setState(() {
+          _hasScrolledToTop = true;
+        });
+      }
+    });
+
+    // _scrollController.addListener(() {
+    //   // ตรวจสอบว่า ScrollController อยู่ที่ตำแหน่งบนสุดหรือไม่
+    //   if (_scrollController.offset <=
+    //           _scrollController.position.minScrollExtent &&
+    //       !_scrollController.position.outOfRange) {
+    //     if (!_isAtTop) {
+    //       setState(() {
+    //         _isAtTop = true;
+    //       });
+    //     }
+    //   } else {
+    //     if (_isAtTop) {
+    //       setState(() {
+    //         _isAtTop = false;
+    //       });
+    //     }
+    //   }
+    // });
+  }
+
+  void _scrollToTop() {
+    // การเลื่อนที่นุ่มนวล
+    _scrollController.animateTo(
+      0,
+      duration: Duration(milliseconds: 500), // ระยะเวลาในการเลื่อน
+      curve: Curves.easeInOut, // รูปแบบการเคลื่อนไหว
+    );
   }
 
   @override
   void dispose() {
-    _animationController
-        .dispose(); // Dispose controller เพื่อหลีกเลี่ยง memory leaks
+    _animationController.dispose(); // หรือหยุด Timer หรือ Animation อื่นๆ
     super.dispose();
   }
 
@@ -738,11 +770,35 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     }
   }
 
+  Future<void> _refreshData() async {
+    // ทำการดึงข้อมูลใหม่
+    setState(() {
+      // รีเซ็ตข้อมูล หรือทำการเรียก Future ใหม่เพื่อดึงข้อมูลใหม่
+      // สมมติว่า _getPets() เป็น Future ที่ดึงข้อมูลใหม่
+      // ทำให้ FutureBuilder เรียก Future ใหม่เมื่อรีเฟรช
+      _futurePets = _getPets();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _initializeOffsets(context);
     return Scaffold(
-      body: SafeArea(
+      body:
+          // NotificationListener<ScrollNotification>(
+          //   onNotification: (scrollNotification) {
+          //     // ใช้สำหรับตรวจสอบเมื่อผู้ใช้เลื่อนขึ้นสุด
+          //     if (scrollNotification is ScrollUpdateNotification) {
+          //       if (_scrollController.offset <=
+          //           _scrollController.position.minScrollExtent) {
+          //         // การรีเฟรชข้อมูลหรือการทำงานที่ต้องการเมื่อเลื่อนขึ้นสุด
+          //         print('Reached the top');
+          //       }
+          //     }
+          //     return false;
+          //   },
+          //   child:
+          SafeArea(
         child: Column(
           children: [
             Card(
@@ -1104,7 +1160,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             ),
             // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: _getPets(), // ใช้ Future ที่คงที่
+              future: _futurePets, // ใช้ Future ที่คงที่
               builder: (BuildContext context,
                   AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1505,315 +1561,327 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   }
 
                   return Expanded(
-                    //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
-                    child: ListView.builder(
-                      itemCount: petUserDataList.length,
-                      itemBuilder: (context, index) {
-                        Map<String, dynamic> petData = petUserDataList[index];
-                        DateTime birthDate =
-                            DateTime.parse(petData['birthdate']);
-                        final now = DateTime.now();
-                        int years = now.year - birthDate.year;
-                        int months = now.month - birthDate.month;
+                    child: RefreshIndicator(
+                      onRefresh: _refreshData,
+                      //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        itemCount: petUserDataList.length,
+                        itemBuilder: (context, index) {
+                          Map<String, dynamic> petData = petUserDataList[index];
+                          DateTime birthDate =
+                              DateTime.parse(petData['birthdate']);
+                          final now = DateTime.now();
+                          int years = now.year - birthDate.year;
+                          int months = now.month - birthDate.month;
 
-                        if (now.day < birthDate.day) {
-                          months--;
-                        }
-
-                        if (months < 0) {
-                          years--;
-                          months += 12;
-                        }
-
-                        String ageString = '';
-                        if (years > 0) {
-                          ageString += '$years ปี';
-                          if (months > 0) {
-                            ageString += ' ';
+                          if (now.day < birthDate.day) {
+                            months--;
                           }
-                        }
-                        if (months > 0 || years == 0) {
-                          if (years == 0 && months == 0) {
-                            ageString = 'ไม่ถึง 1 เดือน';
-                          } else {
-                            ageString += '$months เดือน';
+
+                          if (months < 0) {
+                            years--;
+                            months += 12;
                           }
-                        }
 
-                        //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
-                        return FutureBuilder<DocumentSnapshot>(
-                          future:
-                              ApiUserService.getUserData(petData['user_id']),
-                          builder: (BuildContext context,
-                              AsyncSnapshot<DocumentSnapshot> userSnapshot) {
-                            if (userSnapshot.hasError) {
-                              return Text('Error: ${userSnapshot.error}');
+                          String ageString = '';
+                          if (years > 0) {
+                            ageString += '$years ปี';
+                            if (months > 0) {
+                              ageString += ' ';
                             }
-                            if (!userSnapshot.hasData ||
-                                !userSnapshot.data!.exists) {
-                              return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
+                          }
+                          if (months > 0 || years == 0) {
+                            if (years == 0 && months == 0) {
+                              ageString = 'ไม่ถึง 1 เดือน';
+                            } else {
+                              ageString += '$months เดือน';
                             }
-                            //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา
-                            Map<String, dynamic> userData = userSnapshot.data!
-                                .data() as Map<String, dynamic>;
-                            String? userImageURL = userData['photoURL'];
+                          }
 
-                            return Card(
-                              elevation: 4,
-                              margin: const EdgeInsets.all(10),
-                              child: Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                Profile_pet_AllPage(
-                                                    petId: petData['pet_id']),
-                                          ),
-                                        );
-                                      },
-                                      child: SizedBox(
-                                        width: 150,
-                                        height: 120,
-                                        child: AspectRatio(
-                                          aspectRatio: 1.5,
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(8.0),
-                                            child: Image.memory(
-                                              base64Decode(
-                                                  petData['img_profile']),
-                                              fit: BoxFit.cover,
+                          //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
+                          return FutureBuilder<DocumentSnapshot>(
+                            future:
+                                ApiUserService.getUserData(petData['user_id']),
+                            builder: (BuildContext context,
+                                AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                              if (userSnapshot.hasError) {
+                                return Text('Error: ${userSnapshot.error}');
+                              }
+                              if (!userSnapshot.hasData ||
+                                  !userSnapshot.data!.exists) {
+                                return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
+                              }
+                              //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา
+                              Map<String, dynamic> userData = userSnapshot.data!
+                                  .data() as Map<String, dynamic>;
+                              String? userImageURL = userData['photoURL'];
+
+                              return Card(
+                                elevation: 4,
+                                margin: const EdgeInsets.all(10),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  Profile_pet_AllPage(
+                                                      petId: petData['pet_id']),
+                                            ),
+                                          );
+                                        },
+                                        child: SizedBox(
+                                          width: 150,
+                                          height: 120,
+                                          child: AspectRatio(
+                                            aspectRatio: 1.5,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8.0),
+                                              child: Image.memory(
+                                                base64Decode(
+                                                    petData['img_profile']),
+                                                fit: BoxFit.cover,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                petData['name'],
-                                                style: const TextStyle(
-                                                  color: Colors.black,
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  petData['name'],
+                                                  style: const TextStyle(
+                                                    color: Colors.black,
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
-                                              const SizedBox(width: 5),
-                                              Icon(
-                                                petData['gender'] == 'ตัวผู้'
-                                                    ? Icons.male
-                                                    : petData['gender'] ==
-                                                            'ตัวเมีย'
-                                                        ? Icons.female
-                                                        : Icons.help_outline,
-                                                size: 20,
-                                                color: petData['gender'] ==
-                                                        'ตัวผู้'
-                                                    ? Colors.purple
-                                                    : petData['gender'] ==
-                                                            'ตัวเมีย'
-                                                        ? Colors.pink
-                                                        : Colors.black,
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            petData['breed_pet'],
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 16,
+                                                const SizedBox(width: 5),
+                                                Icon(
+                                                  petData['gender'] == 'ตัวผู้'
+                                                      ? Icons.male
+                                                      : petData['gender'] ==
+                                                              'ตัวเมีย'
+                                                          ? Icons.female
+                                                          : Icons.help_outline,
+                                                  size: 20,
+                                                  color: petData['gender'] ==
+                                                          'ตัวผู้'
+                                                      ? Colors.purple
+                                                      : petData['gender'] ==
+                                                              'ตัวเมีย'
+                                                          ? Colors.pink
+                                                          : Colors.black,
+                                                ),
+                                              ],
                                             ),
-                                          ),
-                                          Text(
-                                            ageString,
-                                            style: const TextStyle(
-                                              color: Colors.black54,
-                                              fontSize: 16,
+                                            Text(
+                                              petData['breed_pet'],
+                                              style: const TextStyle(
+                                                color: Colors.black54,
+                                                fontSize: 16,
+                                              ),
                                             ),
-                                          ),
-                                          SizedBox(height: 10),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
-                                              GestureDetector(
-                                                onTap: (hasPrimaryPet &&
-                                                        !user!
-                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                                                    ? () {
-                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                                                        add_Faverite(
-                                                            petData['pet_id']);
-                                                      }
-                                                    : () {
-                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                                                        if (user!.isAnonymous) {
-                                                          _showSignInDialog(
-                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                                                        } else {
-                                                          _showNoPrimaryPetDialog(
-                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                            Text(
+                                              ageString,
+                                              style: const TextStyle(
+                                                color: Colors.black54,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            SizedBox(height: 10),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                // ปุ่มสำหรับผู้ใช้ที่ไม่ใช่ Anonymous
+                                                GestureDetector(
+                                                  onTap: (hasPrimaryPet &&
+                                                          !user!
+                                                              .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
+                                                      ? () {
+                                                          // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                                          add_Faverite(petData[
+                                                              'pet_id']);
                                                         }
-                                                      },
-                                                child: Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.blue.shade600
-                                                            .withOpacity(0.8)
-                                                        : Colors.grey,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.grey
-                                                            .withOpacity(0.5),
-                                                        spreadRadius: 1,
-                                                        blurRadius: 3,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.star_rounded,
-                                                    color: Colors.yellow,
-                                                    size: 20,
-                                                  ),
-                                                ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () => {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          ProfileAllUserPage(
-                                                        userId:
-                                                            petData['user_id'],
-                                                        userId_req:
-                                                            userId.toString(),
-                                                      ),
+                                                      : () {
+                                                          // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                          if (user!
+                                                              .isAnonymous) {
+                                                            _showSignInDialog(
+                                                                context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                          } else {
+                                                            _showNoPrimaryPetDialog(
+                                                                context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                          }
+                                                        },
+                                                  child: Container(
+                                                    width: 40,
+                                                    height: 40,
+                                                    decoration: BoxDecoration(
+                                                      color: (hasPrimaryPet &&
+                                                              !user!
+                                                                  .isAnonymous)
+                                                          ? Colors.blue.shade600
+                                                              .withOpacity(0.8)
+                                                          : Colors.grey,
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.grey
+                                                              .withOpacity(0.5),
+                                                          spreadRadius: 1,
+                                                          blurRadius: 3,
+                                                          offset: const Offset(
+                                                              0, 2),
+                                                        ),
+                                                      ],
                                                     ),
-                                                  )
-                                                },
-                                                child: Container(
-                                                  width: 50,
-                                                  height: 50,
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey.shade500
-                                                        .withOpacity(0.5),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            40),
-                                                  ),
-                                                  child: Center(
-                                                    child: CircleAvatar(
-                                                      radius: 40,
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      child: ClipOval(
-                                                        child: userImageURL !=
-                                                                null
-                                                            ? Image.memory(
-                                                                base64Decode(
-                                                                    userImageURL),
-                                                                width: 40,
-                                                                height: 40,
-                                                                fit: BoxFit
-                                                                    .cover,
-                                                              )
-                                                            : const Icon(
-                                                                Icons.person,
-                                                                size: 40,
-                                                              ),
-                                                      ),
+                                                    child: Icon(
+                                                      Icons.star_rounded,
+                                                      color: Colors.yellow,
+                                                      size: 20,
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: (hasPrimaryPet &&
-                                                        !user!
-                                                            .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                                                    ? () {
-                                                        // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                                                        _showRequestDialog(
-                                                            context,
-                                                            petData['name'],
-                                                            petData['pet_id'],
-                                                            petData['user_id'],
-                                                            petData[
-                                                                'img_profile']);
-                                                      }
-                                                    : () {
-                                                        // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                                                        if (user!.isAnonymous) {
-                                                          _showSignInDialog(
-                                                              context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                                                        } else {
-                                                          _showNoPrimaryPetDialog(
-                                                              context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
-                                                        }
-                                                      },
-                                                child: Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.white
-                                                        : Colors
-                                                            .grey, // สีปุ่มเปลี่ยนตามสถานะ
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.grey
-                                                            .withOpacity(0.5),
-                                                        spreadRadius: 1,
-                                                        blurRadius: 3,
-                                                        offset:
-                                                            const Offset(0, 2),
+                                                GestureDetector(
+                                                  onTap: () => {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            ProfileAllUserPage(
+                                                          userId: petData[
+                                                              'user_id'],
+                                                          userId_req:
+                                                              userId.toString(),
+                                                        ),
                                                       ),
-                                                    ],
-                                                  ),
-                                                  child: Icon(
-                                                    Icons.favorite,
-                                                    color: (hasPrimaryPet &&
-                                                            !user!.isAnonymous)
-                                                        ? Colors.pinkAccent
-                                                        : Colors.white,
-                                                    size: 20,
+                                                    )
+                                                  },
+                                                  child: Container(
+                                                    width: 50,
+                                                    height: 50,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors
+                                                          .grey.shade500
+                                                          .withOpacity(0.5),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              40),
+                                                    ),
+                                                    child: Center(
+                                                      child: CircleAvatar(
+                                                        radius: 40,
+                                                        backgroundColor:
+                                                            Colors.transparent,
+                                                        child: ClipOval(
+                                                          child: userImageURL !=
+                                                                  null
+                                                              ? Image.memory(
+                                                                  base64Decode(
+                                                                      userImageURL),
+                                                                  width: 40,
+                                                                  height: 40,
+                                                                  fit: BoxFit
+                                                                      .cover,
+                                                                )
+                                                              : const Icon(
+                                                                  Icons.person,
+                                                                  size: 40,
+                                                                ),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                                GestureDetector(
+                                                  onTap: (hasPrimaryPet &&
+                                                          !user!
+                                                              .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
+                                                      ? () {
+                                                          // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                                          _showRequestDialog(
+                                                              context,
+                                                              petData['name'],
+                                                              petData['pet_id'],
+                                                              petData[
+                                                                  'user_id'],
+                                                              petData[
+                                                                  'img_profile']);
+                                                        }
+                                                      : () {
+                                                          // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                                          if (user!
+                                                              .isAnonymous) {
+                                                            _showSignInDialog(
+                                                                context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                                          } else {
+                                                            _showNoPrimaryPetDialog(
+                                                                context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                                          }
+                                                        },
+                                                  child: Container(
+                                                    width: 40,
+                                                    height: 40,
+                                                    decoration: BoxDecoration(
+                                                      color: (hasPrimaryPet &&
+                                                              !user!
+                                                                  .isAnonymous)
+                                                          ? Colors.white
+                                                          : Colors
+                                                              .grey, // สีปุ่มเปลี่ยนตามสถานะ
+                                                      shape: BoxShape.circle,
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.grey
+                                                              .withOpacity(0.5),
+                                                          spreadRadius: 1,
+                                                          blurRadius: 3,
+                                                          offset: const Offset(
+                                                              0, 2),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Icon(
+                                                      Icons.favorite,
+                                                      color: (hasPrimaryPet &&
+                                                              !user!
+                                                                  .isAnonymous)
+                                                          ? Colors.pinkAccent
+                                                          : Colors.white,
+                                                      size: 20,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   );
                 });
@@ -1822,6 +1890,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           ],
         ),
       ),
+      // ),
       floatingActionButton: _isAnimating
           ? AnimatedBuilder(
               animation: _animationController,
@@ -1847,7 +1916,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 );
               },
             )
-          : null,
+          : FloatingActionButton(
+              onPressed: _scrollToTop,
+              child: Icon(Icons.arrow_upward),
+            ),
     );
   }
 
@@ -2280,7 +2352,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     );
   }
 
-  void sendNotificationToUser(String userIdd,String petRespone, String title, String body) async {
+  void sendNotificationToUser(
+      String userIdd, String petRespone, String title, String body) async {
     try {
       // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
       if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
@@ -2298,7 +2371,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           await sendPushMessage(fcmToken, title, body);
 
           // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
-          await _saveNotificationToFirestore(userIdd,petRespone, title, body);
+          await _saveNotificationToFirestore(userIdd, petRespone, title, body);
         } else {
           print("FCM Token is null, unable to send notification");
         }
