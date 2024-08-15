@@ -1307,7 +1307,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       switch (status) {
         case 'เสียชีวิต':
           return Colors.red;
-        case 'พร้อมผสมพันธุ์':
+        case 'พร้อมผสมพันธ์ุ':
           return Colors.pinkAccent;
         case 'ไม่พร้อมผสมพันธ์ุ':
           return Colors.grey;
@@ -1660,7 +1660,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             children: [
               _buildStatusOption(context, 'เสียชีวิต', currentStatus),
               _buildStatusOption(context, 'พร้อมผสมพันธ์ุ', currentStatus),
-              _buildStatusOption(context, 'ไม่พร้อมผสมพันธุ์', currentStatus),
+              _buildStatusOption(context, 'ไม่พร้อมผสมพันธ์ุ', currentStatus),
             ],
           ),
         );

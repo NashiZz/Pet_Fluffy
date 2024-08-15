@@ -133,8 +133,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(
-                      height: 10), 
+                  const SizedBox(height: 10),
                   const SizedBox(
                     height: 30,
                   ),
@@ -146,6 +145,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           borderRadius: BorderRadius.circular(20.0)),
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 15, horizontal: 15),
+                      counterText: '',
                       prefixIcon: Icon(
                           LineAwesomeIcons.user_circle), // เพิ่มไอคอนที่ต้องการ
                     ),
@@ -155,6 +155,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       }
                       return null;
                     },
+                    maxLength: 30,
                   ),
                   const SizedBox(
                     height: 10,
@@ -167,6 +168,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 15, horizontal: 15),
                       labelText: "ชื่อ - นามสกุล",
+                      counterText: '',
                       prefixIcon: Icon(LineAwesomeIcons
                           .identification_card), // เพิ่มไอคอนที่ต้องการ
                     ),
@@ -176,6 +178,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       }
                       return null;
                     },
+                    maxLength: 50,
                   ),
                   const SizedBox(
                     height: 10,
@@ -188,6 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 15, horizontal: 15),
                       labelText: "อีเมล",
+                      counterText: '',
                       prefixIcon: Icon(
                           LineAwesomeIcons.envelope), // เพิ่มไอคอนที่ต้องการ
                     ),
@@ -197,6 +201,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       }
                       return null;
                     },
+                    maxLength: 40,
                   ),
                   const SizedBox(
                     height: 10,
@@ -210,6 +215,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 15, horizontal: 15),
                       labelText: "รหัสผ่าน",
+                      counterText: '',
                       prefixIcon: Icon(LineAwesomeIcons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -226,6 +232,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       }
                       return null;
                     },
+                    maxLength: 30,
                   ),
                   const SizedBox(
                     height: 10,
@@ -239,6 +246,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 15, horizontal: 15),
                       labelText: "ยืนยันรหัสผ่าน",
+                      counterText: '',
                       prefixIcon: Icon(LineAwesomeIcons.lock),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -255,6 +263,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       }
                       return null;
                     },
+                    maxLength: 30,
                   ),
                   const SizedBox(
                     height: 30,
