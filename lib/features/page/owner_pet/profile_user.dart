@@ -101,7 +101,7 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
       setState(() {
         userData = userDocSnapshot.data() as Map<String, dynamic>;
         userImageBase64 = userData['photoURL'] ?? '';
-        String birthdateString = userData['birthdate'] ?? '';
+        String birthdateString = userData['birtdate'] ?? '';
 
         // แปลงวันเกิดจากสตริงเป็น DateTime
         DateTime birthdate = DateTime.parse(birthdateString);
@@ -278,7 +278,7 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
                                     child: Text('อายุ : $age',
                                         style: TextStyle(fontSize: 16)),
                                   ),
-                                  Text('จังหวัด : ${userData['county'] ?? ''}',
+                                  Text('จังหวัด : ${userData['country'] ?? ''}',
                                       style: TextStyle(fontSize: 16)),
                                 ],
                               )

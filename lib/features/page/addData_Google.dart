@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -101,7 +102,10 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginPage()),
+            );
           },
         ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -133,6 +137,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                         controller: nicknameController,
                         decoration: InputDecoration(
                           labelText: 'ชื่อเล่น',
+                          counterText: '',
                           prefixIcon:
                               Icon(LineAwesomeIcons.identification_badge),
                           border: OutlineInputBorder(
@@ -140,6 +145,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                           contentPadding: const EdgeInsets.symmetric(
                               vertical: 15, horizontal: 15),
                         ),
+                        maxLength: 20,
                       ),
                       const SizedBox(height: 15),
                       DropdownButtonFormField<String>(
@@ -247,6 +253,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                         ],
                         decoration: InputDecoration(
                           labelText: 'เบอร์โทรศัพท์',
+                          counterText: '',
                           prefixIcon: Icon(LineAwesomeIcons.phone),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20.0),
@@ -262,6 +269,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                           }
                           return null;
                         },
+                        maxLength: 10,
                       ),
                       const SizedBox(height: 15),
                       TextFormField(
@@ -269,6 +277,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                         controller: facebookController,
                         decoration: InputDecoration(
                           labelText: 'Facebook',
+                          counterText: '',
                           prefixIcon: Icon(LineAwesomeIcons.facebook),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20.0),
@@ -284,6 +293,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                           }
                           return null;
                         },
+                        maxLength: 40,
                       ),
                       const SizedBox(height: 15),
                       TextFormField(
@@ -291,6 +301,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                         controller: lineController,
                         decoration: InputDecoration(
                           labelText: 'Line',
+                          counterText: '',
                           prefixIcon: Icon(LineAwesomeIcons.line),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(20.0),
@@ -306,6 +317,7 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
                           }
                           return null;
                         },
+                        maxLength: 40,
                       ),
                       const SizedBox(height: 30),
                       GestureDetector(
@@ -352,21 +364,6 @@ class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
     String username = widget.userData['username'];
     String fullname = widget.userData['fullname'];
     String image = widget.userData['image'];
-
-    // ปริ้นข้อมูลเพื่อตรวจสอบ
-    print('UID: $uid');
-    print('Email: $email');
-    print('Password: $password');
-    print('Username: $username');
-    print('Fullname: $fullname');
-    print('Image (Base64): $image');
-    print('Nickname: ${nicknameController.text}');
-    print('Phone: ${phoneController.text}');
-    print('Facebook: ${facebookController.text}');
-    print('Line: ${lineController.text}');
-    print('Gender: $_selectedGender');
-    print('Date: ${_dateController.text}');
-    print('County: $_selectedCounty');
 
     try {
       // ดึงข้อมูลผู้ใช้ปัจจุบันจาก Firebase Authentication
