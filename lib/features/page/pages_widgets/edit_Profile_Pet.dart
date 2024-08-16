@@ -525,7 +525,7 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                         ],
                       ),
                       const SizedBox(height: 15),
-                      TextField(
+                      TextFormField(
                         style: const TextStyle(
                           fontSize: 18,
                         ),
@@ -539,6 +539,7 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
                           contentPadding:
                               const EdgeInsets.fromLTRB(10, 40, 15, 10),
                         ),
+                        maxLength: 100,
                       ),
                       const SizedBox(height: 15),
                       ButtonTheme(

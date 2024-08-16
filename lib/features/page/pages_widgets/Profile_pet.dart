@@ -1,4 +1,5 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
+import 'dart:developer';
 import 'dart:typed_data';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
@@ -619,9 +620,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Text(
-                                des,
-                                style: const TextStyle(fontSize: 16),
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  des,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
                             )
                           ],
@@ -1760,7 +1763,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime(2000),
-                          lastDate: DateTime(2101),
+                          lastDate: DateTime.now(),
                         );
 
                         if (pickedDate != null) {
@@ -1776,6 +1779,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         }
                         return null;
                       },
+                      
                     ),
                     SizedBox(height: 20),
                     Align(
@@ -1809,16 +1813,31 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         child: TextButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              NotificationHelper.scheduledNotification(
-                                'Pet fluffy',
-                                '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
-                                _dateController.text,
-                                pet_type,
-                                user!.uid,
-                                pet_id,
-                              );
-                              _saveReportToFirestore();
-                              Navigator.of(context).pop();
+                              final inputDate =
+                                  DateTime.parse(_dateController.text);
+                              final today = DateTime.now();
+
+                              if (inputDate.isAfter(today)) {
+                                // วันที่ใน _dateController.text เป็นวันในอนาคต
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('ไม่สามารถเลือกวันในอนาคตได้'),
+                                  ),
+                                );
+                                return;
+                              } else {
+                                NotificationHelper.scheduledNotification(
+                                  'Pet fluffy',
+                                  '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
+                                  _dateController.text,
+                                  pet_type,
+                                  user!.uid,
+                                  pet_id,
+                                );
+                                _saveReportToFirestore();
+                                Navigator.of(context).pop();
+                              }
                             }
                           },
                           style: TextButton.styleFrom(
@@ -2084,7 +2103,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                 context: context,
                                 initialDate: DateTime.now(),
                                 firstDate: DateTime(2000),
-                                lastDate: DateTime(2101),
+                                lastDate: DateTime.now(),
                               );
 
                               if (pickedDate != null) {
@@ -2344,7 +2363,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime(2000),
-                              lastDate: DateTime(2101),
+                              lastDate: DateTime.now(),
                             );
 
                             if (pickedDate != null) {

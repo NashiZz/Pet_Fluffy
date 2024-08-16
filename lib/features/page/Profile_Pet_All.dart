@@ -341,13 +341,15 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            child: Text(
-                              des,
-                              style: const TextStyle(fontSize: 16),
+                            child: SingleChildScrollView(
+                              child: Text(
+                                des,
+                                style: const TextStyle(fontSize: 16),
+                              ),
                             ),
                           )
                         ],
