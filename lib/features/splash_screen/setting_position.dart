@@ -35,78 +35,84 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder(
-        future: getLocation(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error fetching location data'));
-          } else {
-            return Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue, Colors.purple],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.add_location_alt_rounded,
-                    size: 80,
-                    color: Colors.white,
+    return WillPopScope(
+      onWillPop: () async {
+        // Return false to prevent the back action
+        return false;
+      },
+      child: Scaffold(
+        body: FutureBuilder(
+          future: getLocation(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(child: Text('Error fetching location data'));
+            } else {
+              return Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue, Colors.purple],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
                   ),
-                  const SizedBox(height: 20),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      'ก่อนเริ่มใช้งานแอป กรุณาเพิ่มตำแหน่งในการแสดงบนแผนที่ของสัตว์เลี้ยงคุณ',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white,
-                        fontSize: 20,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.add_location_alt_rounded,
+                      size: 80,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 20),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'ก่อนเริ่มใช้งานแอป กรุณาเพิ่มตำแหน่งในการแสดงบนแผนที่ของสัตว์เลี้ยงคุณ',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Colors.white,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          _showLocationPickerDialog();
-                        },
-                        style: ButtonStyle(
-                          minimumSize: MaterialStateProperty.all(const Size(
-                              260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
-                        ),
-                        child: const Text('เพิ่มแหน่ง'),
-                      ),
-                      const SizedBox(width: 20),
-                      if (!_isLocationAdded)
+                    const SizedBox(height: 20),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         ElevatedButton(
                           onPressed: () {
-                            Get.to(() => const Setting_Pet_Page());
+                            _showLocationPickerDialog();
                           },
                           style: ButtonStyle(
                             minimumSize: MaterialStateProperty.all(const Size(
                                 260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
                           ),
-                          child: const Text('ต่อไป'),
+                          child: const Text('เพิ่มแหน่ง'),
                         ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }
-        },
+                        const SizedBox(width: 20),
+                        if (!_isLocationAdded)
+                          ElevatedButton(
+                            onPressed: () {
+                              Get.to(() => const Setting_Pet_Page());
+                            },
+                            style: ButtonStyle(
+                              minimumSize: MaterialStateProperty.all(const Size(
+                                  260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                            ),
+                            child: const Text('ต่อไป'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+        ),
       ),
     );
   }

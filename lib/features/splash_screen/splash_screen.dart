@@ -125,7 +125,7 @@ class _SplashPageState extends State<Splash_Page> {
           } else {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => const LocationSelectionPage(),
+                builder: (_) => const Home_Page(),
               ),
             );
           }

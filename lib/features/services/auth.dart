@@ -67,7 +67,7 @@ class AuthService {
             await _auth.signInWithCredential(credential);
         User? user = userCredential.user;
 
-        await saveUserGoogle(user!);
+        // await saveUserGoogle(user!);
 
         return user;
       }
@@ -108,28 +108,40 @@ class AuthService {
   }
 
   // บันทึกข้อมูลผู้ใช้ที่ลงทะเบียนด้วย Google
-  Future<void> saveUserGoogle(User user) async {
+  Future<void> saveUserGoogle(
+    String uid,
+    String username,
+    String fullname,
+    String email,
+    String password,
+    String image,
+    String nickname,
+    String phone,
+    String facbook,
+    String line,
+    String? selectedGender,
+    String date,
+    String? selectedCounty,
+  ) async {
     try {
-      final userRef =
-          FirebaseFirestore.instance.collection('user').doc(user.uid);
+      final userRef = FirebaseFirestore.instance.collection('user').doc(uid);
       final userData = await userRef.get();
-      String base64Image = await convertImageToBase64(user.photoURL!);
 
       if (!userData.exists) {
         await userRef.set({
-          'uid': user.uid,
-          'username': user.displayName,
-          'fullname': '',
-          'email': user.email,
-          'password': '',
-          'photoURL': base64Image,
-          'phone': user.phoneNumber,
-          'nickname': '',
-          'gender': '',
-          'birtdate': '',
-          'country': '',
-          'facebeook': '',
-          'line': '',
+          'uid': uid,
+          'username': username,
+          'fullname': fullname,
+          'email': email,
+          'password': password,
+          'photoURL': image,
+          'phone': phone,
+          'nickname': nickname,
+          'gender': selectedGender,
+          'birtdate': date,
+          'country': selectedCounty,
+          'facebeook': facbook,
+          'line': line,
           'status': 'สมาชิก'
         });
       }
