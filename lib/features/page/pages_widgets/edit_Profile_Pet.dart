@@ -54,7 +54,7 @@ class _Edit_Pet_PageState extends State<Edit_Pet_Page> {
   final List<String> _status = [
     'เสียชีวิต',
     'พร้อมผสมพันธุ์',
-    'ไม่พร้อมผสมพันธ์ุ'
+    'ไม่พร้อมผสมพันธุ์'
   ];
   final List<String> _types = [];
   final List<String> _breedsOfType1 = [];

@@ -39,14 +39,12 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? petId = prefs.getString(user!.uid.toString());
 
     try {
       // ดึงข้อมูลจากคอลเลคชัน Usage_pet เพื่อหาข้อมูล pet_id
       QuerySnapshot petIdQuerySnapshot = await FirebaseFirestore.instance
           .collection('Usage_pet')
-          .where('pet_id', isEqualTo: petId)
+          .where('user_id', isEqualTo: user?.uid)
           .get();
 
       if (petIdQuerySnapshot.docs.isNotEmpty) {
@@ -56,7 +54,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         petId_main = firstDoc?['pet_id'];
         print('Pet ID from Usage_pet: $petId_main');
       } else {
-        print('No pet_id found in Usage_pet for petId: $petId');
+        print('No pet_id found in Usage_pet for petId: $petId_main');
       }
 
       QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance

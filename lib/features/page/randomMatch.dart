@@ -152,7 +152,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         }
 
         // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
-        _fetchUnreadNotifications();
+        setState(() {
+          unreadNotifications =
+              0; // จำนวนการแจ้งเตือนหลังจากทำการอ่านทั้งหมดแล้ว
+        });
       } catch (e) {
         print('Error marking all notifications as read: $e');
       }
@@ -462,7 +465,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     getLocation();
     _printStoredPetId();
     _fetchUnreadNotifications();
-    _markAllNotificationsAsRead();
     _futurePets = _getPets();
     // กำหนด AnimationController
     _animationController = AnimationController(
@@ -879,16 +881,25 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                           children: [
                             IconButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NotificationMore_Page(
-                                      idPet: petId!,
+                                if (petId != null && petId!.isNotEmpty) {
+                                  // นำทางไปยังหน้าการแจ้งเตือน
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          NotificationMore_Page(
+                                        idPet: petId!,
+                                      ),
                                     ),
-                                  ),
-                                ).then((_) {
-                                  _fetchUnreadNotifications(); // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่านหลังจากกลับมา
-                                });
+                                  ).then((_) async {
+                                    // เปลี่ยนสถานะการแจ้งเตือนเป็น "อ่านแล้ว" หลังจากกลับมาที่หน้าเดิม
+                                    await _markAllNotificationsAsRead();
+                                    // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
+                                    await _fetchUnreadNotifications();
+                                  });
+                                } else {
+                                  print('Pet ID is null or empty.');
+                                }
                               },
                               icon: Icon(
                                 Icons.notifications_rounded,

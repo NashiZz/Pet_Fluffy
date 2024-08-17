@@ -120,7 +120,7 @@ class AuthService {
     String facbook,
     String line,
     String? selectedGender,
-    String date,
+    String birthdate,
     String? selectedCounty,
   ) async {
     try {
@@ -138,9 +138,9 @@ class AuthService {
           'phone': phone,
           'nickname': nickname,
           'gender': selectedGender,
-          'birtdate': date,
+          'birtdate': birthdate,
           'country': selectedCounty,
-          'facebeook': facbook,
+          'facebook': facbook,
           'line': line,
           'status': 'สมาชิก'
         });

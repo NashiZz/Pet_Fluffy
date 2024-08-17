@@ -73,7 +73,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  //พันธ์สุนัข
+// พันธุ์สุนัข
   void _fetchBreadDataDog() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -83,6 +83,10 @@ class _Pet_PageState extends State<Pet_Page> {
           .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+
+      // เรียงลำดับพันธุ์ตามตัวอักษร
+      breeds.sort((a, b) => a.compareTo(b));
+
       setState(() {
         _breedsOfType1 = breeds;
       });
@@ -91,7 +95,7 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  //พันธ์แมว
+// พันธุ์แมว
   void _fetchBreadDataCat() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -101,6 +105,10 @@ class _Pet_PageState extends State<Pet_Page> {
           .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+
+      // เรียงลำดับพันธุ์ตามตัวอักษร
+      breeds.sort((a, b) => a.compareTo(b));
+
       setState(() {
         _breedsOfType2 = breeds;
       });
@@ -327,7 +335,8 @@ class _Pet_PageState extends State<Pet_Page> {
                               if (_selectedType != null)
                                 // ตรวจสอบว่า `_isOtherBreed` เป็น `true` หรือไม่
                                 if (!_isOtherBreed)
-                                  Expanded(
+                                  SizedBox(
+                                    width: 230,
                                     child: DropdownButtonFormField<String>(
                                       value: _selectedBreed,
                                       items: [

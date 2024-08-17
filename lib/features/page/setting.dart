@@ -6,7 +6,6 @@ import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
-import 'package:Pet_Fluffy/features/page/setNotiandLocation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -184,7 +183,27 @@ class _Setting_PageState extends State<Setting_Page> {
                       title: "โปรไฟล์สัตว์เลี้ยง",
                       icon: LineAwesomeIcons.dog,
                       onPress: () {
-                        if (petId != '') {
+                        if (petId.isEmpty) {
+                          // แสดงข้อความเตือนเมื่อ petId เป็นค่าว่าง
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('ยังไม่ได้เลือกสัตว์เลี้ยง'),
+                                content: const Text(
+                                    'กรุณาเลือกสัตว์เลี้ยงตัวหลักก่อนที่จะเข้าถึงโปรไฟล์สัตว์เลี้ยง'),
+                                actions: [
+                                  TextButton(
+                                    child: const Text('ตกลง'),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        } else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
