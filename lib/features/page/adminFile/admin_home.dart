@@ -19,16 +19,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
   late List<Map<String, dynamic>> TypePetdatas = [];
   late List<Map<String, dynamic>> genePetDatas = [];
   late List<Map<String, dynamic>> vaccinePetDatas = [];
+  late List<Map<String, dynamic>> vaccineMore = [];
   final TextEditingController _nameTypeController = TextEditingController();
   final TextEditingController _nameGeneController = TextEditingController();
   final TextEditingController _nameVaccController = TextEditingController();
   final TextEditingController _nameAgeController = TextEditingController();
   final TextEditingController _nameDoseController = TextEditingController();
+  final TextEditingController _nameVacMore = TextEditingController();
   bool isLoading = true;
   final TextEditingController _controller = TextEditingController();
   String? petId_main;
   String typePet = '5yWv1hawXz6Gh15gEed1';
   bool isDog = true; // ตัวแปรสถานะเริ่มต้นเป็นสุนัข
+  DateTime? _lastPressedAt;
 
   @override
   void initState() {
@@ -38,6 +41,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
       _getTypePetData('');
       _getGene_petData('');
       _getVaccines_petData('');
+      _getVaccineMore_petData('');
     }
   }
 
@@ -98,18 +102,26 @@ class _AdminHomePageState extends State<AdminHomePage> {
           return matchesName;
         }).toList();
 
+        // เรียงลำดับข้อมูลตามตัวอักษร
+        allGeneData.sort(
+            (a, b) => a['name'].toString().compareTo(b['name'].toString()));
+
         setState(() {
           genePetDatas = allGeneData;
           isLoading = false;
         });
       } else {
+        // เรียงลำดับข้อมูลทั้งหมดตามตัวอักษร
+        allGene.sort(
+            (a, b) => a['name'].toString().compareTo(b['name'].toString()));
+
         setState(() {
           genePetDatas = allGene;
           isLoading = false;
         });
       }
     } catch (e) {
-      print('Error getting pet user data from Firestore: $e');
+      print('Error getting gene pet data from Firestore: $e');
       setState(() {
         isLoading = false;
       });
@@ -138,11 +150,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
           return matchesName;
         }).toList();
 
+        // เรียงลำดับข้อมูลตามตัวอักษร
+        allVaccData.sort((a, b) =>
+            a['vaccine'].toString().compareTo(b['vaccine'].toString()));
+
         setState(() {
           vaccinePetDatas = allVaccData;
           isLoading = false;
         });
       } else {
+        // เรียงลำดับข้อมูลทั้งหมดตามตัวอักษร
+        allVaccine.sort((a, b) =>
+            a['vaccine'].toString().compareTo(b['vaccine'].toString()));
+
         setState(() {
           vaccinePetDatas = allVaccine;
           isLoading = false;
@@ -150,7 +170,57 @@ class _AdminHomePageState extends State<AdminHomePage> {
       }
       log(vaccinePetDatas.length.toString());
     } catch (e) {
-      print('Error getting pet user data from Firestore: $e');
+      print('Error getting pet vaccines data from Firestore: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _getVaccineMore_petData(String searchValue) async {
+    try {
+      QuerySnapshot vaccinesMoreQuerySnapshot = await FirebaseFirestore.instance
+          .collection('vaccines_more')
+          .doc(typePet)
+          .collection("vaccines_more")
+          .get();
+
+      List<Map<String, dynamic>> allVaccine_more = vaccinesMoreQuerySnapshot
+          .docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      if (searchValue.isNotEmpty) {
+        List<Map<String, dynamic>> allVaccData_more =
+            allVaccine_more.where((type) {
+          bool matchesName = type['vaccine']
+              .toString()
+              .toLowerCase()
+              .contains(searchValue.toLowerCase());
+          return matchesName;
+        }).toList();
+
+        // เรียงลำดับข้อมูลตามตัวอักษร
+        allVaccData_more.sort((a, b) =>
+            a['vaccine'].toString().compareTo(b['vaccine'].toString()));
+
+        setState(() {
+          vaccineMore = allVaccData_more;
+          isLoading = false;
+        });
+      } else {
+        // เรียงลำดับข้อมูลทั้งหมดตามตัวอักษร
+        allVaccine_more.sort((a, b) =>
+            a['vaccine'].toString().compareTo(b['vaccine'].toString()));
+
+        setState(() {
+          vaccineMore = allVaccine_more;
+          isLoading = false;
+        });
+      }
+      log(vaccineMore.length.toString());
+    } catch (e) {
+      print('Error getting vaccines more data from Firestore: $e');
       setState(() {
         isLoading = false;
       });
@@ -169,6 +239,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
     _getTypePetData(value);
     _getGene_petData(value);
     _getVaccines_petData(value); // Log the current value of the TextField
+    _getVaccineMore_petData(value);
   }
 
   void _logSearchValue() {
@@ -178,164 +249,191 @@ class _AdminHomePageState extends State<AdminHomePage> {
       _getTypePetData(searchValue);
       _getGene_petData(searchValue);
       _getVaccines_petData(searchValue);
+      _getVaccineMore_petData(searchValue);
     });
+  }
+
+  Future<bool> _onWillPop() async {
+    final DateTime now = DateTime.now();
+    if (_lastPressedAt == null ||
+        now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+      // First press, show dialog
+      _lastPressedAt = now;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กดอีกครั้งเพื่อออกจากแอป'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return Future.value(false); // Do not exit
+    } else {
+      // Second press, exit app
+      return Future.value(true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              onPressed: () async {
-                await showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text("ออกจากระบบ"),
-                      content: const Text("คุณต้องการออกจากระบบหรือไม่?"),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context); // ปิด Popup
-                          },
-                          child: const Text("ยกเลิก"),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            User? user = FirebaseAuth.instance.currentUser;
-                            if (user != null && user.isAnonymous) {
-                              // ลบบัญชี anonymous
-                              try {
-                                await user.delete();
-                                print("Anonymous account deleted");
-                              } catch (e) {
-                                print("Error deleting anonymous account: $e");
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: DefaultTabController(
+        length: 4,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 20),
+          child: Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                onPressed: () async {
+                  await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("ออกจากระบบ"),
+                        content: const Text("คุณต้องการออกจากระบบหรือไม่?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context); // ปิด Popup
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              User? user = FirebaseAuth.instance.currentUser;
+                              if (user != null && user.isAnonymous) {
+                                // ลบบัญชี anonymous
+                                try {
+                                  await user.delete();
+                                  print("Anonymous account deleted");
+                                } catch (e) {
+                                  print("Error deleting anonymous account: $e");
+                                }
+                              } else {
+                                await GoogleSignIn().signOut();
                               }
-                            } else {
-                              await GoogleSignIn().signOut();
-                            }
-                            FirebaseAuth.instance.signOut();
-                            print("Sign Out Success!!");
-                            Navigator.pushAndRemoveUntil(
-                              // ignore: use_build_context_synchronously
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const LoginPage()),
-                              (Route<dynamic> route) => false,
-                            );
-                          },
-                          child: const Text("ตกลง"),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-              icon: const Icon(LineAwesomeIcons.alternate_sign_out),
-            ),
-            title: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                "ผู้ดูแล",
-                style: Theme.of(context).textTheme.headlineMedium,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                              FirebaseAuth.instance.signOut();
+                              print("Sign Out Success!!");
+                              Navigator.pushAndRemoveUntil(
+                                // ignore: use_build_context_synchronously
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const LoginPage()),
+                                (Route<dynamic> route) => false,
+                              );
+                            },
+                            child: const Text("ตกลง"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                icon: const Icon(LineAwesomeIcons.alternate_sign_out),
               ),
-            ),
-            centerTitle: true,
-            automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
-            bottom: PreferredSize(
-              preferredSize: Size.fromHeight(
-                  kToolbarHeight + 60), // ปรับขนาด preferredSize
-              child: Container(
-                // decoration: BoxDecoration(
-                //   border: Border.all(
-                //     color: Colors.grey, // สีของกรอบ
-                //     width: 2.0, // ความหนาของกรอบ
-                //   ),
-                //   borderRadius: BorderRadius.circular(12.0), // มุมโค้งของกรอบ
-                // ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 50.0, vertical: 14.0),
-                      child: Container(
-                        height: MediaQuery.of(context).size.height / 17,
-                        child: TextField(
-                          controller: _controller,
-                          onChanged: (value) {
-                            _logSearchValuee(value); // Log value as it's typed
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'ค้นหา',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.search),
-                              onPressed: _logSearchValue,
+              title: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  "ผู้ดูแล",
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              centerTitle: true,
+              automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
+              bottom: PreferredSize(
+                preferredSize: Size.fromHeight(
+                    kToolbarHeight + 60), // ปรับขนาด preferredSize
+                child: Container(
+                  // decoration: BoxDecoration(
+                  //   border: Border.all(
+                  //     color: Colors.grey, // สีของกรอบ
+                  //     width: 2.0, // ความหนาของกรอบ
+                  //   ),
+                  //   borderRadius: BorderRadius.circular(12.0), // มุมโค้งของกรอบ
+                  // ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 50.0, vertical: 14.0),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height / 17,
+                          child: TextField(
+                            controller: _controller,
+                            onChanged: (value) {
+                              _logSearchValuee(
+                                  value); // Log value as it's typed
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'ค้นหา',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.search),
+                                onPressed: _logSearchValue,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    TabBar(
-                      isScrollable: true,
-                      tabs: [
-                        Tab(text: 'ประเภทสัตว์เลี้ยง'),
-                        Tab(text: 'พันธุ์สัตว์เลี้ยง'),
-                        Tab(text: 'เกณฑ์การฉีดวัคซีนสัตว์เลี้ยง'),
-                      ],
-                    ),
-                  ],
+                      TabBar(
+                        isScrollable: true,
+                        tabs: [
+                          Tab(text: 'ประเภทสัตว์เลี้ยง'),
+                          Tab(text: 'พันธุ์สัตว์เลี้ยง'),
+                          Tab(text: 'เกณฑ์การฉีดวัคซีนสัตว์เลี้ยง'),
+                          Tab(text: 'การฉีดวัคซีนสัตว์เลี้ยงเพิ่มเติม'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          body: isLoading
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      CircularProgressIndicator(),
-                      SizedBox(
-                          height:
-                              16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
-                      Text('กำลังโหลดข้อมูล'),
+            body: isLoading
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        CircularProgressIndicator(),
+                        SizedBox(
+                            height:
+                                16), // เพิ่มระยะห่างระหว่าง CircularProgressIndicator กับข้อความ
+                        Text('กำลังโหลดข้อมูล'),
+                      ],
+                    ),
+                  )
+                : TabBarView(
+                    children: [
+                      _buildTypePet(TypePetdatas),
+                      _buildGenePet(genePetDatas),
+                      _buildVaccPet(vaccinePetDatas),
+                      _buildVaccMore(vaccineMore)
                     ],
                   ),
-                )
-              : TabBarView(
-                  children: [
-                    _buildTypePet(TypePetdatas),
-                    _buildGenePet(genePetDatas),
-                    _buildVaccPet(vaccinePetDatas)
-                  ],
-                ),
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: Colors.deepPurple,
-            onPressed: () {
-              setState(() {
-                isDog = !isDog;
-                if (typePet == '5yWv1hawXz6Gh15gEed1') {
-                  typePet = 'Qy38o0xCXKQlIngPz9jb';
-                } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
-                  typePet = '5yWv1hawXz6Gh15gEed1';
-                }
-                _getGene_petData(_controller.text);
-                _getVaccines_petData(_controller.text);
-              });
-            },
-            child: Icon(
-              isDog
-                  ? LineAwesomeIcons.cat
-                  : LineAwesomeIcons.dog, // ใช้ไอคอนสุนัขหรือแมวตามสถานะ
-              color: Colors.white,
+            floatingActionButton: FloatingActionButton(
+              backgroundColor: Colors.deepPurple,
+              onPressed: () {
+                setState(() {
+                  isDog = !isDog;
+                  if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                    typePet = 'Qy38o0xCXKQlIngPz9jb';
+                  } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                    typePet = '5yWv1hawXz6Gh15gEed1';
+                  }
+                  _getGene_petData(_controller.text);
+                  _getVaccines_petData(_controller.text);
+                  _getVaccineMore_petData(_controller.text);
+                });
+              },
+              child: Icon(
+                isDog
+                    ? LineAwesomeIcons.cat
+                    : LineAwesomeIcons.dog, // ใช้ไอคอนสุนัขหรือแมวตามสถานะ
+                color: Colors.white,
+              ),
             ),
           ),
         ),
@@ -545,10 +643,68 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   Widget _buildGenePet(List<Map<String, dynamic>> GenePetList) {
     return GenePetList.isEmpty
-        ? const Center(
-            child: Text(
-              'ไม่มีข้อมูลพันธู์สัตว์เลี้ยง',
-              style: TextStyle(fontSize: 16),
+        ? Center(
+            child: Card(
+              elevation: 4.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12.0),
+                onTap: () {
+                  _nameVacMore.text = '';
+                  String? nameTypePet;
+                  if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                    nameTypePet = 'แมว';
+                  } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                    nameTypePet = 'สุนัข';
+                  }
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(
+                          'เพิ่มวัคซีนสัตว์เลี้ยงเพิ่มเติมของ$nameTypePet',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        content:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          TextField(
+                            controller: _nameVacMore,
+                            decoration: const InputDecoration(
+                                hintText: "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                          ),
+                        ]),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              addVac_more();
+                            },
+                            child: const Text("บันทึก"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  child: Center(
+                    child: Icon(
+                      Icons.add,
+                      size: 40.0,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
             ),
           )
         : SingleChildScrollView(
@@ -594,7 +750,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                 content: TextField(
                                   controller: _nameGeneController,
                                   decoration: const InputDecoration(
-                                      hintText: "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
+                                      hintText:
+                                          "กรุณากรอกชื่อพันธุ์สัตว์เลี้ยง"),
                                 ),
                                 actions: <Widget>[
                                   TextButton(
@@ -753,10 +910,68 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
   Widget _buildVaccPet(List<Map<String, dynamic>> VaccPetList) {
     return VaccPetList.isEmpty
-        ? const Center(
-            child: Text(
-              'ไม่มีข้อมูล',
-              style: TextStyle(fontSize: 16),
+        ? Center(
+            child: Card(
+              elevation: 4.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12.0),
+                onTap: () {
+                  _nameVacMore.text = '';
+                  String? nameTypePet;
+                  if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                    nameTypePet = 'แมว';
+                  } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                    nameTypePet = 'สุนัข';
+                  }
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(
+                          'เพิ่มวัคซีนสัตว์เลี้ยงเพิ่มเติมของ$nameTypePet',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        content:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          TextField(
+                            controller: _nameVacMore,
+                            decoration: const InputDecoration(
+                                hintText: "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                          ),
+                        ]),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              addVac_more();
+                            },
+                            child: const Text("บันทึก"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  child: Center(
+                    child: Icon(
+                      Icons.add,
+                      size: 40.0,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
             ),
           )
         : SingleChildScrollView(
@@ -831,6 +1046,159 @@ class _AdminHomePageState extends State<AdminHomePage> {
                                 TextButton(
                                   onPressed: () {
                                     addVacc();
+                                  },
+                                  child: const Text("บันทึก"),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        child: Center(
+                          child: Icon(
+                            Icons.add,
+                            size: 40.0,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 63),
+              ],
+            ),
+          );
+  }
+
+  Widget _buildVaccMore(List<Map<String, dynamic>> VaccMoreList) {
+    return VaccMoreList.isEmpty
+        ? Center(
+            child: Card(
+              elevation: 4.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12.0),
+                onTap: () {
+                  _nameVacMore.text = '';
+                  String? nameTypePet;
+                  if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                    nameTypePet = 'แมว';
+                  } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                    nameTypePet = 'สุนัข';
+                  }
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text(
+                          'เพิ่มวัคซีนสัตว์เลี้ยงเพิ่มเติมของ$nameTypePet',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        content:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                          TextField(
+                            controller: _nameVacMore,
+                            decoration: const InputDecoration(
+                                hintText: "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                          ),
+                        ]),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              addVac_more();
+                            },
+                            child: const Text("บันทึก"),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  child: Center(
+                    child: Icon(
+                      Icons.add,
+                      size: 40.0,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          )
+        : SingleChildScrollView(
+            // แสดงรายการสัตว์เลี้ยงเมื่อข้อมูลถูกโหลดเสร็จสิ้น
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: VaccMoreList.length,
+                  itemBuilder: (context, index) {
+                    return _buildVaccMoreCard(VaccMoreList[index]);
+                  },
+                ),
+                const SizedBox(height: 40),
+                Center(
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12.0),
+                      onTap: () {
+                        _nameVacMore.text = '';
+                        String? nameTypePet;
+                        if (typePet == '5yWv1hawXz6Gh15gEed1') {
+                          nameTypePet = 'แมว';
+                        } else if (typePet == 'Qy38o0xCXKQlIngPz9jb') {
+                          nameTypePet = 'สุนัข';
+                        }
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text(
+                                'เพิ่มวัคซีนสัตว์เลี้ยงเพิ่มเติมของ$nameTypePet',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextField(
+                                      controller: _nameVacMore,
+                                      decoration: const InputDecoration(
+                                          hintText:
+                                              "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยง"),
+                                    ),
+                                  ]),
+                              actions: <Widget>[
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: const Text("ยกเลิก"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    addVac_more();
                                   },
                                   child: const Text("บันทึก"),
                                 ),
@@ -1005,6 +1373,126 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
+  Widget _buildVaccMoreCard(Map<String, dynamic> VaccMoreData) {
+    return GestureDetector(
+      onTap: () {
+        _nameVacMore.text = VaccMoreData['vaccine'];
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                  title: Text(
+                    'แก้ไขการฉีดวัคซีนสัตว์เลี้ยงเพิ่มเติม',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: _nameVacMore,
+                        decoration: const InputDecoration(
+                            hintText:
+                                "กรุณากรอกชื่อวัคซีนสัตว์เลี้ยงเพิ่มเติม"),
+                      ),
+                    ],
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("ยกเลิก"),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        editVaccMore(VaccMoreData['id_vaccines_more']);
+                      },
+                      child: const Text("บันทึก"),
+                    ),
+                  ]);
+            });
+      },
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        child: ListTile(
+            title: Text(
+              VaccMoreData['vaccine'] ?? '',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Column(
+                            children: [
+                              const Icon(LineAwesomeIcons.trash,
+                                  color: Colors.deepPurple, size: 50),
+                              SizedBox(height: 20),
+                              Text('คุณต้องการลบข้อมูลวัคซีนเพิ่มเติม',
+                                  style: TextStyle(fontSize: 18)),
+                            ],
+                          ),
+                          content: Text(
+                            "${VaccMoreData['vaccine']}?",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          actions: <Widget>[
+                            Center(
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  SizedBox(
+                                    height: 40,
+                                    width: 90,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: const Text("ยกเลิก"),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: 40,
+                                    width: 90,
+                                    child: TextButton(
+                                      onPressed: () {
+                                        deleteVacMore(
+                                            VaccMoreData['id_vaccines_more']);
+                                      },
+                                      child: const Text("ยืนยัน"),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: Colors.blue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(LineAwesomeIcons.minus),
+                ),
+              ],
+            )),
+      ),
+    );
+  }
+
   void addType() async {
     bool chek = false;
     for (var element in TypePetdatas) {
@@ -1151,6 +1639,53 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
+  void addVac_more() async {
+    bool chek = false;
+    for (var element in genePetDatas) {
+      if (element['vaccine'] == _nameVacMore.text) {
+        chek = true;
+      }
+    }
+    if (chek) {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (BuildContext context) {
+          return SizedBox(
+            height: 100,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Text('The information is already in the system.'),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      CollectionReference vac_more = FirebaseFirestore.instance
+          .collection('vaccines_more')
+          .doc(typePet)
+          .collection('vaccines_more');
+      try {
+        DocumentReference newGeneRef =
+            await vac_more.add({'vaccine': _nameVacMore.text});
+        String docId = newGeneRef.id;
+
+        await newGeneRef.update({'id_vaccines_more': docId});
+
+        setState(() {
+          Navigator.pop(context);
+          _getVaccineMore_petData('');
+        });
+      } catch (e) {
+        print('Error Add vac_more data: $e');
+      }
+    }
+  }
+
   void deleteType(String id_type_pet) async {
     try {
       await FirebaseFirestore.instance
@@ -1209,6 +1744,26 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
+  void deleteVacMore(String id_vacc_more) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('vaccines_more')
+          .doc(typePet)
+          .collection('vaccines_more')
+          .doc(id_vacc_more)
+          .delete();
+
+      // ลบข้อมูลสัตว์เลี้ยงสำเร็จ ให้รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
+
+      setState(() {
+        Navigator.pop(context);
+        _getVaccineMore_petData('');
+      });
+    } catch (e) {
+      print('Error deleting pet data: $e');
+    }
+  }
+
   void editTypePet(String id_type_pet) {
     CollectionReference type =
         FirebaseFirestore.instance.collection('pet_type');
@@ -1250,6 +1805,21 @@ class _AdminHomePageState extends State<AdminHomePage> {
       setState(() {
         Navigator.pop(context);
         _getVaccines_petData('');
+      });
+    });
+  }
+
+  void editVaccMore(String id_vaccines_more) {
+    CollectionReference type = FirebaseFirestore.instance
+        .collection('vaccines_more')
+        .doc(typePet)
+        .collection('vaccines_more');
+    type.doc(id_vaccines_more).update({
+      'vaccine': _nameVacMore.text,
+    }).then((value) {
+      setState(() {
+        Navigator.pop(context);
+        _getVaccineMore_petData('');
       });
     });
   }

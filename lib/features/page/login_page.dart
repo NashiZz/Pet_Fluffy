@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
 import 'package:Pet_Fluffy/features/page/addData_Google.dart';
+import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
@@ -339,21 +340,62 @@ class _LoginPageState extends State<LoginPage> {
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('user')
               .where('uid', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'สมาชิก')
               .get();
 
           if (getPetQuerySnapshot.docs.isNotEmpty) {
-            // หากมีข้อมูลอยู่แล้ว
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('เข้าสู่ระบบด้วย Google สำเร็จ')),
-            );
+            // ตรวจสอบสถานะของผู้ใช้
+            DocumentSnapshot userDoc = getPetQuerySnapshot.docs.first;
+            String status = userDoc['status'] ?? '';
 
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const LocationSelectionPage(),
-              ),
-            );
+            if (status == 'แอดมิน') {
+              // หากเป็นผู้ดูแลระบบ
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบ แอดมิน สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const AdminHomePage(), // หน้าแรกสำหรับผู้ดูแลระบบ
+                ),
+              );
+            } else if (status == 'สมาชิก') {
+              // หากเป็นสมาชิก
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LocationSelectionPage(),
+                ),
+              );
+            } else {
+              // หากไม่มีข้อมูลในระบบ
+              Map<String, dynamic> userData = {
+                'uid': user.uid,
+                'email': user.email,
+                'password': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'username': user.displayName,
+                'fullname': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'image': user.photoURL != null
+                    ? await _authService.convertImageToBase64(user.photoURL!)
+                    : null,
+              };
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('สมัครสมาชิกด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => addDataGoogle_Page(userData: userData),
+                ),
+              );
+            }
           } else {
             // หากไม่มีข้อมูลในระบบ
             Map<String, dynamic> userData = {
