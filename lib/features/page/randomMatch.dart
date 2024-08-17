@@ -2222,116 +2222,50 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           .get();
 
       if (querySnapshot.docs.isNotEmpty) {
-        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว ให้ทำการอัพเดตเอกสารนั้น
-        querySnapshot.docs.forEach((doc) async {
-          await doc.reference
-              .update({'status': 'จับคู่แล้ว', 'updates_at': formatted});
+        setState(() {
+          isLoading = false;
         });
 
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef =
-            FirebaseFirestore.instance.collection('match');
-
-        try {
-          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
-
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
+        // แจ้งเตือนว่ามีคำขอจับคู่อยู่แล้ว
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
             });
-
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
+            return const AlertDialog(
+              title: Text('Duplicate Request'),
+              content: Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่'),
             );
-          }
-        } catch (error) {
-          print("Failed to add pet: $error");
-
-          setState(() {
-            isLoading = false;
-          });
-        }
+          },
+        );
       } else {
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef =
-            FirebaseFirestore.instance.collection('match');
+        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+        DocumentReference newPetMatch = await petMatchRef.add({
+          'created_at': formatted,
+          'description': des,
+          'pet_request': pet_request,
+          'pet_respone': pet_respone,
+          'status': 'กำลังรอ',
+          'updates_at': formatted
+        });
 
-        try {
-          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
+        String docId = newPetMatch.id;
 
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
-            });
+        await newPetMatch.update({'id_match': docId});
 
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
-            );
-          } else {
-            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-            DocumentReference newPetMatch = await petMatchRef.add({
-              'created_at': formatted,
-              'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
-              'status': 'กำลังรอ',
-              'updates_at': formatted
-            });
+        sendNotificationToUser(
+            userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+            pet_respone,
+            "คุณมีคำขอใหม่!",
+            "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+        setState(() {
+          isLoading = false;
+        });
+        _showHeartAnimation();
 
-            String docId = newPetMatch.id;
-
-            await newPetMatch.update({'id_match': docId});
-
-            sendNotificationToUser(
-                userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
-                pet_respone,
-                "คุณมีคำขอใหม่!",
-                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
-            setState(() {
-              isLoading = false;
-            });
-            _showHeartAnimation();
-          }
-
-          _getUserDataFromFirestore();
-          _getUsage_pet(search.toString());
-        } catch (error) {
-          print("Failed to add pet: $error");
-
-          setState(() {
-            isLoading = false;
-          });
-        }
+        _getUserDataFromFirestore();
+        _getUsage_pet(search.toString());
       }
     } catch (error) {
       print("Failed to add pet: $error");

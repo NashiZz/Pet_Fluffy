@@ -306,6 +306,7 @@ class _Notification_PageState extends State<Notification_Page>
             children: [
               IconButton(
                 onPressed: () {
+                  print('petid: ${widget.idPet}');
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
@@ -340,8 +341,10 @@ class _Notification_PageState extends State<Notification_Page>
                                     width: 160,
                                     child: TextButton(
                                       onPressed: () {
-                                        _deletePetData(petUserData['pet_id'],
-                                            petUserData['user_id']);
+                                        _deletePetData(
+                                            petUserData['pet_id'],
+                                            petUserData['user_id'],
+                                            petUserData['name']);
                                         Navigator.of(context).pop();
                                       },
                                       child: Row(
@@ -437,16 +440,8 @@ class _Notification_PageState extends State<Notification_Page>
     print('User ID: $userId');
   }
 
-  void _deletePetData(String petId_res, String Userid_res) async {
+  void _deletePetData(String petId_res, String userId, String petName) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? petId_req = prefs.getString(Userid_res);
-
-      if (petId_req == null) {
-        print('No pet ID found for user $Userid_res');
-        return;
-      }
-
       final DateTime now = DateTime.now();
       final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
       final String formatted =
@@ -474,6 +469,18 @@ class _Notification_PageState extends State<Notification_Page>
             .where('pet_request', isEqualTo: petId_res)
             .where('status', isEqualTo: "กำลังรอ")
             .get();
+
+        Map<String, dynamic>? petRequestDetails =
+            await getPetDetails(widget.idPet);
+
+        // ถ้าไม่สามารถดึงข้อมูลได้ ให้ตั้งค่าค่าพื้นฐาน
+        String name = petRequestDetails?['name'] ?? 'Unknown';
+
+        sendNotificationToUser(
+            userId, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+            petId_res,
+            "การจับคู่",
+            "สัตว์เลี้ยง $petName ของคุณถูกปฎิเสธจาก $name แล้ว!");
 
         if (querySnapshot_req_pending.docs.isNotEmpty) {
           for (var doc in querySnapshot_req_pending.docs) {
@@ -539,69 +546,31 @@ class _Notification_PageState extends State<Notification_Page>
 
         try {
           // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
+          Map<String, dynamic>? petRequestDetails =
+              await getPetDetails(pet_request);
 
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
-            });
+          // ถ้าไม่สามารถดึงข้อมูลได้ ให้ตั้งค่าค่าพื้นฐาน
+          String petName = petRequestDetails?['name'] ?? 'Unknown';
+          String petImg = petRequestDetails?['img_profile'] ?? '';
 
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
-            );
-          } else {
-            // ดึงข้อมูลของ pet_request
-            Map<String, dynamic>? petRequestDetails =
-                await getPetDetails(pet_request);
-
-            // ถ้าไม่สามารถดึงข้อมูลได้ ให้ตั้งค่าค่าพื้นฐาน
-            String petName = petRequestDetails?['name'] ?? 'Unknown';
-            String petImg = petRequestDetails?['img_profile'] ?? '';
-
-            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-            DocumentReference newPetMatch = await petMatchRef.add({
-              'created_at': formatted,
-              'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
-              'status': 'จับคู่แล้ว',
-              'updates_at': formatted
-            });
-
-            String docId = newPetMatch.id;
-
-            await newPetMatch.update({'id_match': docId});
-
-            sendNotificationToUser(
-                userIdd, 'Pet fluffy', 'You have a new pet match!');
-            // match success จะให้ไปที่หน้า match
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => Matchsuccess_Page(
-                    pet_request: petImg, // รูปสัตว์คนที่กด หัวใจ
-                    pet_respone: img_profile, // รูปสัตว์คนที่โดนกด
-                    idUser_pet: userIdd, // id user ที่โดนกดหัวใจ
-                    pet_request_name: petName,
-                    pet_respone_name: name_petrep,
-                    idUser_petReq: userId.toString()), // id user ที่กดหัวใจ
-              ),
-            );
-          }
+          sendNotificationToUser(
+              userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+              pet_respone,
+              "$name_petrep",
+              "สัตว์เลี้ยง $name_petrep ของคุณได้รับการตอบรับจับคู่จาก $petName แล้ว!");
+          // match success จะให้ไปที่หน้า match
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Matchsuccess_Page(
+                  pet_request: petImg, // รูปสัตว์คนที่กด หัวใจ
+                  pet_respone: img_profile, // รูปสัตว์คนที่โดนกด
+                  idUser_pet: userIdd, // id user ที่โดนกดหัวใจ
+                  pet_request_name: petName,
+                  pet_respone_name: name_petrep,
+                  idUser_petReq: userId.toString()), // id user ที่กดหัวใจ
+            ),
+          );
         } catch (error) {
           print("Failed to add pet: $error");
 
@@ -613,8 +582,8 @@ class _Notification_PageState extends State<Notification_Page>
         try {
           // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
           QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
+              .where('pet_request', isEqualTo: pet_respone)
+              .where('pet_respone', isEqualTo: pet_request)
               .get();
 
           if (querySnapshot.docs.isNotEmpty) {
@@ -641,8 +610,8 @@ class _Notification_PageState extends State<Notification_Page>
             DocumentReference newPetMatch = await petMatchRef.add({
               'created_at': formatted,
               'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
+              'pet_request': pet_respone,
+              'pet_respone': pet_request,
               'status': 'กำลังรอ',
               'updates_at': formatted
             });
@@ -675,13 +644,66 @@ class _Notification_PageState extends State<Notification_Page>
     }
   }
 
-  void sendNotificationToUser(String userIdd, String title, String body) async {
-    DocumentSnapshot userDoc =
-        await FirebaseFirestore.instance.collection('user').doc(userIdd).get();
-    String? fcmToken = userDoc['fcm_token'];
+  void sendNotificationToUser(
+      String userIdd, String petRespone, String title, String body) async {
+    try {
+      // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
+      if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(userIdd)
+            .get();
 
-    if (fcmToken != null) {
-      await sendPushMessage(fcmToken, title, body);
+        // ดึง FCM Token ของผู้ใช้จากข้อมูลที่ได้มา
+        String? fcmToken = userDoc['fcm_token'];
+
+        if (fcmToken != null) {
+          // ส่งการแจ้งเตือนโดยเรียกใช้ฟังก์ชัน sendPushMessage
+          await sendPushMessage(fcmToken, title, body);
+
+          // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
+          await _saveNotificationToFirestore(userIdd, petRespone, title, body);
+        } else {
+          print("FCM Token is null, unable to send notification");
+        }
+      } else {
+        print(
+            "No notification sent because the user is the one who made the request.");
+      }
+    } catch (error) {
+      print("Error sending notification to user: $error");
+    }
+  }
+
+  Future<void> _saveNotificationToFirestore(
+      String userId, String petId, String title, String body) async {
+    try {
+      // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+      final DateTime now = DateTime.now();
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      final String formattedDate =
+          formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+      // อ้างอิงถึงคอลเลกชัน notifications ในเอกสาร userId
+      CollectionReference notificationsRef = FirebaseFirestore.instance
+          .collection('notification')
+          .doc(userId)
+          .collection('pet_notification');
+
+      // เพิ่มเอกสารใหม่ลงในคอลเลกชัน notifications
+      await notificationsRef.add({
+        'pet_id': petId, // เพิ่มข้อมูล pet_id
+        'title': title,
+        'body': body,
+        'status': 'unread', // สถานะเริ่มต้นเป็น 'unread'
+        'created_at': formattedDate,
+        'scheduled_at': formattedDate, // เวลาที่การแจ้งเตือนถูกตั้งค่า
+      });
+
+      print("Notification saved to Firestore successfully");
+    } catch (error) {
+      print("Error saving notification to Firestore: $error");
     }
   }
 
@@ -692,10 +714,7 @@ class _Notification_PageState extends State<Notification_Page>
     final data = {
       "message": {
         "token": token_user,
-        "notification": {
-          "body": "Pet Fluffy",
-          "title": "มีการตอบรับจากสัตว์เลี้ยงที่คุณร้องขอแล้วไปดูเร็ว!!!"
-        }
+        "notification": {"title": title, "body": body}
       }
     };
     try {

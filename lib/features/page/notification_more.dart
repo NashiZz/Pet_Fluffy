@@ -162,7 +162,61 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
         automaticallyImplyLeading: false,
         actions: [
           GestureDetector(
-            onTap: _deleteAllNotifications,
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Column(
+                      children: [
+                        const Icon(LineAwesomeIcons.trash,
+                            color: Colors.deepPurple, size: 50),
+                        SizedBox(height: 20),
+                        Text('คุณต้องการลบข้อมูลการแจ้งเตือนทั้งหมด',
+                            style: TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                    actions: <Widget>[
+                      Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            SizedBox(
+                              height: 40,
+                              width: 90,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text("ยกเลิก"),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 40,
+                              width: 90,
+                              child: TextButton(
+                                onPressed: () {
+                                  _deleteAllNotifications();
+                                },
+                                child: const Text("ยืนยัน"),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text('ลบทั้งหมด',
