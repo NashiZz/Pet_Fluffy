@@ -4,14 +4,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -28,6 +32,7 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   User? user =
       FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
   late List<Map<String, dynamic>> petUserDataList =
@@ -90,49 +95,49 @@ class _MapsPageState extends State<Maps_Page> {
     'มากกว่า 30000 บาท'
   ];
 
-  void initState() {
-    super.initState();
-    location = Location();
-    _locationSubscription =
-        location.onLocationChanged.listen((LocationData currentLocation) {
-      _updateUserLocationMarker();
-      setState(() {
-        _locationData = currentLocation;
-        _loadSelectedLocation();
-      });
-    });
-    getLocation(); // เรียก getLocation ที่นี่
-    _getUserDataFromFirestore();
-  }
-
-  // @override
   // void initState() {
   //   super.initState();
   //   location = Location();
-
   //   _locationSubscription =
   //       location.onLocationChanged.listen((LocationData currentLocation) {
+  //     _updateUserLocationMarker();
   //     setState(() {
   //       _locationData = currentLocation;
-  //       _updateUserLocationMarker();
   //       _loadSelectedLocation();
   //     });
   //   });
-
-  //   // แยกการโหลดข้อมูลเป็นครั้งๆ
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     getLocation();
-  //     _loadPetDataAsync();
-  //   });
-  // }
-
-  // void _loadPetDataAsync() async {
-  //   // ทำการโหลดข้อมูลสัตว์เลี้ยง
+  //   getLocation(); // เรียก getLocation ที่นี่
   //   _getUserDataFromFirestore();
-
-  //   // โหลดข้อมูลแยกกันเพื่อไม่ให้หนักไปในครั้งเดียว
-  //   _loadAllPetLocations(context);
   // }
+
+  @override
+  void initState() {
+    super.initState();
+    location = Location();
+
+    _locationSubscription =
+        location.onLocationChanged.listen((LocationData currentLocation) {
+      setState(() {
+        _locationData = currentLocation;
+        _updateUserLocationMarker();
+        _loadSelectedLocation();
+      });
+    });
+
+    // แยกการโหลดข้อมูลเป็นครั้งๆ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      getLocation();
+      _loadPetDataAsync();
+    });
+  }
+
+  void _loadPetDataAsync() async {
+    // ทำการโหลดข้อมูลสัตว์เลี้ยง
+    _getUserDataFromFirestore();
+
+    // โหลดข้อมูลแยกกันเพื่อไม่ให้หนักไปในครั้งเดียว
+    _loadAllPetLocations(context);
+  }
 
   @override
   void dispose() {
@@ -1610,6 +1615,7 @@ class _MapsPageState extends State<Maps_Page> {
                     String birthdateStr = data['birthdate'] ?? '';
                     DateTime birthdate = DateTime.parse(birthdateStr);
                     String age = calculateAge(birthdate);
+                    String petUserId = data['user_id'];
 
                     Uint8List? bytes = markerImages[doc.id];
                     if (bytes == null) {
@@ -1637,6 +1643,7 @@ class _MapsPageState extends State<Maps_Page> {
                             petType,
                             des,
                             distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId,
                           );
                         },
                         icon: (await _createMarkerIcon(bytes)
@@ -1687,6 +1694,7 @@ class _MapsPageState extends State<Maps_Page> {
                   String birthdateStr = data['birthdate'] ?? '';
                   DateTime birthdate = DateTime.parse(birthdateStr);
                   String age = calculateAge(birthdate);
+                  String petUserId = data['user_id'];
 
                   Uint8List? bytes = markerImages[doc.id];
                   if (bytes == null) {
@@ -1704,18 +1712,18 @@ class _MapsPageState extends State<Maps_Page> {
                       position: petLocation,
                       onTap: () {
                         _showPetDetails(
-                          context,
-                          petID,
-                          petName,
-                          petImageBase64,
-                          weight,
-                          petGender,
-                          userPhotoURL,
-                          age,
-                          petType,
-                          des,
-                          distanceStr, // เพิ่มระยะห่างที่นี่
-                        );
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId);
                       },
                       icon:
                           (await _createMarkerIcon(bytes).toBitmapDescriptor()),
@@ -2106,6 +2114,7 @@ class _MapsPageState extends State<Maps_Page> {
                   String birthdateStr = data['birthdate'] ?? '';
                   DateTime birthdate = DateTime.parse(birthdateStr);
                   String age = calculateAge(birthdate);
+                  String petUserId = data['user_id'];
 
                   Uint8List? bytes = markerImages[doc.id];
                   if (bytes == null) {
@@ -2121,18 +2130,18 @@ class _MapsPageState extends State<Maps_Page> {
                       position: petLocation,
                       onTap: () {
                         _showPetDetails(
-                          context,
-                          petID,
-                          petName,
-                          petImageBase64,
-                          weight,
-                          petGender,
-                          userPhotoURL,
-                          age,
-                          petType,
-                          des,
-                          distanceStr, // เพิ่มระยะห่างที่นี่
-                        );
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId);
                       },
                       icon:
                           (await _createMarkerIcon(bytes).toBitmapDescriptor()),
@@ -2325,6 +2334,243 @@ class _MapsPageState extends State<Maps_Page> {
     return [0.0, 0.0];
   }
 
+  void add_Faverite(String petIdd) async {
+    // setState(() {
+    //   isLoading = true;
+    // });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String? petId = prefs.getString(userId.toString());
+    String pet_request = petId.toString();
+    String pet_respone = petIdd.toString();
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
+    DocumentReference userFavoritesRef =
+        FirebaseFirestore.instance.collection('favorites').doc(userId);
+
+    // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+    CollectionReference petFavoriteRef =
+        userFavoritesRef.collection('pet_favorite');
+
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petFavoriteRef
+          .where('pet_request', isEqualTo: pet_request)
+          .where('pet_respone', isEqualTo: pet_respone)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+        // setState(() {
+        //   isLoading = false;
+        // });
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('คุณมีการกดถูกใจนี้อยู่แล้ว',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            );
+          },
+        );
+      } else {
+        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+        DocumentReference newPetfav = await petFavoriteRef.add({
+          'created_at': formatted,
+          'pet_request': pet_request,
+          'pet_respone': pet_respone,
+        });
+
+        String docId = newPetfav.id;
+
+        await newPetfav.update({'id_fav': docId});
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 1), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('เพิ่มการกดถูกใจเรียบร้อย',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            );
+          },
+        );
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void add_match(String petIdd, petId, petUserId, String img_profile, String name_petrep,
+      String des) async {
+    String pet_request = petIdd.toString();
+    String pet_respone = petId.toString();
+
+    print(pet_request);
+    print(pet_respone);
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    CollectionReference petMatchRef =
+        FirebaseFirestore.instance.collection('match');
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petMatchRef
+          .where('pet_request', isEqualTo: pet_request)
+          .where('pet_respone', isEqualTo: pet_respone)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว ให้ทำการอัพเดตเอกสารนั้น
+        querySnapshot.docs.forEach((doc) async {
+          await doc.reference
+              .update({'status': 'จับคู่แล้ว', 'updates_at': formatted});
+        });
+
+        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+        CollectionReference petMatchRef =
+            FirebaseFirestore.instance.collection('match');
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      } else {
+        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+        CollectionReference petMatchRef =
+            FirebaseFirestore.instance.collection('match');
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': des,
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'กำลังรอ',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            sendNotificationToUser(
+                userId, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+                pet_respone,
+                "คุณมีคำขอใหม่!",
+                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+            setState(() {
+              isLoading = false;
+            });
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   //Show Dialog เมื่อมีการคลิก Maker สัตว์เลี้ยง
   void _showPetDetails(
       BuildContext context,
@@ -2337,7 +2583,8 @@ class _MapsPageState extends State<Maps_Page> {
       String age,
       String type,
       String des,
-      String distance) {
+      String distance,
+      String petUserId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2604,13 +2851,14 @@ class _MapsPageState extends State<Maps_Page> {
                                   height: 60,
                                   decoration: BoxDecoration(
                                     color:
-                                        Colors.blue.shade800.withOpacity(0.5),
+                                        Colors.blue.shade800.withOpacity(0.8),
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: Center(
                                     child: IconButton(
                                       onPressed: () {
-                                        // Add your code to handle the "exit" action here
+                                        add_Faverite(petID);
+                                        Navigator.of(context).pop();
                                       },
                                       icon: const Icon(
                                         Icons.star_rounded,
@@ -2653,7 +2901,8 @@ class _MapsPageState extends State<Maps_Page> {
                                   child: Center(
                                     child: IconButton(
                                       onPressed: () {
-                                        // Add your code to handle the "heart" action here
+                                        _showRequestDialog(context, petName,
+                                            petId, petID, petUserId, petImageBase64);
                                       },
                                       icon: Icon(
                                         Icons.favorite,
@@ -2677,5 +2926,219 @@ class _MapsPageState extends State<Maps_Page> {
         );
       },
     );
+  }
+
+  void _showRequestDialog(
+      BuildContext context, petName, petId, petID, petUserId, Img) {
+    TextEditingController des = TextEditingController();
+    print('pet request: $petId, pet respone: $petID, userID: $petUserId');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          title: Column(
+            children: [
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'ส่งคำขอจับคู่ไปหา ',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      petName,
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.pink.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: 150,
+                height: 120,
+                child: AspectRatio(
+                  aspectRatio: 1.5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.memory(
+                      base64Decode(Img),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: des,
+                decoration: InputDecoration(
+                  hintText: 'พิมพ์ข้อความที่ต้องการส่งไปหา....',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.deepPurpleAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child: Text('ยกเลิกการส่งคำขอ',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      add_match(petId, petID, petUserId, Img, petName, des.text);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.pinkAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            LineAwesomeIcons.paper_plane_1,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text('ส่งคำขอ', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void sendNotificationToUser(
+      String userIdd, String petRespone, String title, String body) async {
+    try {
+      // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
+      if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(userIdd)
+            .get();
+
+        // ดึง FCM Token ของผู้ใช้จากข้อมูลที่ได้มา
+        String? fcmToken = userDoc['fcm_token'];
+
+        if (fcmToken != null) {
+          // ส่งการแจ้งเตือนโดยเรียกใช้ฟังก์ชัน sendPushMessage
+          await sendPushMessage(fcmToken, title, body);
+
+          // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
+          await _saveNotificationToFirestore(userIdd, petRespone, title, body);
+        } else {
+          print("FCM Token is null, unable to send notification");
+        }
+      } else {
+        print(
+            "No notification sent because the user is the one who made the request.");
+      }
+    } catch (error) {
+      print("Error sending notification to user: $error");
+    }
+  }
+
+  Future<void> _saveNotificationToFirestore(
+      String userId, String petId, String title, String body) async {
+    try {
+      // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+      final DateTime now = DateTime.now();
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      final String formattedDate =
+          formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+      // อ้างอิงถึงคอลเลกชัน notifications ในเอกสาร userId
+      CollectionReference notificationsRef = FirebaseFirestore.instance
+          .collection('notification')
+          .doc(userId)
+          .collection('pet_notification');
+
+      // เพิ่มเอกสารใหม่ลงในคอลเลกชัน notifications
+      await notificationsRef.add({
+        'pet_id': petId, // เพิ่มข้อมูล pet_id
+        'title': title,
+        'body': body,
+        'status': 'unread', // สถานะเริ่มต้นเป็น 'unread'
+        'created_at': formattedDate,
+        'scheduled_at': formattedDate, // เวลาที่การแจ้งเตือนถูกตั้งค่า
+      });
+
+      print("Notification saved to Firestore successfully");
+    } catch (error) {
+      print("Error saving notification to Firestore: $error");
+    }
+  }
+
+  Future<void> sendPushMessage(
+      String token_user, String title, String body) async {
+    try {
+      print("Sending notification to token: $token_user");
+
+      // ดึง Firebase Access Token
+      String token = await firebaseAccessToken.getToken();
+
+      final data = {
+        "message": {
+          "token": token_user,
+          "notification": {"title": title, "body": body}
+        }
+      };
+
+      final response = await http.post(
+        Uri.parse(
+            'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        print("Notification sent successfully");
+      } else {
+        print("Failed to send notification");
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (error) {
+      print("Error sending notification: $error");
+    }
   }
 }
