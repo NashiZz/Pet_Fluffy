@@ -923,46 +923,81 @@ class _MapsPageState extends State<Maps_Page> {
                                                 ],
                                               ),
                                               const SizedBox(height: 15),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    location = Location();
-                                                    _locationSubscription =
-                                                        location
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        location = Location();
+                                                        _locationSubscription = location
                                                             .onLocationChanged
                                                             .listen((LocationData
                                                                 currentLocation) {
-                                                      setState(() {
-                                                        _locationData =
-                                                            currentLocation;
-                                                        _updateUserLocationMarker();
-                                                      });
-                                                    });
-                                                    getLocation(); // เรียก getLocation ที่นี่
-                                                    _getUserDataFromFirestore();
-                                                    _selectedDistance =
-                                                        _selectedDistance;
-                                                    _selectedAge = _selectedAge;
-                                                    _otherBreedController.text =
+                                                          setState(() {
+                                                            _locationData =
+                                                                currentLocation;
+                                                            _updateUserLocationMarker();
+                                                          });
+                                                        });
+                                                        getLocation(); // เรียก getLocation ที่นี่
+                                                        _getUserDataFromFirestore();
+                                                        _selectedDistance =
+                                                            _selectedDistance;
+                                                        _selectedAge =
+                                                            _selectedAge;
                                                         _otherBreedController
-                                                            .text;
-                                                    _otherColor.text =
-                                                        _otherColor.text;
-                                                    _selectedPrice =
-                                                        _selectedPrice;
-                                                  });
-                                                  Navigator.pop(context);
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            30),
+                                                                .text =
+                                                            _otherBreedController
+                                                                .text;
+                                                        _otherColor.text =
+                                                            _otherColor.text;
+                                                        _selectedPrice =
+                                                            _selectedPrice;
+                                                      });
+                                                      Navigator.pop(context);
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text('ค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
                                                   ),
-                                                ),
-                                                child: const Text('ค้นหา',
-                                                    style: TextStyle(
-                                                        fontSize: 16)),
+                                                  SizedBox(width: 20),
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        _selectedDistance =
+                                                            null;
+                                                        _selectedAge = null;
+                                                        _otherBreedController
+                                                            .text = '';
+                                                        _otherColor.text = '';
+                                                        _selectedPrice = null;
+                                                      });
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                        'ล้างข้อมูลค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
