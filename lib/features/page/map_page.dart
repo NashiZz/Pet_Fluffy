@@ -125,6 +125,7 @@ class _MapsPageState extends State<Maps_Page> {
         _loadSelectedLocation();
       });
     });
+    _getImageUser();
 
     // แยกการโหลดข้อมูลเป็นครั้งๆ
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -148,8 +149,7 @@ class _MapsPageState extends State<Maps_Page> {
     _locationSubscription?.cancel();
     super.dispose();
   }
-
-  void _getUserDataFromFirestore() async {
+  void _getImageUser() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
@@ -161,13 +161,22 @@ class _MapsPageState extends State<Maps_Page> {
           isLoading = false;
         });
       }
+    }
+  }
+
+  void _getUserDataFromFirestore() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      
       isAnonymous = userData.isAnonymous;
       if (isAnonymous) {
         setState(() {
-          userImageBase64 = ''; // หรือคุณอาจจะใช้รูปภาพ default ที่คุณต้องการ
+          userImageBase64 = '';
         });
       } else {
         try {
+          
           DocumentSnapshot idpetDocSnapshot = await FirebaseFirestore.instance
               .collection('Usage_pet')
               .doc(userId)
