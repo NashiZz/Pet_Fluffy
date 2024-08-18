@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/edit_Profile_Pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -80,7 +81,28 @@ class _PetAllTwoState extends State<PetAllTwo> {
           appBar: AppBar(
             leading: IconButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pushAndRemoveUntil(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      Navigator_Page(initialIndex: 3),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                    const begin = Offset(-1.0, 0.0); // เริ่มต้นจากขวา
+                    const end = Offset.zero; // สิ้นสุดที่ศูนย์กลาง (0.0, 0.0)
+                    const curve = Curves.ease;
+
+                    var tween = Tween(begin: begin, end: end)
+                        .chain(CurveTween(curve: curve));
+
+                    return SlideTransition(
+                      position: animation.drive(tween),
+                      child: child,
+                    );
+                  },
+                ),
+                (route) => false, // ลบทุกเส้นทางก่อนหน้าออก
+              );
               },
               icon: const Icon(LineAwesomeIcons.angle_left),
             ),
