@@ -2231,11 +2231,18 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           context: context,
           builder: (BuildContext context) {
             Future.delayed(const Duration(seconds: 2), () {
-              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 2 วินาที
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
             });
-            return const AlertDialog(
-              title: Text('Duplicate Request'),
-              content: Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่'),
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.heart_1,
+                      color: Colors.pinkAccent, size: 50),
+                  SizedBox(height: 20),
+                  Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
             );
           },
         );

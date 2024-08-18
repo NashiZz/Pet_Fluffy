@@ -36,10 +36,16 @@ class ProfileService {
     throw Exception('Document does not exist');
   }
 
-  Future<List<String>> fetchVacData(String collectionName) async {
+  Future<List<String>> fetchVacDataDog(String collectionName) async {
     QuerySnapshot querySnapshot =
-        await _firestore.collection(collectionName).get();
-    return querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+        await _firestore.collection(collectionName).doc('Qy38o0xCXKQlIngPz9jb').collection('vaccines_more').get();
+    return querySnapshot.docs.map((doc) => doc['vaccine'] as String).toList();
+  }
+
+  Future<List<String>> fetchVacDataCat(String collectionName) async {
+    QuerySnapshot querySnapshot =
+        await _firestore.collection(collectionName).doc('5yWv1hawXz6Gh15gEed1').collection('vaccines_more').get();
+    return querySnapshot.docs.map((doc) => doc['vaccine'] as String).toList();
   }
 
   Future<Map<String, dynamic>?> getUserData(String userId) async {

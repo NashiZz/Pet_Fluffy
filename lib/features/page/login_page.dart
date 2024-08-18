@@ -78,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: "อีเมล",
+                      labelText: "อีเมล/ชื่อผู้ใช้",
                       border: OutlineInputBorder(
                         borderSide: const BorderSide(color: Colors.grey),
                         borderRadius: BorderRadius.circular(15),
@@ -448,19 +448,19 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // ดึงค่าอีเมลและรหัสผ่านจากตัวควบคุม
-    String email = _emailController.text.trim();
+    // ดึงค่าอีเมลหรือชื่อผู้ใช้ และรหัสผ่านจากตัวควบคุม
+    String emailOrUsername = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
     // ตรวจสอบว่าผู้ใช้กรอกข้อมูลทั้งสองช่องหรือไม่
-    if (email.isEmpty || password.isEmpty) {
+    if (emailOrUsername.isEmpty || password.isEmpty) {
       setState(() {
         _isSigning = false;
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('กรุณากรอกอีเมลและรหัสผ่าน'),
+          content: Text('กรุณากรอกอีเมล/ชื่อผู้ใช้และรหัสผ่าน'),
         ),
       );
       return;
@@ -473,31 +473,26 @@ class _LoginPageState extends State<LoginPage> {
       multiLine: false,
     );
 
-    if (!emailRegex.hasMatch(email)) {
-      // หากรูปแบบของอีเมลไม่ถูกต้อง
-      setState(() {
-        _isSigning = false;
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รูปแบบของอีเมลไม่ถูกต้อง'),
-        ),
-      );
-      return;
-    }
+    bool isEmail = emailRegex.hasMatch(emailOrUsername);
 
     try {
-      //เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      User? user =
-          await _authService.signInWithEmailAndPassword(email, password);
+      User? user;
+      if (isEmail) {
+        // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+        user = await _authService.signInWithEmailAndPassword(
+            emailOrUsername, password);
+      } else {
+        // เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน
+        user = await _authService.signInWithUsernameAndPassword(
+            emailOrUsername, password);
+      }
 
       setState(() {
         _isSigning = false;
         _isLoading = false;
       });
 
-      //ตรวจสอบการเข้าสู่ระบบ
+      // ตรวจสอบการเข้าสู่ระบบ
       if (user != null) {
         // ตรวจสอบว่าอีเมลได้รับการยืนยันหรือไม่
         if (user.emailVerified) {
@@ -522,7 +517,7 @@ class _LoginPageState extends State<LoginPage> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+            content: Text('อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'),
           ),
         );
       }
