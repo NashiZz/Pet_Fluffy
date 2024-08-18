@@ -29,20 +29,60 @@ class AuthService {
     return user != null && user.isAnonymous;
   }
 
-  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
   Future<User?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
-      //เข้าสู่ระบบด้วยบัญชีผู้ใช้ที่มีอยู่
+      // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        // showToast(message: 'Invalid email or password.');
+        // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
+        print('Invalid email or password.');
       } else {
-        // showToast(message: 'An error occurred: ${e.code}');
+        // จัดการข้อผิดพลาดอื่นๆ
+        print('An error occurred: ${e.code}');
       }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
+    }
+    return null;
+  }
+
+  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+  Future<User?> signInWithUsernameAndPassword(
+      String username, String password) async {
+    try {
+      // ดึงข้อมูลของผู้ใช้จาก Firestore โดยใช้ชื่อผู้ใช้
+      QuerySnapshot userQuery = await FirebaseFirestore.instance
+          .collection('user')
+          .where('username', isEqualTo: username)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        // ใช้ข้อมูลผู้ใช้ที่ดึงมาเพื่อเข้าสู่ระบบ
+        String email =
+            userQuery.docs.first['email']; // ดึงอีเมลของผู้ใช้จากเอกสาร
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        return userCredential.user;
+      } else {
+        print('Username not found.');
+      }
+    } on FirebaseAuthException catch (e) {
+      // จัดการข้อผิดพลาดของ FirebaseAuthException
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        print('Invalid username or password.');
+      } else {
+        print('An error occurred: ${e.code}');
+      }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
     }
     return null;
   }

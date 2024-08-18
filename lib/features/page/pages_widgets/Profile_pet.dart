@@ -1,5 +1,4 @@
 // ignore_for_file: camel_case_types, file_names, avoid_print
-import 'dart:developer';
 import 'dart:typed_data';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
@@ -379,7 +378,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
     try {
-      List<String> breeds = await _profileService.fetchVacData('dog_vac');
+      List<String> breeds = await _profileService.fetchVacDataDog('vaccines_more');
       setState(() {
         _vacOfDog = breeds;
       });
@@ -391,7 +390,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Cat
   void _fetchVacDataCat() async {
     try {
-      List<String> breeds = await _profileService.fetchVacData('cat_vac');
+      List<String> breeds = await _profileService.fetchVacDataCat('vaccines_more');
       setState(() {
         _vacOfCat = breeds;
       });
