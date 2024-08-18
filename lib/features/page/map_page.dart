@@ -4,14 +4,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -28,6 +32,7 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
   User? user =
       FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
   late List<Map<String, dynamic>> petUserDataList =
@@ -51,12 +56,14 @@ class _MapsPageState extends State<Maps_Page> {
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
   bool isAnonymous = false;
+  bool hasPrimaryPet = false;
   bool _isMapInitialized = false; // ใช้เพื่อตรวจสอบการโหลดแผนที่
   bool isAnonymousUser = false;
   String? search;
   String? _selectedDistance;
   String? _selectedAge;
   String? _selectedPrice;
+  final AuthService _authService = AuthService();
   final TextEditingController _otherBreedController = TextEditingController();
   final TextEditingController _otherColor = TextEditingController();
   late List<Map<String, dynamic>> petDataMatchList = [];
@@ -90,22 +97,42 @@ class _MapsPageState extends State<Maps_Page> {
     'มากกว่า 30000 บาท'
   ];
 
+  // void initState() {
+  //   super.initState();
+  //   location = Location();
+  //   _locationSubscription =
+  //       location.onLocationChanged.listen((LocationData currentLocation) {
+  //     _updateUserLocationMarker();
+  //     setState(() {
+  //       _locationData = currentLocation;
+  //       _loadSelectedLocation();
+  //     });
+  //   });
+  //   getLocation(); // เรียก getLocation ที่นี่
+  //   _getUserDataFromFirestore();
+  // }
+
   @override
   void initState() {
     super.initState();
     location = Location();
-
+    isAnonymousUser = _authService.isAnonymous();
     _locationSubscription =
         location.onLocationChanged.listen((LocationData currentLocation) {
-      _locationData = currentLocation;
-      _updateUserLocationMarker();
-      _loadSelectedLocation();
+      setState(() {
+        _locationData = currentLocation;
+        _updateUserLocationMarker();
+        _loadSelectedLocation();
+      });
     });
+    _getImageUser();
 
     // แยกการโหลดข้อมูลเป็นครั้งๆ
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      getLocation();
-      _loadPetDataAsync();
+      if (mounted) {
+        getLocation();
+        _loadPetDataAsync();
+      }
     });
   }
 
@@ -123,14 +150,30 @@ class _MapsPageState extends State<Maps_Page> {
     super.dispose();
   }
 
+  void _getImageUser() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      Map<String, dynamic>? userDataFromFirestore =
+          await ApiUserService.getUserDataFromFirestore(userId);
+      if (userDataFromFirestore != null && mounted) {
+        setState(() {
+          userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
+
       isAnonymous = userData.isAnonymous;
       if (isAnonymous) {
         setState(() {
-          userImageBase64 = ''; // หรือคุณอาจจะใช้รูปภาพ default ที่คุณต้องการ
+          userImageBase64 = '';
         });
       } else {
         try {
@@ -140,24 +183,30 @@ class _MapsPageState extends State<Maps_Page> {
               .get();
 
           petId = idpetDocSnapshot['pet_id'];
+          if (petId != null && petId.isNotEmpty) {
+            hasPrimaryPet = true;
 
-          DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
-              .collection('Pet_User')
-              .doc(petId)
-              .get();
+            DocumentSnapshot petDocSnapshot = await FirebaseFirestore.instance
+                .collection('Pet_User')
+                .doc(petId)
+                .get();
 
-          petImg = petDocSnapshot['img_profile'];
-          pet_type = petDocSnapshot['type_pet'];
-          gender = petDocSnapshot['gender'];
-          petName = petDocSnapshot['name'] ?? '';
+            petImg = petDocSnapshot['img_profile'];
+            pet_type = petDocSnapshot['type_pet'];
+            gender = petDocSnapshot['gender'];
+            petName = petDocSnapshot['name'] ?? '';
 
-          Map<String, dynamic>? userMap =
-              await ApiUserService.getUserDataFromFirestore(userId);
+            Map<String, dynamic>? userMap =
+                await ApiUserService.getUserDataFromFirestore(userId);
 
-          if (userMap != null) {
-            userImageBase64 = userMap['photoURL'] ?? '';
+            if (userMap != null) {
+              userImageBase64 = userMap['photoURL'] ?? '';
+            } else {
+              print("User data does not exist");
+            }
           } else {
-            print("User data does not exist");
+            print('No primary pet assigned.');
+            hasPrimaryPet = false;
           }
         } catch (e) {
           print('Error getting user data from Firestore: $e');
@@ -203,7 +252,6 @@ class _MapsPageState extends State<Maps_Page> {
                   .toList());
             }
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-            print(allPetDataList.length);
             setState(() {
               petDataMatchList = allPetDataList;
               isLoading = false;
@@ -305,50 +353,61 @@ class _MapsPageState extends State<Maps_Page> {
   }
 
   void _updateUserLocationMarker() {
-    setState(() {
-      _markers
-          .removeWhere((marker) => marker.markerId.value == 'currentLocation');
-      _createUserLocationMarker();
-    });
+    if (mounted) {
+      setState(() {
+        _markers.removeWhere(
+            (marker) => marker.markerId.value == 'currentLocation');
+        _createUserLocationMarker();
+      });
+    }
   }
 
   void getLocation() async {
     _locationData = await location.getLocation();
     if (_locationData != null) {
-      setState(() {
-        _initialCameraPosition = CameraPosition(
-          bearing: 192.8334901395799,
-          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-          tilt: 59.4407176971435555,
-          zoom: 19.151926040649414,
-        );
-        _createUserLocationMarker();
-        _isMapInitialized = true;
-      });
-      _goToTheLake();
+      if (mounted) {
+        setState(() {
+          _initialCameraPosition = CameraPosition(
+            bearing: 192.8334901395799,
+            target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+            tilt: 59.4407176971435555,
+            zoom: 19.151926040649414,
+          );
+          _createUserLocationMarker();
+          _isMapInitialized = true;
+        });
+        _goToTheLake();
+      }
     }
+    _loadAllPetLocations(context);
   }
 
   void _logSearchValue() {
-    setState(() {
-      _selectedDistance = null;
-      _selectedAge = null;
-      _otherBreedController.text = '';
-      _otherColor.text = '';
-      _selectedPrice = null;
-    });
+    if (mounted) {
+      setState(() {
+        _selectedDistance = null;
+        _selectedAge = null;
+        _otherBreedController.text = '';
+        _otherColor.text = '';
+        _selectedPrice = null;
+      });
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controllerSearch.text;
       search = searchValue.toString();
       location = Location();
       _locationSubscription =
           location.onLocationChanged.listen((LocationData currentLocation) {
-        setState(() {
-          _locationData = currentLocation;
-          _updateUserLocationMarker();
-        });
+        if (mounted) {
+          setState(() {
+            _locationData = currentLocation;
+            _updateUserLocationMarker();
+          });
+        }
       });
-      getLocation();
+
+      getLocation(); // เรียก getLocation ที่นี่
       _getUserDataFromFirestore();
     });
   }
@@ -650,7 +709,12 @@ class _MapsPageState extends State<Maps_Page> {
                                                   height: 40,
                                                   fit: BoxFit.cover,
                                                 )
-                                              : const CircularProgressIndicator(),
+                                              : Image.memory(
+                                                  base64Decode(userImageBase64),
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit: BoxFit.cover,
+                                                ),
                                     ),
                                   ),
                                 ),
@@ -896,46 +960,82 @@ class _MapsPageState extends State<Maps_Page> {
                                                 ],
                                               ),
                                               const SizedBox(height: 15),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  setState(() {
-                                                    location = Location();
-                                                    _locationSubscription =
-                                                        location
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        location = Location();
+                                                        _locationSubscription = location
                                                             .onLocationChanged
                                                             .listen((LocationData
                                                                 currentLocation) {
-                                                      setState(() {
-                                                        _locationData =
-                                                            currentLocation;
-                                                        _updateUserLocationMarker();
-                                                      });
-                                                    });
-                                                    getLocation(); // เรียก getLocation ที่นี่
-                                                    _getUserDataFromFirestore();
-                                                    _selectedDistance =
-                                                        _selectedDistance;
-                                                    _selectedAge = _selectedAge;
-                                                    _otherBreedController.text =
+                                                          setState(() {
+                                                            _locationData =
+                                                                currentLocation;
+                                                            _updateUserLocationMarker();
+                                                          });
+                                                        });
+                                                        getLocation(); // เรียก getLocation ที่นี่
+                                                        _getUserDataFromFirestore();
+                                                        _selectedDistance =
+                                                            _selectedDistance;
+                                                        _selectedAge =
+                                                            _selectedAge;
                                                         _otherBreedController
-                                                            .text;
-                                                    _otherColor.text =
-                                                        _otherColor.text;
-                                                    _selectedPrice =
-                                                        _selectedPrice;
-                                                  });
-                                                  Navigator.pop(context);
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            30),
+                                                                .text =
+                                                            _otherBreedController
+                                                                .text;
+                                                        _otherColor.text =
+                                                            _otherColor.text;
+                                                        _selectedPrice =
+                                                            _selectedPrice;
+                                                      });
+                                                      Navigator.pop(context);
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text('ค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
                                                   ),
-                                                ),
-                                                child: const Text('ค้นหา',
-                                                    style: TextStyle(
-                                                        fontSize: 16)),
+                                                  SizedBox(width: 20),
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        _selectedDistance =
+                                                            null;
+                                                        _selectedAge = null;
+                                                        _otherBreedController
+                                                            .text = '';
+                                                        _otherColor.text = '';
+                                                        _selectedPrice = null;
+                                                      });
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                        'ล้างข้อมูลค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -1194,6 +1294,7 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
+  //เลือกตำแหน่งแสดงผลสัตว์เลี้ยง
   void _startSelectingLocation() async {
     // สร้างตัวแปรเพื่อเก็บค่า markerId
     final String markerId = 'selected-location';
@@ -1489,26 +1590,11 @@ class _MapsPageState extends State<Maps_Page> {
         _locationData?.latitude ?? 0.0,
         _locationData?.longitude ?? 0.0,
       );
-
+      bool isAnonymousUser =
+          FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();
-        bool isMacth = false;
-        bool isFavorite = false;
-        for (var doc in petDataMatchList) {
-          if (doc['pet_id'] == data['pet_id']) {
-            isMacth = true;
-            // print('isMatch' + data['name'] + ' && '+doc['name']);
-            return;
-          }
-        }
-        for (var doc in petDataFavoriteList) {
-          if (doc['pet_id'] == data['pet_id']) {
-            isFavorite = true;
-            // print('isFavorite' + data['name'] + ' && '+doc['name']);
-            return;
-          }
-        }
-        if (isMacth == false && isFavorite == false) {
+        if (isAnonymousUser) {
           if (_selectedDistance == null &&
               _selectedAge == null &&
               _otherBreedController.text == '' &&
@@ -1559,10 +1645,6 @@ class _MapsPageState extends State<Maps_Page> {
                   matchesBreed ||
                   matchesGender ||
                   matchesColor) {
-                if (data['user_id'] == user?.uid) {
-                  return;
-                }
-
                 DocumentSnapshot userSnapshot =
                     await ApiUserService.getUserData(data['user_id']);
 
@@ -1578,84 +1660,6 @@ class _MapsPageState extends State<Maps_Page> {
 
                 // ตรวจสอบประเภทและเพศ
                 if (petStatus == 'พร้อมผสมพันธุ์') {
-                  if (petType == pet_type && petGender != gender) {
-                    String userPhotoURL = userSnapshot['photoURL'] ?? '';
-                    String petID = data['pet_id'] ?? '';
-                    String petName = data['name'] ?? '';
-                    String petImageBase64 = data['img_profile'] ?? '';
-                    String weight = data['weight'] ?? '0.0';
-                    String des = data['description'] ?? '';
-                    String birthdateStr = data['birthdate'] ?? '';
-                    DateTime birthdate = DateTime.parse(birthdateStr);
-                    String age = calculateAge(birthdate);
-
-                    Uint8List? bytes = markerImages[doc.id];
-                    if (bytes == null) {
-                      errors
-                          .add('Marker image not found for document ${doc.id}');
-                      return;
-                    }
-
-                    try {
-                      String distanceStr =
-                          calculateDistance(userLocation, petLocation);
-                      Marker petMarker = Marker(
-                        markerId: MarkerId(doc.id),
-                        position: petLocation,
-                        onTap: () {
-                          _showPetDetails(
-                            context,
-                            petID,
-                            petName,
-                            petImageBase64,
-                            weight,
-                            petGender,
-                            userPhotoURL,
-                            age,
-                            petType,
-                            des,
-                            distanceStr, // เพิ่มระยะห่างที่นี่
-                          );
-                        },
-                        icon: (await _createMarkerIcon(bytes)
-                            .toBitmapDescriptor()),
-                        infoWindow: InfoWindow(
-                          title: petName,
-                          snippet: distanceStr,
-                        ),
-                      );
-
-                      markers.add(petMarker);
-                    } catch (e) {
-                      errors.add(
-                          'Error creating marker for document ${doc.id}: $e');
-                    }
-                  }
-                }
-              } else {
-                return;
-              }
-            } else {
-              // ข้ามข้อมูลของสัตว์เลี้ยงที่เป็นของผู้ใช้เอง
-              if (data['user_id'] == user?.uid) {
-                return;
-              }
-              DocumentSnapshot userSnapshot =
-                  await ApiUserService.getUserData(data['user_id']);
-
-              double lat = userSnapshot['lat'] ?? 0.0;
-              double lng = userSnapshot['lng'] ?? 0.0;
-              lat += Random().nextDouble() * 0.0002;
-              lng += Random().nextDouble() * 0.0002;
-              LatLng petLocation = LatLng(lat, lng);
-
-              String petType = data['type_pet'] ?? '';
-              String petGender = data['gender'] ?? '';
-              String petStatus = data['status'] ?? '';
-
-              // ตรวจสอบประเภทและเพศ
-              if (petStatus == 'พร้อมผสมพันธุ์') {
-                if (petType == pet_type && petGender != gender) {
                   String userPhotoURL = userSnapshot['photoURL'] ?? '';
                   String petID = data['pet_id'] ?? '';
                   String petName = data['name'] ?? '';
@@ -1665,6 +1669,7 @@ class _MapsPageState extends State<Maps_Page> {
                   String birthdateStr = data['birthdate'] ?? '';
                   DateTime birthdate = DateTime.parse(birthdateStr);
                   String age = calculateAge(birthdate);
+                  String petUserId = data['user_id'];
 
                   Uint8List? bytes = markerImages[doc.id];
                   if (bytes == null) {
@@ -1673,10 +1678,8 @@ class _MapsPageState extends State<Maps_Page> {
                   }
 
                   try {
-                    // คำนวณระยะห่าง
                     String distanceStr =
                         calculateDistance(userLocation, petLocation);
-
                     Marker petMarker = Marker(
                       markerId: MarkerId(doc.id),
                       position: petLocation,
@@ -1693,6 +1696,7 @@ class _MapsPageState extends State<Maps_Page> {
                           petType,
                           des,
                           distanceStr, // เพิ่มระยะห่างที่นี่
+                          petUserId,
                         );
                       },
                       icon:
@@ -1709,12 +1713,80 @@ class _MapsPageState extends State<Maps_Page> {
                         'Error creating marker for document ${doc.id}: $e');
                   }
                 }
+              } else {
+                return;
+              }
+            } else {
+              DocumentSnapshot userSnapshot =
+                  await ApiUserService.getUserData(data['user_id']);
+
+              double lat = userSnapshot['lat'] ?? 0.0;
+              double lng = userSnapshot['lng'] ?? 0.0;
+              lat += Random().nextDouble() * 0.0002;
+              lng += Random().nextDouble() * 0.0002;
+              LatLng petLocation = LatLng(lat, lng);
+
+              String petType = data['type_pet'] ?? '';
+              String petGender = data['gender'] ?? '';
+              String petStatus = data['status'] ?? '';
+
+              // ตรวจสอบประเภทและเพศ
+              if (petStatus == 'พร้อมผสมพันธุ์') {
+                String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                String petID = data['pet_id'] ?? '';
+                String petName = data['name'] ?? '';
+                String petImageBase64 = data['img_profile'] ?? '';
+                String weight = data['weight'] ?? '0.0';
+                String des = data['description'] ?? '';
+                String birthdateStr = data['birthdate'] ?? '';
+                DateTime birthdate = DateTime.parse(birthdateStr);
+                String age = calculateAge(birthdate);
+                String petUserId = data['user_id'];
+
+                Uint8List? bytes = markerImages[doc.id];
+                if (bytes == null) {
+                  errors.add('Marker image not found for document ${doc.id}');
+                  return;
+                }
+
+                try {
+                  // คำนวณระยะห่าง
+                  String distanceStr =
+                      calculateDistance(userLocation, petLocation);
+
+                  Marker petMarker = Marker(
+                    markerId: MarkerId(doc.id),
+                    position: petLocation,
+                    onTap: () {
+                      _showPetDetails(
+                          context,
+                          petID,
+                          petName,
+                          petImageBase64,
+                          weight,
+                          petGender,
+                          userPhotoURL,
+                          age,
+                          petType,
+                          des,
+                          distanceStr, // เพิ่มระยะห่างที่นี่
+                          petUserId);
+                    },
+                    icon: (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+                    infoWindow: InfoWindow(
+                      title: petName,
+                      snippet: distanceStr,
+                    ),
+                  );
+
+                  markers.add(petMarker);
+                } catch (e) {
+                  errors
+                      .add('Error creating marker for document ${doc.id}: $e');
+                }
               }
             }
           } else {
-            if (data['user_id'] == user?.uid) {
-              return;
-            }
             DocumentSnapshot userSnapshot =
                 await ApiUserService.getUserData(data['user_id']);
 
@@ -1744,9 +1816,1263 @@ class _MapsPageState extends State<Maps_Page> {
                 data['price'].toString(), _selectedPrice.toString());
 
             if (petStatus == 'พร้อมผสมพันธุ์') {
-              if (petType == pet_type && petGender != gender) {
-                print(data['name']);
-                print(matchesAge);
+              if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesBreed &&
+                    matchesAge &&
+                    matchesColor &&
+                    matchesPrice &&
+                    matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesAge &&
+                    matchesColor &&
+                    matchesPrice &&
+                    matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesBreed &&
+                    matchesColor &&
+                    matchesPrice &&
+                    matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesBreed &&
+                    matchesAge &&
+                    matchesPrice &&
+                    matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesBreed &&
+                    matchesAge &&
+                    matchesColor &&
+                    matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesBreed &&
+                    matchesAge &&
+                    matchesColor &&
+                    matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesColor && matchesPrice && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesAge && matchesPrice && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesAge && matchesColor && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesAge && matchesColor && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesBreed && matchesPrice && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesBreed && matchesColor && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesColor && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesBreed && matchesAge && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesAge && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesAge && matchesColor) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance != null) {
+                if (matchesPrice && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesColor && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesColor && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesAge && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesAge && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesAge && matchesColor) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchesBreed && matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesColor) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text != '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesBreed && matchesAge) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance != null) {
+                if (matchDistance) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice != null &&
+                  _selectedDistance == null) {
+                if (matchesPrice) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge == null &&
+                  _otherColor.text != '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesColor) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else if (_otherBreedController.text == '' &&
+                  _selectedAge != null &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null &&
+                  _selectedDistance == null) {
+                if (matchesAge) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              } else {
+                if (matchesBreed) {
+                  chekDataSearch = true;
+                } else {
+                  chekDataSearch = false;
+                }
+              }
+
+              if (chekDataSearch) {
+                String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                String petID = data['pet_id'] ?? '';
+                String petName = data['name'] ?? '';
+                String petImageBase64 = data['img_profile'] ?? '';
+                String weight = data['weight'] ?? '0.0';
+                String des = data['description'] ?? '';
+                String birthdateStr = data['birthdate'] ?? '';
+                DateTime birthdate = DateTime.parse(birthdateStr);
+                String age = calculateAge(birthdate);
+                String petUserId = data['user_id'];
+
+                Uint8List? bytes = markerImages[doc.id];
+                if (bytes == null) {
+                  errors.add('Marker image not found for document ${doc.id}');
+                  return;
+                }
+
+                try {
+                  String distanceStr =
+                      calculateDistance(userLocation, petLocation);
+                  Marker petMarker = Marker(
+                    markerId: MarkerId(doc.id),
+                    position: petLocation,
+                    onTap: () {
+                      _showPetDetails(
+                          context,
+                          petID,
+                          petName,
+                          petImageBase64,
+                          weight,
+                          petGender,
+                          userPhotoURL,
+                          age,
+                          petType,
+                          des,
+                          distanceStr, // เพิ่มระยะห่างที่นี่
+                          petUserId);
+                    },
+                    icon: (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+                    infoWindow: InfoWindow(
+                      title: petName,
+                      snippet: distanceStr,
+                    ),
+                  );
+
+                  markers.add(petMarker);
+                } catch (e) {
+                  errors
+                      .add('Error creating marker for document ${doc.id}: $e');
+                }
+              }
+            }
+          }
+        } else {
+          print('petid: $petId');
+          if (petId != null && petId.isNotEmpty) {
+            bool isMacth = false;
+            bool isFavorite = false;
+            for (var doc in petDataMatchList) {
+              if (doc['pet_id'] == data['pet_id']) {
+                isMacth = true;
+                // print('isMatch' + data['name'] + ' && '+doc['name']);
+                return;
+              }
+            }
+            for (var doc in petDataFavoriteList) {
+              if (doc['pet_id'] == data['pet_id']) {
+                isFavorite = true;
+                // print('isFavorite' + data['name'] + ' && '+doc['name']);
+                return;
+              }
+            }
+            if (isMacth == false && isFavorite == false) {
+              if (_selectedDistance == null &&
+                  _selectedAge == null &&
+                  _otherBreedController.text == '' &&
+                  _otherColor.text == '' &&
+                  _selectedPrice == null) {
+                if (search.toString() != 'null') {
+                  bool matchesName = data['name']
+                      .toString()
+                      .toLowerCase()
+                      .contains(search.toString().toLowerCase());
+
+                  DateTime birthDate = DateTime.parse(data['birthdate']);
+                  DateTime now = DateTime.now();
+                  int yearsDifference = now.year - birthDate.year;
+                  int monthsDifference = now.month - birthDate.month;
+
+                  if (now.day < birthDate.day) {
+                    monthsDifference--;
+                  }
+
+                  if (monthsDifference < 0) {
+                    yearsDifference--;
+                    monthsDifference += 12;
+                  }
+
+                  String ageDifference =
+                      '$yearsDifferenceปี$monthsDifferenceเดือน';
+
+                  bool matchesAge = ageDifference
+                      .toLowerCase()
+                      .contains(search.toString().toLowerCase());
+
+                  bool matchesBreed = data['breed_pet']
+                      .toString()
+                      .toLowerCase()
+                      .contains(search.toString().toLowerCase());
+
+                  bool matchesGender = data['gender']
+                      .toString()
+                      .toLowerCase()
+                      .contains(search.toString().toLowerCase());
+
+                  bool matchesColor = data['color']
+                      .toString()
+                      .toLowerCase()
+                      .contains(search.toString().toLowerCase());
+                  if (matchesName ||
+                      matchesAge ||
+                      matchesBreed ||
+                      matchesGender ||
+                      matchesColor) {
+                    if (data['user_id'] == user?.uid) {
+                      return;
+                    }
+
+                    DocumentSnapshot userSnapshot =
+                        await ApiUserService.getUserData(data['user_id']);
+
+                    double lat = userSnapshot['lat'] ?? 0.0;
+                    double lng = userSnapshot['lng'] ?? 0.0;
+                    lat += Random().nextDouble() * 0.0002;
+                    lng += Random().nextDouble() * 0.0002;
+                    LatLng petLocation = LatLng(lat, lng);
+
+                    String petType = data['type_pet'] ?? '';
+                    String petGender = data['gender'] ?? '';
+                    String petStatus = data['status'] ?? '';
+
+                    // ตรวจสอบประเภทและเพศ
+                    if (petStatus == 'พร้อมผสมพันธุ์') {
+                      if (petType == pet_type && petGender != gender) {
+                        String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                        String petID = data['pet_id'] ?? '';
+                        String petName = data['name'] ?? '';
+                        String petImageBase64 = data['img_profile'] ?? '';
+                        String weight = data['weight'] ?? '0.0';
+                        String des = data['description'] ?? '';
+                        String birthdateStr = data['birthdate'] ?? '';
+                        DateTime birthdate = DateTime.parse(birthdateStr);
+                        String age = calculateAge(birthdate);
+                        String petUserId = data['user_id'];
+
+                        Uint8List? bytes = markerImages[doc.id];
+                        if (bytes == null) {
+                          errors.add(
+                              'Marker image not found for document ${doc.id}');
+                          return;
+                        }
+
+                        try {
+                          String distanceStr =
+                              calculateDistance(userLocation, petLocation);
+                          Marker petMarker = Marker(
+                            markerId: MarkerId(doc.id),
+                            position: petLocation,
+                            onTap: () {
+                              _showPetDetails(
+                                context,
+                                petID,
+                                petName,
+                                petImageBase64,
+                                weight,
+                                petGender,
+                                userPhotoURL,
+                                age,
+                                petType,
+                                des,
+                                distanceStr, // เพิ่มระยะห่างที่นี่
+                                petUserId,
+                              );
+                            },
+                            icon: (await _createMarkerIcon(bytes)
+                                .toBitmapDescriptor()),
+                            infoWindow: InfoWindow(
+                              title: petName,
+                              snippet: distanceStr,
+                            ),
+                          );
+
+                          markers.add(petMarker);
+                        } catch (e) {
+                          errors.add(
+                              'Error creating marker for document ${doc.id}: $e');
+                        }
+                      }
+                    }
+                  } else {
+                    return;
+                  }
+                } else {
+                  // ข้ามข้อมูลของสัตว์เลี้ยงที่เป็นของผู้ใช้เอง
+                  if (data['user_id'] == user?.uid) {
+                    return;
+                  }
+                  DocumentSnapshot userSnapshot =
+                      await ApiUserService.getUserData(data['user_id']);
+
+                  double lat = userSnapshot['lat'] ?? 0.0;
+                  double lng = userSnapshot['lng'] ?? 0.0;
+                  lat += Random().nextDouble() * 0.0002;
+                  lng += Random().nextDouble() * 0.0002;
+                  LatLng petLocation = LatLng(lat, lng);
+
+                  String petType = data['type_pet'] ?? '';
+                  String petGender = data['gender'] ?? '';
+                  String petStatus = data['status'] ?? '';
+
+                  // ตรวจสอบประเภทและเพศ
+                  if (petStatus == 'พร้อมผสมพันธุ์') {
+                    if (petType == pet_type && petGender != gender) {
+                      String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                      String petID = data['pet_id'] ?? '';
+                      String petName = data['name'] ?? '';
+                      String petImageBase64 = data['img_profile'] ?? '';
+                      String weight = data['weight'] ?? '0.0';
+                      String des = data['description'] ?? '';
+                      String birthdateStr = data['birthdate'] ?? '';
+                      DateTime birthdate = DateTime.parse(birthdateStr);
+                      String age = calculateAge(birthdate);
+                      String petUserId = data['user_id'];
+
+                      Uint8List? bytes = markerImages[doc.id];
+                      if (bytes == null) {
+                        errors.add(
+                            'Marker image not found for document ${doc.id}');
+                        return;
+                      }
+
+                      try {
+                        // คำนวณระยะห่าง
+                        String distanceStr =
+                            calculateDistance(userLocation, petLocation);
+
+                        Marker petMarker = Marker(
+                          markerId: MarkerId(doc.id),
+                          position: petLocation,
+                          onTap: () {
+                            _showPetDetails(
+                                context,
+                                petID,
+                                petName,
+                                petImageBase64,
+                                weight,
+                                petGender,
+                                userPhotoURL,
+                                age,
+                                petType,
+                                des,
+                                distanceStr, // เพิ่มระยะห่างที่นี่
+                                petUserId);
+                          },
+                          icon: (await _createMarkerIcon(bytes)
+                              .toBitmapDescriptor()),
+                          infoWindow: InfoWindow(
+                            title: petName,
+                            snippet: distanceStr,
+                          ),
+                        );
+
+                        markers.add(petMarker);
+                      } catch (e) {
+                        errors.add(
+                            'Error creating marker for document ${doc.id}: $e');
+                      }
+                    }
+                  }
+                }
+              } else {
+                if (data['user_id'] == user?.uid) {
+                  return;
+                }
+                DocumentSnapshot userSnapshot =
+                    await ApiUserService.getUserData(data['user_id']);
+
+                double lat = userSnapshot['lat'] ?? 0.0;
+                double lng = userSnapshot['lng'] ?? 0.0;
+                lat += Random().nextDouble() * 0.0002;
+                lng += Random().nextDouble() * 0.0002;
+                LatLng petLocation = LatLng(lat, lng);
+                String petType = data['type_pet'] ?? '';
+                String petGender = data['gender'] ?? '';
+                String petStatus = data['status'] ?? '';
+                String distanceStr =
+                    calculateDistance(userLocation, petLocation);
+                bool matchDistance =
+                    isDistanceRange(distanceStr, _selectedDistance.toString());
+                bool matchesBreed = data['breed_pet']
+                    .toString()
+                    .toLowerCase()
+                    .contains(_otherBreedController.text.toLowerCase());
+
+                DateTime birthDate = DateTime.parse(data['birthdate']);
+                bool matchesAge =
+                    isAgeInRange(_selectedAge.toString(), birthDate);
+                bool matchesColor = data['color']
+                    .toString()
+                    .toLowerCase()
+                    .contains(_otherColor.text.toLowerCase());
+                bool matchesPrice = isPriceInRange(
+                    data['price'].toString(), _selectedPrice.toString());
+
+                if (petStatus == 'พร้อมผสมพันธุ์') {
+                  if (petType == pet_type && petGender != gender) {
+                    print(data['name']);
+                    print(matchesAge);
+                    if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed &&
+                          matchesAge &&
+                          matchesColor &&
+                          matchesPrice &&
+                          matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesAge &&
+                          matchesColor &&
+                          matchesPrice &&
+                          matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed &&
+                          matchesColor &&
+                          matchesPrice &&
+                          matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed &&
+                          matchesAge &&
+                          matchesPrice &&
+                          matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed &&
+                          matchesAge &&
+                          matchesColor &&
+                          matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed &&
+                          matchesAge &&
+                          matchesColor &&
+                          matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesColor && matchesPrice && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesAge && matchesPrice && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesAge && matchesColor && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesAge && matchesColor && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed && matchesPrice && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed && matchesColor && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesColor && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed && matchesAge && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesAge && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesAge && matchesColor) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance != null) {
+                      if (matchesPrice && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesColor && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesColor && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesAge && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesAge && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesAge && matchesColor) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchesBreed && matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesColor) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text != '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesBreed && matchesAge) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance != null) {
+                      if (matchDistance) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice != null &&
+                        _selectedDistance == null) {
+                      if (matchesPrice) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge == null &&
+                        _otherColor.text != '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesColor) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else if (_otherBreedController.text == '' &&
+                        _selectedAge != null &&
+                        _otherColor.text == '' &&
+                        _selectedPrice == null &&
+                        _selectedDistance == null) {
+                      if (matchesAge) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    } else {
+                      if (matchesBreed) {
+                        chekDataSearch = true;
+                      } else {
+                        chekDataSearch = false;
+                      }
+                    }
+
+                    if (chekDataSearch) {
+                      String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                      String petID = data['pet_id'] ?? '';
+                      String petName = data['name'] ?? '';
+                      String petImageBase64 = data['img_profile'] ?? '';
+                      String weight = data['weight'] ?? '0.0';
+                      String des = data['description'] ?? '';
+                      String birthdateStr = data['birthdate'] ?? '';
+                      DateTime birthdate = DateTime.parse(birthdateStr);
+                      String age = calculateAge(birthdate);
+                      String petUserId = data['user_id'];
+
+                      Uint8List? bytes = markerImages[doc.id];
+                      if (bytes == null) {
+                        errors.add(
+                            'Marker image not found for document ${doc.id}');
+                        return;
+                      }
+
+                      try {
+                        String distanceStr =
+                            calculateDistance(userLocation, petLocation);
+                        Marker petMarker = Marker(
+                          markerId: MarkerId(doc.id),
+                          position: petLocation,
+                          onTap: () {
+                            _showPetDetails(
+                                context,
+                                petID,
+                                petName,
+                                petImageBase64,
+                                weight,
+                                petGender,
+                                userPhotoURL,
+                                age,
+                                petType,
+                                des,
+                                distanceStr, // เพิ่มระยะห่างที่นี่
+                                petUserId);
+                          },
+                          icon: (await _createMarkerIcon(bytes)
+                              .toBitmapDescriptor()),
+                          infoWindow: InfoWindow(
+                            title: petName,
+                            snippet: distanceStr,
+                          ),
+                        );
+
+                        markers.add(petMarker);
+                      } catch (e) {
+                        errors.add(
+                            'Error creating marker for document ${doc.id}: $e');
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            if (_selectedDistance == null &&
+                _selectedAge == null &&
+                _otherBreedController.text == '' &&
+                _otherColor.text == '' &&
+                _selectedPrice == null) {
+              if (search.toString() != 'null') {
+                bool matchesName = data['name']
+                    .toString()
+                    .toLowerCase()
+                    .contains(search.toString().toLowerCase());
+
+                DateTime birthDate = DateTime.parse(data['birthdate']);
+                DateTime now = DateTime.now();
+                int yearsDifference = now.year - birthDate.year;
+                int monthsDifference = now.month - birthDate.month;
+
+                if (now.day < birthDate.day) {
+                  monthsDifference--;
+                }
+
+                if (monthsDifference < 0) {
+                  yearsDifference--;
+                  monthsDifference += 12;
+                }
+
+                String ageDifference =
+                    '$yearsDifferenceปี$monthsDifferenceเดือน';
+
+                bool matchesAge = ageDifference
+                    .toLowerCase()
+                    .contains(search.toString().toLowerCase());
+
+                bool matchesBreed = data['breed_pet']
+                    .toString()
+                    .toLowerCase()
+                    .contains(search.toString().toLowerCase());
+
+                bool matchesGender = data['gender']
+                    .toString()
+                    .toLowerCase()
+                    .contains(search.toString().toLowerCase());
+
+                bool matchesColor = data['color']
+                    .toString()
+                    .toLowerCase()
+                    .contains(search.toString().toLowerCase());
+                if (matchesName ||
+                    matchesAge ||
+                    matchesBreed ||
+                    matchesGender ||
+                    matchesColor) {
+                  DocumentSnapshot userSnapshot =
+                      await ApiUserService.getUserData(data['user_id']);
+
+                  double lat = userSnapshot['lat'] ?? 0.0;
+                  double lng = userSnapshot['lng'] ?? 0.0;
+                  lat += Random().nextDouble() * 0.0002;
+                  lng += Random().nextDouble() * 0.0002;
+                  LatLng petLocation = LatLng(lat, lng);
+
+                  String petType = data['type_pet'] ?? '';
+                  String petGender = data['gender'] ?? '';
+                  String petStatus = data['status'] ?? '';
+
+                  // ตรวจสอบประเภทและเพศ
+                  if (petStatus == 'พร้อมผสมพันธุ์') {
+                    String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                    String petID = data['pet_id'] ?? '';
+                    String petName = data['name'] ?? '';
+                    String petImageBase64 = data['img_profile'] ?? '';
+                    String weight = data['weight'] ?? '0.0';
+                    String des = data['description'] ?? '';
+                    String birthdateStr = data['birthdate'] ?? '';
+                    DateTime birthdate = DateTime.parse(birthdateStr);
+                    String age = calculateAge(birthdate);
+                    String petUserId = data['user_id'];
+
+                    Uint8List? bytes = markerImages[doc.id];
+                    if (bytes == null) {
+                      errors
+                          .add('Marker image not found for document ${doc.id}');
+                      return;
+                    }
+
+                    try {
+                      String distanceStr =
+                          calculateDistance(userLocation, petLocation);
+                      Marker petMarker = Marker(
+                        markerId: MarkerId(doc.id),
+                        position: petLocation,
+                        onTap: () {
+                          _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId,
+                          );
+                        },
+                        icon: (await _createMarkerIcon(bytes)
+                            .toBitmapDescriptor()),
+                        infoWindow: InfoWindow(
+                          title: petName,
+                          snippet: distanceStr,
+                        ),
+                      );
+
+                      markers.add(petMarker);
+                    } catch (e) {
+                      errors.add(
+                          'Error creating marker for document ${doc.id}: $e');
+                    }
+                  }
+                } else {
+                  return;
+                }
+              } else {
+                DocumentSnapshot userSnapshot =
+                    await ApiUserService.getUserData(data['user_id']);
+
+                double lat = userSnapshot['lat'] ?? 0.0;
+                double lng = userSnapshot['lng'] ?? 0.0;
+                lat += Random().nextDouble() * 0.0002;
+                lng += Random().nextDouble() * 0.0002;
+                LatLng petLocation = LatLng(lat, lng);
+
+                String petType = data['type_pet'] ?? '';
+                String petGender = data['gender'] ?? '';
+                String petStatus = data['status'] ?? '';
+
+                // ตรวจสอบประเภทและเพศ
+                if (petStatus == 'พร้อมผสมพันธุ์') {
+                  String userPhotoURL = userSnapshot['photoURL'] ?? '';
+                  String petID = data['pet_id'] ?? '';
+                  String petName = data['name'] ?? '';
+                  String petImageBase64 = data['img_profile'] ?? '';
+                  String weight = data['weight'] ?? '0.0';
+                  String des = data['description'] ?? '';
+                  String birthdateStr = data['birthdate'] ?? '';
+                  DateTime birthdate = DateTime.parse(birthdateStr);
+                  String age = calculateAge(birthdate);
+                  String petUserId = data['user_id'];
+
+                  Uint8List? bytes = markerImages[doc.id];
+                  if (bytes == null) {
+                    errors.add('Marker image not found for document ${doc.id}');
+                    return;
+                  }
+
+                  try {
+                    // คำนวณระยะห่าง
+                    String distanceStr =
+                        calculateDistance(userLocation, petLocation);
+
+                    Marker petMarker = Marker(
+                      markerId: MarkerId(doc.id),
+                      position: petLocation,
+                      onTap: () {
+                        _showPetDetails(
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId);
+                      },
+                      icon:
+                          (await _createMarkerIcon(bytes).toBitmapDescriptor()),
+                      infoWindow: InfoWindow(
+                        title: petName,
+                        snippet: distanceStr,
+                      ),
+                    );
+
+                    markers.add(petMarker);
+                  } catch (e) {
+                    errors.add(
+                        'Error creating marker for document ${doc.id}: $e');
+                  }
+                }
+              }
+            } else {
+              DocumentSnapshot userSnapshot =
+                  await ApiUserService.getUserData(data['user_id']);
+
+              double lat = userSnapshot['lat'] ?? 0.0;
+              double lng = userSnapshot['lng'] ?? 0.0;
+              lat += Random().nextDouble() * 0.0002;
+              lng += Random().nextDouble() * 0.0002;
+              LatLng petLocation = LatLng(lat, lng);
+              String petType = data['type_pet'] ?? '';
+              String petGender = data['gender'] ?? '';
+              String petStatus = data['status'] ?? '';
+              String distanceStr = calculateDistance(userLocation, petLocation);
+              bool matchDistance =
+                  isDistanceRange(distanceStr, _selectedDistance.toString());
+              bool matchesBreed = data['breed_pet']
+                  .toString()
+                  .toLowerCase()
+                  .contains(_otherBreedController.text.toLowerCase());
+
+              DateTime birthDate = DateTime.parse(data['birthdate']);
+              bool matchesAge =
+                  isAgeInRange(_selectedAge.toString(), birthDate);
+              bool matchesColor = data['color']
+                  .toString()
+                  .toLowerCase()
+                  .contains(_otherColor.text.toLowerCase());
+              bool matchesPrice = isPriceInRange(
+                  data['price'].toString(), _selectedPrice.toString());
+
+              if (petStatus == 'พร้อมผสมพันธุ์') {
                 if (_otherBreedController.text != '' &&
                     _selectedAge != null &&
                     _otherColor.text != '' &&
@@ -2084,6 +3410,7 @@ class _MapsPageState extends State<Maps_Page> {
                   String birthdateStr = data['birthdate'] ?? '';
                   DateTime birthdate = DateTime.parse(birthdateStr);
                   String age = calculateAge(birthdate);
+                  String petUserId = data['user_id'];
 
                   Uint8List? bytes = markerImages[doc.id];
                   if (bytes == null) {
@@ -2099,18 +3426,18 @@ class _MapsPageState extends State<Maps_Page> {
                       position: petLocation,
                       onTap: () {
                         _showPetDetails(
-                          context,
-                          petID,
-                          petName,
-                          petImageBase64,
-                          weight,
-                          petGender,
-                          userPhotoURL,
-                          age,
-                          petType,
-                          des,
-                          distanceStr, // เพิ่มระยะห่างที่นี่
-                        );
+                            context,
+                            petID,
+                            petName,
+                            petImageBase64,
+                            weight,
+                            petGender,
+                            userPhotoURL,
+                            age,
+                            petType,
+                            des,
+                            distanceStr, // เพิ่มระยะห่างที่นี่
+                            petUserId);
                       },
                       icon:
                           (await _createMarkerIcon(bytes).toBitmapDescriptor()),
@@ -2131,6 +3458,7 @@ class _MapsPageState extends State<Maps_Page> {
           }
         }
       });
+
       _markers.clear();
       _markers.addAll(markers);
       print(_markers.length);
@@ -2303,6 +3631,242 @@ class _MapsPageState extends State<Maps_Page> {
     return [0.0, 0.0];
   }
 
+  void add_Faverite(String petIdd) async {
+    // setState(() {
+    //   isLoading = true;
+    // });
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    String? petId = prefs.getString(userId.toString());
+    String pet_request = petId.toString();
+    String pet_respone = petIdd.toString();
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
+    DocumentReference userFavoritesRef =
+        FirebaseFirestore.instance.collection('favorites').doc(userId);
+
+    // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+    CollectionReference petFavoriteRef =
+        userFavoritesRef.collection('pet_favorite');
+
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petFavoriteRef
+          .where('pet_request', isEqualTo: pet_request)
+          .where('pet_respone', isEqualTo: pet_respone)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+        // setState(() {
+        //   isLoading = false;
+        // });
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('คุณมีการกดถูกใจนี้อยู่แล้ว',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            );
+          },
+        );
+      } else {
+        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+        DocumentReference newPetfav = await petFavoriteRef.add({
+          'created_at': formatted,
+          'pet_request': pet_request,
+          'pet_respone': pet_respone,
+        });
+
+        String docId = newPetfav.id;
+
+        await newPetfav.update({'id_fav': docId});
+
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 1), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.star_1,
+                      color: Colors.yellow.shade800, size: 50),
+                  SizedBox(height: 20),
+                  Text('เพิ่มการกดถูกใจเรียบร้อย',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            );
+          },
+        );
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void add_match(String petIdd, petId, petUserId, String img_profile,
+      String name_petrep, String des) async {
+    String pet_request = petIdd.toString();
+    String pet_respone = petId.toString();
+
+    print(pet_request);
+    print(pet_respone);
+
+    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+    final DateTime now = DateTime.now();
+    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final String formatted =
+        formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+    CollectionReference petMatchRef =
+        FirebaseFirestore.instance.collection('match');
+    try {
+      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+      QuerySnapshot querySnapshot = await petMatchRef
+          .where('pet_request', isEqualTo: pet_request)
+          .where('pet_respone', isEqualTo: pet_respone)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        setState(() {
+          isLoading = false;
+        });
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+            });
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.heart_1,
+                      color: Colors.pinkAccent, size: 50),
+                  SizedBox(height: 20),
+                  Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
+            );
+          },
+        );
+      } else {
+        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
+        CollectionReference petMatchRef =
+            FirebaseFirestore.instance.collection('match');
+
+        try {
+          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
+          QuerySnapshot querySnapshot = await petMatchRef
+              .where('pet_request', isEqualTo: pet_request)
+              .where('pet_respone', isEqualTo: pet_respone)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+            setState(() {
+              isLoading = false;
+            });
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return const AlertDialog(
+                  title: Text('Error'),
+                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
+                );
+              },
+            );
+          } else {
+            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+            DocumentReference newPetMatch = await petMatchRef.add({
+              'created_at': formatted,
+              'description': des,
+              'pet_request': pet_request,
+              'pet_respone': pet_respone,
+              'status': 'กำลังรอ',
+              'updates_at': formatted
+            });
+
+            String docId = newPetMatch.id;
+
+            await newPetMatch.update({'id_match': docId});
+
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context)
+                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                });
+                return AlertDialog(
+                  title: Column(
+                    children: [
+                      Icon(LineAwesomeIcons.heart_1,
+                          color: Colors.pinkAccent, size: 50),
+                      SizedBox(height: 20),
+                      Text('ส่งคำร้องขอการจับคู่กับ $name_petrep สำเร็จ',
+                          style: TextStyle(fontSize: 18)),
+                    ],
+                  ),
+                );
+              },
+            );
+
+            sendNotificationToUser(
+                petUserId, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+                pet_respone,
+                "คุณมีคำขอใหม่!",
+                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+            setState(() {
+              isLoading = false;
+            });
+          }
+        } catch (error) {
+          print("Failed to add pet: $error");
+
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (error) {
+      print("Failed to add pet: $error");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   //Show Dialog เมื่อมีการคลิก Maker สัตว์เลี้ยง
   void _showPetDetails(
       BuildContext context,
@@ -2315,7 +3879,8 @@ class _MapsPageState extends State<Maps_Page> {
       String age,
       String type,
       String des,
-      String distance) {
+      String distance,
+      String petUserId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2577,24 +4142,48 @@ class _MapsPageState extends State<Maps_Page> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Colors.blue.shade800.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Center(
-                                    child: IconButton(
-                                      onPressed: () {
-                                        // Add your code to handle the "exit" action here
-                                      },
-                                      icon: const Icon(
-                                        Icons.star_rounded,
-                                        color: Colors.yellow,
-                                      ),
-                                      iconSize: 40,
+                                GestureDetector(
+                                  onTap: (hasPrimaryPet &&
+                                          !user!
+                                              .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
+                                      ? () {
+                                          // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
+                                          add_Faverite(petID);
+                                          Navigator.of(context).pop();
+                                        }
+                                      : () {
+                                          // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                          if (user!.isAnonymous) {
+                                            _showSignInDialog(
+                                                context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                          } else {
+                                            _showNoPrimaryPetDialog(
+                                                context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                          }
+                                        },
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (hasPrimaryPet && !user!.isAnonymous)
+                                              ? Colors.blue.shade600
+                                                  .withOpacity(0.8)
+                                              : Colors.grey,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.5),
+                                          spreadRadius: 1,
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.star_rounded,
+                                      color: Colors.yellow,
+                                      size: 20,
                                     ),
                                   ),
                                 ),
@@ -2621,23 +4210,96 @@ class _MapsPageState extends State<Maps_Page> {
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueGrey.shade50,
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Center(
-                                    child: IconButton(
-                                      onPressed: () {
-                                        // Add your code to handle the "heart" action here
-                                      },
-                                      icon: Icon(
-                                        Icons.favorite,
-                                        color: Colors.pinkAccent.shade400,
-                                      ),
-                                      iconSize: 30,
+                                GestureDetector(
+                                  onTap: () async {
+                                    print(
+                                        'petrequest: $petID, petrespone: $petId');
+                                    if (hasPrimaryPet && !user!.isAnonymous) {
+                                      // ตรวจสอบว่ามีข้อมูลที่ซ้ำกันอยู่หรือไม่
+                                      final petMatchRef = FirebaseFirestore
+                                          .instance
+                                          .collection('match');
+                                      QuerySnapshot querySnapshot =
+                                          await petMatchRef
+                                              .where('pet_request',
+                                                  isEqualTo: petID)
+                                              .where('pet_respone',
+                                                  isEqualTo: petId)
+                                              .get();
+
+                                      if (querySnapshot.docs.isNotEmpty) {
+                                        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
+                                        showDialog(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            Future.delayed(
+                                                const Duration(seconds: 2), () {
+                                              Navigator.of(context).pop(
+                                                  true); // ปิดไดอะล็อกหลังจาก 2 วินาที
+                                            });
+                                            return AlertDialog(
+                                              title: Column(
+                                                children: [
+                                                  Icon(Icons.error,
+                                                      color: Colors.red,
+                                                      size: 50),
+                                                  SizedBox(height: 20),
+                                                  Text(
+                                                      'สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่',
+                                                      style: TextStyle(
+                                                          fontSize: 18)),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      } else {
+                                        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+                                        _showRequestDialog(
+                                            context,
+                                            petName,
+                                            petId,
+                                            petID,
+                                            petUserId,
+                                            petImageBase64);
+                                      }
+                                    } else {
+                                      // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
+                                      if (user!.isAnonymous) {
+                                        _showSignInDialog(
+                                            context); // แสดงการแจ้งเตือนให้ล็อกอิน
+                                      } else {
+                                        _showNoPrimaryPetDialog(
+                                            context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: (hasPrimaryPet &&
+                                              !user!.isAnonymous)
+                                          ? Colors.white
+                                          : Colors
+                                              .grey, // สีปุ่มเปลี่ยนตามสถานะ
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey.withOpacity(0.5),
+                                          spreadRadius: 1,
+                                          blurRadius: 3,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.favorite,
+                                      color:
+                                          (hasPrimaryPet && !user!.isAnonymous)
+                                              ? Colors.pinkAccent
+                                              : Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 )
@@ -2655,5 +4317,274 @@ class _MapsPageState extends State<Maps_Page> {
         );
       },
     );
+  }
+
+  void _showNoPrimaryPetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+        });
+        return AlertDialog(
+          title: Column(
+            children: [
+              const Icon(Icons.pets_rounded, color: Colors.deepPurple, size: 50),
+              SizedBox(height: 20),
+              Text(
+                'กรุณาเลือกสัตว์เลี้ยงตัวหลัก',
+                style: TextStyle(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            'ที่จะใช้ในการจับคู่และกดถูกใจก่อน',
+            style: TextStyle(fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSignInDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('กรุณาลงทะเบียน'),
+          content: const Text('คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('ลงทะเบียน'),
+              onPressed: () {},
+            ),
+            TextButton(
+              child: const Text('ยกเลิก'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showRequestDialog(
+      BuildContext context, petName, petId, petID, petUserId, Img) {
+    TextEditingController des = TextEditingController();
+    print('pet request: $petId, pet respone: $petID, userID: $petUserId');
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          title: Column(
+            children: [
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'ส่งคำขอจับคู่ไปหา ',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      petName,
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.pink.shade600),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              SizedBox(
+                width: 150,
+                height: 120,
+                child: AspectRatio(
+                  aspectRatio: 1.5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.memory(
+                      base64Decode(Img),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: des,
+                decoration: InputDecoration(
+                  hintText: 'พิมพ์ข้อความที่ต้องการส่งไปหา....',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.deepPurpleAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child: Text('ยกเลิกการส่งคำขอ',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      add_match(
+                          petId, petID, petUserId, Img, petName, des.text);
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.pinkAccent, // เปลี่ยนสีพื้นหลังของปุ่ม
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            LineAwesomeIcons.paper_plane_1,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text('ส่งคำขอ', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void sendNotificationToUser(
+      String userIdd, String petRespone, String title, String body) async {
+    try {
+      // ตรวจสอบว่า userIdd ไม่ตรงกับผู้ใช้ปัจจุบัน (หมายถึงผู้ใช้ที่ถูกส่งคำขอ)
+      if (userIdd != FirebaseAuth.instance.currentUser!.uid) {
+        // ดึงข้อมูลผู้ใช้จาก Firestore
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(userIdd)
+            .get();
+
+        // ดึง FCM Token ของผู้ใช้จากข้อมูลที่ได้มา
+        String? fcmToken = userDoc['fcm_token'];
+
+        if (fcmToken != null) {
+          // ส่งการแจ้งเตือนโดยเรียกใช้ฟังก์ชัน sendPushMessage
+          await sendPushMessage(fcmToken, title, body);
+
+          // บันทึกข้อมูลการแจ้งเตือนลงใน Firestore
+          await _saveNotificationToFirestore(userIdd, petRespone, title, body);
+        } else {
+          print("FCM Token is null, unable to send notification");
+        }
+      } else {
+        print(
+            "No notification sent because the user is the one who made the request.");
+      }
+    } catch (error) {
+      print("Error sending notification to user: $error");
+    }
+  }
+
+  Future<void> _saveNotificationToFirestore(
+      String userId, String petId, String title, String body) async {
+    try {
+      // รับวันและเวลาปัจจุบันในโซนเวลาไทย
+      final DateTime now = DateTime.now();
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      final String formattedDate =
+          formatter.format(now.toUtc().add(Duration(hours: 7)));
+
+      // อ้างอิงถึงคอลเลกชัน notifications ในเอกสาร userId
+      CollectionReference notificationsRef = FirebaseFirestore.instance
+          .collection('notification')
+          .doc(userId)
+          .collection('pet_notification');
+
+      // เพิ่มเอกสารใหม่ลงในคอลเลกชัน notifications
+      await notificationsRef.add({
+        'pet_id': petId, // เพิ่มข้อมูล pet_id
+        'title': title,
+        'body': body,
+        'status': 'unread', // สถานะเริ่มต้นเป็น 'unread'
+        'created_at': formattedDate,
+        'scheduled_at': formattedDate, // เวลาที่การแจ้งเตือนถูกตั้งค่า
+      });
+
+      print("Notification saved to Firestore successfully");
+    } catch (error) {
+      print("Error saving notification to Firestore: $error");
+    }
+  }
+
+  Future<void> sendPushMessage(
+      String token_user, String title, String body) async {
+    try {
+      print("Sending notification to token: $token_user");
+
+      // ดึง Firebase Access Token
+      String token = await firebaseAccessToken.getToken();
+
+      final data = {
+        "message": {
+          "token": token_user,
+          "notification": {"title": title, "body": body}
+        }
+      };
+
+      final response = await http.post(
+        Uri.parse(
+            'https://fcm.googleapis.com/v1/projects/login-3c8fb/messages:send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        print("Notification sent successfully");
+      } else {
+        print("Failed to send notification");
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+      }
+    } catch (error) {
+      print("Error sending notification: $error");
+    }
   }
 }

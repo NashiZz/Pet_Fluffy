@@ -1,23 +1,25 @@
 import 'dart:convert';
 
-import 'package:Pet_Fluffy/features/page/email_verifly.dart';
+import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
+import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-class addDataUser_Page extends StatefulWidget {
+class addDataGoogle_Page extends StatefulWidget {
   final Map<String, dynamic> userData;
 
-  const addDataUser_Page({Key? key, required this.userData}) : super(key: key);
+  const addDataGoogle_Page({Key? key, required this.userData})
+      : super(key: key);
 
   @override
-  State<addDataUser_Page> createState() => _addDataUser_PageState();
+  State<addDataGoogle_Page> createState() => _addDataGoogle_PageState();
 }
 
-class _addDataUser_PageState extends State<addDataUser_Page> {
+class _addDataGoogle_PageState extends State<addDataGoogle_Page> {
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
   final TextEditingController nicknameController = TextEditingController();
@@ -100,7 +102,10 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginPage()),
+            );
           },
         ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -334,7 +339,7 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
                                       color: Colors.white,
                                     )
                                   : const Text(
-                                      "สมัครสมาชิก",
+                                      "บันทึกข้อมูล",
                                       style: TextStyle(
                                           color: Colors.white, fontSize: 18),
                                     )),
@@ -348,75 +353,56 @@ class _addDataUser_PageState extends State<addDataUser_Page> {
     );
   }
 
-  Future<void> saveUserAdditionalData() async {
-    if (_isLoading) return;
-
+  void saveUserAdditionalData() async {
     setState(() {
       _isLoading = true;
     });
 
+    String uid = widget.userData['uid'];
+    String email = widget.userData['email'];
+    String password = widget.userData['password'];
+    String username = widget.userData['username'];
+    String fullname = widget.userData['fullname'];
+    String image = widget.userData['image'];
+
     try {
-      // ดึงข้อมูลที่ส่งมาจากหน้าก่อน
-      String email = widget.userData['email'];
-      String password = widget.userData['password'];
-      String username = widget.userData['username'];
-      String fullname = widget.userData['fullname'];
-      String image = widget.userData['image'] != null
-          ? base64Encode(widget.userData['image'])
-          : '';
+      // ดึงข้อมูลผู้ใช้ปัจจุบันจาก Firebase Authentication
+      User? user = FirebaseAuth.instance.currentUser;
 
-      // สร้างบัญชีผู้ใช้ใน Firebase Authentication
-      UserCredential? userCredential =
-          await _authService.signUp(email, password);
-
-      if (userCredential == null) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (user != null) {
+        // สร้างข้อมูลที่ต้องการบันทึกลง Firestore
+        await _authService.saveUserGoogle(
+          uid,
+          username,
+          fullname,
+          email,
+          password,
+          image,
+          nicknameController.text,
+          phoneController.text,
+          facebookController.text,
+          lineController.text,
+          _selectedGender,
+          _dateController.text,
+          _selectedCounty,
+        );
+        // นำทางไปยังหน้าหลักของผู้ใช้
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LocationSelectionPage()),
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
-            backgroundColor: Colors.red,
+            content: Text('ไม่พบข้อมูลผู้ใช้'),
           ),
         );
-        return;
       }
-
-      // เรียกใช้ฟังก์ชัน saveUserDataToFirestore
-      await _authService.saveUserDataToFirestore(
-        userCredential.user!.uid,
-        username,
-        fullname,
-        email,
-        password,
-        image,
-        nicknameController.text,
-        phoneController.text,
-        facebookController.text,
-        lineController.text,
-        _selectedGender,
-        _dateController.text,
-        _selectedCounty,
-      );
-
-      // แสดงข้อความที่สำเร็จ
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ข้อมูลส่วนตัวถูกบันทึกเรียบร้อยแล้ว!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
-      );
-    } catch (error) {
-      print("Error saving user additional data: $error");
+    } catch (e) {
+      print('Error saving user data: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล'),
-          backgroundColor: Colors.red,
         ),
       );
     } finally {

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/notification_more.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:geolocator/geolocator.dart';
@@ -66,7 +67,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   bool hasPrimaryPet = false;
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolledToTop = false;
-  bool _isAtTop = true; // ตรวจสอบว่าอยู่ที่ตำแหน่งบนสุดหรือไม่
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
@@ -152,7 +152,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         }
 
         // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
-        _fetchUnreadNotifications();
+        setState(() {
+          unreadNotifications =
+              0; // จำนวนการแจ้งเตือนหลังจากทำการอ่านทั้งหมดแล้ว
+        });
       } catch (e) {
         print('Error marking all notifications as read: $e');
       }
@@ -260,47 +263,52 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           SharedPreferences prefs = await SharedPreferences.getInstance();
           String? storedPetId = prefs.getString(userId.toString());
 
-          // ตรวจสอบว่าค่าของ storedPetId ไม่เป็น null ก่อนที่จะทำการใช้งาน
           if (storedPetId != null && storedPetId.isNotEmpty) {
-            QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
+            // Query สำหรับ pet_request
+            QuerySnapshot petRequestQuerySnapshot = await FirebaseFirestore
                 .instance
                 .collection('match')
                 .where('pet_request', isEqualTo: storedPetId)
                 .get();
 
-            List<dynamic> petResponses = petUserQuerySnapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .toList();
+            // Query สำหรับ pet_respone
+            QuerySnapshot petResponeQuerySnapshot = await FirebaseFirestore
+                .instance
+                .collection('match')
+                .where('pet_respone', isEqualTo: storedPetId)
+                .get();
+
+            // รวมผลลัพธ์จากทั้งสอง query
+            List<dynamic> combinedResponses = [
+              ...petRequestQuerySnapshot.docs,
+              ...petResponeQuerySnapshot.docs,
+            ];
 
             List<Map<String, dynamic>> allPetDataList = [];
 
-            for (var petRespone in petResponses) {
-              String? petResponeId = petRespone['pet_respone'] as String?;
+            for (var doc in combinedResponses) {
+              Map<String, dynamic> petData = doc.data() as Map<String, dynamic>;
 
-              if (petResponeId != null) {
-                // ดึงข้อมูลจาก Pet_User
-                QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
-                    .instance
-                    .collection('Pet_User')
-                    .where('pet_id', isEqualTo: petResponeId)
-                    .where('type_pet', isEqualTo: petType)
-                    .get();
+              // ตรวจสอบว่าค่าของ pet_request หรือ pet_respone มีค่าเป็น null หรือไม่
+              String? petResponeId = petData['pet_respone'] as String?;
+              String? petRequestId = petData['pet_request'] as String?;
 
-                List<Map<String, dynamic>> petDataList = getPetQuerySnapshot
-                    .docs
-                    .map((doc) => doc.data() as Map<String, dynamic>)
-                    .toList();
+              // ดึงข้อมูลจาก Pet_User
+              QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+                  .instance
+                  .collection('Pet_User')
+                  .where('pet_id', whereIn: [petResponeId, petRequestId])
+                  .where('type_pet', isEqualTo: petType)
+                  .get();
 
-                // กรองสัตว์เลี้ยงที่ไม่ใช่ตัวที่กำลังขอจับคู่
-                petDataList
-                    .removeWhere((petData) => petData['pet_id'] == storedPetId);
+              List<Map<String, dynamic>> petDataList = getPetQuerySnapshot.docs
+                  .map((doc) => doc.data() as Map<String, dynamic>)
+                  .toList();
 
-                allPetDataList.addAll(petDataList);
-              }
+              allPetDataList.addAll(petDataList);
             }
 
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-            print(allPetDataList.length);
             setState(() {
               petDataMatchList = allPetDataList;
               isLoading = false;
@@ -412,9 +420,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       }
       petList.shuffle();
       if (mounted) {
-        setState(() {
-          // Update your UI with the fetched petList
-        });
+        setState(() {});
       }
       return petList;
     } catch (e) {
@@ -462,7 +468,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     getLocation();
     _printStoredPetId();
     _fetchUnreadNotifications();
-    _markAllNotificationsAsRead();
     _futurePets = _getPets();
     // กำหนด AnimationController
     _animationController = AnimationController(
@@ -485,25 +490,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         });
       }
     });
-
-    // _scrollController.addListener(() {
-    //   // ตรวจสอบว่า ScrollController อยู่ที่ตำแหน่งบนสุดหรือไม่
-    //   if (_scrollController.offset <=
-    //           _scrollController.position.minScrollExtent &&
-    //       !_scrollController.position.outOfRange) {
-    //     if (!_isAtTop) {
-    //       setState(() {
-    //         _isAtTop = true;
-    //       });
-    //     }
-    //   } else {
-    //     if (_isAtTop) {
-    //       setState(() {
-    //         _isAtTop = false;
-    //       });
-    //     }
-    //   }
-    // });
   }
 
   void _scrollToTop() {
@@ -784,21 +770,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   Widget build(BuildContext context) {
     _initializeOffsets(context);
     return Scaffold(
-      body:
-          // NotificationListener<ScrollNotification>(
-          //   onNotification: (scrollNotification) {
-          //     // ใช้สำหรับตรวจสอบเมื่อผู้ใช้เลื่อนขึ้นสุด
-          //     if (scrollNotification is ScrollUpdateNotification) {
-          //       if (_scrollController.offset <=
-          //           _scrollController.position.minScrollExtent) {
-          //         // การรีเฟรชข้อมูลหรือการทำงานที่ต้องการเมื่อเลื่อนขึ้นสุด
-          //         print('Reached the top');
-          //       }
-          //     }
-          //     return false;
-          //   },
-          //   child:
-          SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             Card(
@@ -879,16 +851,25 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                           children: [
                             IconButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => NotificationMore_Page(
-                                      idPet: petId!,
+                                if (petId != null && petId!.isNotEmpty) {
+                                  // นำทางไปยังหน้าการแจ้งเตือน
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          NotificationMore_Page(
+                                        idPet: petId!,
+                                      ),
                                     ),
-                                  ),
-                                ).then((_) {
-                                  _fetchUnreadNotifications(); // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่านหลังจากกลับมา
-                                });
+                                  ).then((_) async {
+                                    // เปลี่ยนสถานะการแจ้งเตือนเป็น "อ่านแล้ว" หลังจากกลับมาที่หน้าเดิม
+                                    await _markAllNotificationsAsRead();
+                                    // อัปเดตจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน
+                                    await _fetchUnreadNotifications();
+                                  });
+                                } else {
+                                  print('Pet ID is null or empty.');
+                                }
                               },
                               icon: Icon(
                                 Icons.notifications_rounded,
@@ -1198,6 +1179,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
                   String oppositeGender =
                       (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                  print(oppositeGender);
+
                   filteredPetData = snapshot.data!
                       .where((pet) =>
                           pet['type_pet'] == petType &&
@@ -1208,8 +1191,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                 // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
                 if (filteredPetData.isEmpty) {
-                  // หากว่างเปล่า ให้แสดงสัตว์เลี้ยงทั้งหมด
-                  filteredPetData = snapshot.data!;
+                  filteredPetData = [];
                 }
 
                 return FutureBuilder<List<Map<String, dynamic>>>(
@@ -1241,7 +1223,15 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   if (filteredSnapshot.data == null ||
                       filteredSnapshot.data!.isEmpty) {
                     return Center(
-                      child: Text('คุณได้จับคู่หมดแล้ว'),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height / 3,
+                          ),
+                          Text(
+                              'คุณได้จับคู่หมดแล้ว หรือ ไม่มีข้อมูลสัตว์เลี้ยง'),
+                        ],
+                      ),
                     );
                   }
 
@@ -1559,6 +1549,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     }).toList();
                     petUserDataList = filteredPets;
                   }
+                  print(petUserDataList);
 
                   return Expanded(
                     child: RefreshIndicator(
@@ -1890,7 +1881,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           ],
         ),
       ),
-      // ),
       floatingActionButton: _isAnimating
           ? AnimatedBuilder(
               animation: _animationController,
@@ -2041,17 +2031,49 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('กรุณาลงทะเบียน'),
-          content: const Text('คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้'),
+          content: const Text(
+            'คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้',
+            style: TextStyle(fontSize: 16),
+          ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('ลงทะเบียน'),
-              onPressed: () {},
+            SizedBox(
+              height: 40,
+              width: 90,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("ยกเลิก"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
+                ),
+              ),
             ),
-            TextButton(
-              child: const Text('ยกเลิก'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+            SizedBox(
+              height: 40,
+              width: 90,
+              child: TextButton(
+                onPressed: () async {
+                  try {
+                    await user?.delete();
+                    print("Anonymous account deleted");
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginPage()),
+                      (Route<dynamic> route) => false,
+                    );
+                  } catch (e) {
+                    print("Error deleting anonymous account: $e");
+                  }
+                },
+                child: const Text("ลงทะเบียน"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
+                ),
+              ),
             ),
           ],
         );
@@ -2211,116 +2233,57 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           .get();
 
       if (querySnapshot.docs.isNotEmpty) {
-        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว ให้ทำการอัพเดตเอกสารนั้น
-        querySnapshot.docs.forEach((doc) async {
-          await doc.reference
-              .update({'status': 'จับคู่แล้ว', 'updates_at': formatted});
+        setState(() {
+          isLoading = false;
         });
 
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef =
-            FirebaseFirestore.instance.collection('match');
-
-        try {
-          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
-
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
+        // แจ้งเตือนว่ามีคำขอจับคู่อยู่แล้ว
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            Future.delayed(const Duration(seconds: 2), () {
+              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
             });
-
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
+            return AlertDialog(
+              title: Column(
+                children: [
+                  Icon(LineAwesomeIcons.heart_1,
+                      color: Colors.pinkAccent, size: 50),
+                  SizedBox(height: 20),
+                  Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่',
+                      style: TextStyle(fontSize: 18)),
+                ],
+              ),
             );
-          }
-        } catch (error) {
-          print("Failed to add pet: $error");
-
-          setState(() {
-            isLoading = false;
-          });
-        }
+          },
+        );
       } else {
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef =
-            FirebaseFirestore.instance.collection('match');
+        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
+        DocumentReference newPetMatch = await petMatchRef.add({
+          'created_at': formatted,
+          'description': des,
+          'pet_request': pet_request,
+          'pet_respone': pet_respone,
+          'status': 'กำลังรอ',
+          'updates_at': formatted
+        });
 
-        try {
-          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
+        String docId = newPetMatch.id;
 
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
-            });
+        await newPetMatch.update({'id_match': docId});
 
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
-            );
-          } else {
-            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-            DocumentReference newPetMatch = await petMatchRef.add({
-              'created_at': formatted,
-              'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
-              'status': 'กำลังรอ',
-              'updates_at': formatted
-            });
+        sendNotificationToUser(
+            userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
+            pet_respone,
+            "คุณมีคำขอใหม่!",
+            "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+        setState(() {
+          isLoading = false;
+        });
+        _showHeartAnimation();
 
-            String docId = newPetMatch.id;
-
-            await newPetMatch.update({'id_match': docId});
-
-            sendNotificationToUser(
-                userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
-                pet_respone,
-                "คุณมีคำขอใหม่!",
-                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
-            setState(() {
-              isLoading = false;
-            });
-            _showHeartAnimation();
-          }
-
-          _getUserDataFromFirestore();
-          _getUsage_pet(search.toString());
-        } catch (error) {
-          print("Failed to add pet: $error");
-
-          setState(() {
-            isLoading = false;
-          });
-        }
+        _getUserDataFromFirestore();
+        _getUsage_pet(search.toString());
       }
     } catch (error) {
       print("Failed to add pet: $error");
@@ -2335,18 +2298,27 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+        });
         return AlertDialog(
-          title: const Text('เลือกสัตว์เลี้ยงตัวหลัก'),
-          content: const Text(
-              'กรุณาเลือกสัตว์เลี้ยงตัวหลักที่จะใช้ในการจับคู่และกดถูกใจก่อน'),
-          actions: [
-            TextButton(
-              child: const Text('ตกลง'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+          title: Column(
+            children: [
+              const Icon(Icons.pets_rounded,
+                  color: Colors.deepPurple, size: 50),
+              SizedBox(height: 20),
+              Text(
+                'กรุณาเลือกสัตว์เลี้ยงตัวหลัก',
+                style: TextStyle(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            'ที่จะใช้ในการจับคู่และกดถูกใจก่อน',
+            style: TextStyle(fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
         );
       },
     );

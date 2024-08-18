@@ -29,20 +29,60 @@ class AuthService {
     return user != null && user.isAnonymous;
   }
 
-  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
   Future<User?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
-      //เข้าสู่ระบบด้วยบัญชีผู้ใช้ที่มีอยู่
+      // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        // showToast(message: 'Invalid email or password.');
+        // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
+        print('Invalid email or password.');
       } else {
-        // showToast(message: 'An error occurred: ${e.code}');
+        // จัดการข้อผิดพลาดอื่นๆ
+        print('An error occurred: ${e.code}');
       }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
+    }
+    return null;
+  }
+
+  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+  Future<User?> signInWithUsernameAndPassword(
+      String username, String password) async {
+    try {
+      // ดึงข้อมูลของผู้ใช้จาก Firestore โดยใช้ชื่อผู้ใช้
+      QuerySnapshot userQuery = await FirebaseFirestore.instance
+          .collection('user')
+          .where('username', isEqualTo: username)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        // ใช้ข้อมูลผู้ใช้ที่ดึงมาเพื่อเข้าสู่ระบบ
+        String email =
+            userQuery.docs.first['email']; // ดึงอีเมลของผู้ใช้จากเอกสาร
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        return userCredential.user;
+      } else {
+        print('Username not found.');
+      }
+    } on FirebaseAuthException catch (e) {
+      // จัดการข้อผิดพลาดของ FirebaseAuthException
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        print('Invalid username or password.');
+      } else {
+        print('An error occurred: ${e.code}');
+      }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
     }
     return null;
   }
@@ -67,7 +107,7 @@ class AuthService {
             await _auth.signInWithCredential(credential);
         User? user = userCredential.user;
 
-        await saveUserGoogle(user!);
+        // await saveUserGoogle(user!);
 
         return user;
       }
@@ -108,28 +148,40 @@ class AuthService {
   }
 
   // บันทึกข้อมูลผู้ใช้ที่ลงทะเบียนด้วย Google
-  Future<void> saveUserGoogle(User user) async {
+  Future<void> saveUserGoogle(
+    String uid,
+    String username,
+    String fullname,
+    String email,
+    String password,
+    String image,
+    String nickname,
+    String phone,
+    String facbook,
+    String line,
+    String? selectedGender,
+    String birthdate,
+    String? selectedCounty,
+  ) async {
     try {
-      final userRef =
-          FirebaseFirestore.instance.collection('user').doc(user.uid);
+      final userRef = FirebaseFirestore.instance.collection('user').doc(uid);
       final userData = await userRef.get();
-      String base64Image = await convertImageToBase64(user.photoURL!);
 
       if (!userData.exists) {
         await userRef.set({
-          'uid': user.uid,
-          'username': user.displayName,
-          'fullname': '',
-          'email': user.email,
-          'password': '',
-          'photoURL': base64Image,
-          'phone': user.phoneNumber,
-          'nickname': '',
-          'gender': '',
-          'birtdate': '',
-          'country': '',
-          'facebeook': '',
-          'line': '',
+          'uid': uid,
+          'username': username,
+          'fullname': fullname,
+          'email': email,
+          'password': password,
+          'photoURL': image,
+          'phone': phone,
+          'nickname': nickname,
+          'gender': selectedGender,
+          'birthdate': birthdate,
+          'country': selectedCounty,
+          'facebook': facbook,
+          'line': line,
           'status': 'สมาชิก'
         });
       }
@@ -166,7 +218,7 @@ class AuthService {
       'nickname': nickname,
       'gender': gender ?? '',
       'birthdate': birthdate ?? '',
-      'county': county ?? '',
+      'country': county ?? '',
       'facebook': facebook,
       'line': line,
       'status': 'สมาชิก'

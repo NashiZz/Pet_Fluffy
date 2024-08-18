@@ -20,74 +20,81 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue, Colors.purple],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
+    return WillPopScope(
+      onWillPop: () async {
+        // Return false to prevent the back action
+        return false;
+      },
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue, Colors.purple],
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.pets,
-              size: 80,
-              color: Colors.white,
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            const Text(
-              'คุณต้องการเพิ่มข้อมูลสัตว์เลี้ยงหรือไม่?',
-              style: TextStyle(
-                fontStyle: FontStyle.italic,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.pets,
+                size: 80,
                 color: Colors.white,
-                fontSize: 20,
               ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const Pet_Page()),
-                    );
-                  },
-                  style: ButtonStyle(
-                    minimumSize: MaterialStateProperty.all(
-                        const Size(260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
-                  ),
-                  child: const Text('เพิ่ม'),
+              const SizedBox(
+                height: 20,
+              ),
+              const Text(
+                'คุณต้องการเพิ่มข้อมูลสัตว์เลี้ยงหรือไม่?',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.white,
+                  fontSize: 20,
                 ),
-                const SizedBox(width: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    shared();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              const Navigator_Page(initialIndex: 0)),
-                    );
-                  },
-                  style: ButtonStyle(
-                    minimumSize: MaterialStateProperty.all(
-                        const Size(260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const Pet_Page()),
+                      );
+                    },
+                    style: ButtonStyle(
+                      minimumSize: MaterialStateProperty.all(const Size(
+                          260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                    ),
+                    child: const Text('เพิ่ม'),
                   ),
-                  child: const Text('ข้าม'),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      shared();
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const Navigator_Page(initialIndex: 0)),
+                      );
+                    },
+                    style: ButtonStyle(
+                      minimumSize: MaterialStateProperty.all(const Size(
+                          260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
+                    ),
+                    child: const Text('ข้าม'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -96,7 +103,7 @@ class _Setting_Pet_PageState extends State<Setting_Pet_Page> {
   Future shared() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
-      userId = userData.uid;  
+      userId = userData.uid;
       SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setString(userId, '');
     }

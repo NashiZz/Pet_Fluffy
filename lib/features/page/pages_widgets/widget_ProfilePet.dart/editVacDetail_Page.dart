@@ -61,7 +61,7 @@ class _EditVaccinePageState extends State<EditVaccinePage> {
   void _fetchVacData() async {
     try {
       if (widget.pet_type == 'สุนัข') {
-        List<String> breeds = await profileService.fetchVacData('dog_vac');
+        List<String> breeds = await profileService.fetchVacDataDog('vaccines_more');
         setState(() {
           _vacOfDog = breeds;
           vaccinationList = _vacOfDog;
@@ -70,7 +70,7 @@ class _EditVaccinePageState extends State<EditVaccinePage> {
               : null;
         });
       } else if (widget.pet_type == 'แมว') {
-        List<String> breeds = await profileService.fetchVacData('cat_vac');
+        List<String> breeds = await profileService.fetchVacDataCat('vaccines_more');
         setState(() {
           _vacOfCat = breeds;
           vaccinationList = _vacOfCat;

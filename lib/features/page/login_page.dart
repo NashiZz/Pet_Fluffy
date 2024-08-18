@@ -1,6 +1,5 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
-import 'dart:developer';
-
+import 'package:Pet_Fluffy/features/page/addData_Google.dart';
 import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
@@ -79,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: TextField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: "อีเมล",
+                      labelText: "อีเมล/ชื่อผู้ใช้",
                       border: OutlineInputBorder(
                         borderSide: const BorderSide(color: Colors.grey),
                         borderRadius: BorderRadius.circular(15),
@@ -337,30 +336,94 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
         try {
+          // เช็คว่าผู้ใช้มีข้อมูลในระบบหรือไม่
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('user')
               .where('uid', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'สมาชิก')
               .get();
+
           if (getPetQuerySnapshot.docs.isNotEmpty) {
-            log(getPetQuerySnapshot.docs.isEmpty.toString());
+            // ตรวจสอบสถานะของผู้ใช้
+            DocumentSnapshot userDoc = getPetQuerySnapshot.docs.first;
+            String status = userDoc['status'] ?? '';
+
+            if (status == 'แอดมิน') {
+              // หากเป็นผู้ดูแลระบบ
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบ แอดมิน สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const AdminHomePage(), // หน้าแรกสำหรับผู้ดูแลระบบ
+                ),
+              );
+            } else if (status == 'สมาชิก') {
+              // หากเป็นสมาชิก
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LocationSelectionPage(),
+                ),
+              );
+            } else {
+              // หากไม่มีข้อมูลในระบบ
+              Map<String, dynamic> userData = {
+                'uid': user.uid,
+                'email': user.email,
+                'password': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'username': user.displayName,
+                'fullname': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'image': user.photoURL != null
+                    ? await _authService.convertImageToBase64(user.photoURL!)
+                    : null,
+              };
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('สมัครสมาชิกด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => addDataGoogle_Page(userData: userData),
+                ),
+              );
+            }
+          } else {
+            // หากไม่มีข้อมูลในระบบ
+            Map<String, dynamic> userData = {
+              'uid': user.uid,
+              'email': user.email,
+              'password': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+              'username': user.displayName,
+              'fullname': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+              'image': user.photoURL != null
+                  ? await _authService.convertImageToBase64(user.photoURL!)
+                  : null,
+            };
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('สมัครสมาชิกด้วย Google สำเร็จ')),
+            );
 
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => const LocationSelectionPage()),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const AdminHomePage()),
+                builder: (context) => addDataGoogle_Page(userData: userData),
+              ),
             );
           }
         } catch (e) {
           print('Error: $e');
         }
       } else {
-        // Handle case when user is null
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to sign in with Google')),
         );
@@ -385,19 +448,19 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // ดึงค่าอีเมลและรหัสผ่านจากตัวควบคุม
-    String email = _emailController.text.trim();
+    // ดึงค่าอีเมลหรือชื่อผู้ใช้ และรหัสผ่านจากตัวควบคุม
+    String emailOrUsername = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
     // ตรวจสอบว่าผู้ใช้กรอกข้อมูลทั้งสองช่องหรือไม่
-    if (email.isEmpty || password.isEmpty) {
+    if (emailOrUsername.isEmpty || password.isEmpty) {
       setState(() {
         _isSigning = false;
         _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('กรุณากรอกอีเมลและรหัสผ่าน'),
+          content: Text('กรุณากรอกอีเมล/ชื่อผู้ใช้และรหัสผ่าน'),
         ),
       );
       return;
@@ -410,31 +473,26 @@ class _LoginPageState extends State<LoginPage> {
       multiLine: false,
     );
 
-    if (!emailRegex.hasMatch(email)) {
-      // หากรูปแบบของอีเมลไม่ถูกต้อง
-      setState(() {
-        _isSigning = false;
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รูปแบบของอีเมลไม่ถูกต้อง'),
-        ),
-      );
-      return;
-    }
+    bool isEmail = emailRegex.hasMatch(emailOrUsername);
 
     try {
-      //เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      User? user =
-          await _authService.signInWithEmailAndPassword(email, password);
+      User? user;
+      if (isEmail) {
+        // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+        user = await _authService.signInWithEmailAndPassword(
+            emailOrUsername, password);
+      } else {
+        // เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน
+        user = await _authService.signInWithUsernameAndPassword(
+            emailOrUsername, password);
+      }
 
       setState(() {
         _isSigning = false;
         _isLoading = false;
       });
 
-      //ตรวจสอบการเข้าสู่ระบบ
+      // ตรวจสอบการเข้าสู่ระบบ
       if (user != null) {
         // ตรวจสอบว่าอีเมลได้รับการยืนยันหรือไม่
         if (user.emailVerified) {
@@ -459,7 +517,7 @@ class _LoginPageState extends State<LoginPage> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+            content: Text('อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'),
           ),
         );
       }

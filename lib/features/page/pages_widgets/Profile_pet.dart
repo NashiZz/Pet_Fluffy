@@ -77,7 +77,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   List<Map<String, dynamic>> vaccinationDataFromFirestore = [];
   List<String> _selectedVaccines = []; // เก็บวัคซีนที่ถูกเลือกแล้ว
   List<Map<String, String>> _availableVaccinations = [];
-
+  late List<Map<String, dynamic>> vaccinePetDatas = [];
   String? _vacStatus_Table;
   String? _selectedVac;
   String? _selectedVac_Table;
@@ -114,14 +114,51 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     super.dispose();
   }
 
+  Future<void> _getVaccines_petData() async {
+    String idTypePet = '';
+
+    if (pet_type == 'แมว') {
+      idTypePet = '5yWv1hawXz6Gh15gEed1';
+    } else if (pet_type == 'สุนัข') {
+      idTypePet = 'Qy38o0xCXKQlIngPz9jb';
+    }
+
+    try {
+      QuerySnapshot vaccinesPetQuerySnapshot = await FirebaseFirestore.instance
+          .collection('pet_vaccines')
+          .doc(idTypePet)
+          .collection("pet_vaccines")
+          .orderBy("id_table_vacc", descending: false)
+          .get();
+
+      List<Map<String, dynamic>> allVaccine = vaccinesPetQuerySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      setState(() {
+        vaccinePetDatas = allVaccine;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error getting pet vaccines data from Firestore: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
   Future<void> _refreshHomePage() async {
-    setState(() {
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
     await _loadAllPet(widget.petId); // โหลดข้อมูลใหม่
-    setState(() {
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   // ดึงข้อมูล User
@@ -133,9 +170,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           await _profileService.getUserData(userId!);
       if (userDataFromFirestore != null) {
         userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
@@ -185,14 +224,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         status = petData['status'] ?? 'พร้อมผสมพันธุ์';
         _firestoreImages = firestoreImages;
 
-        vaccinationSchedule =
-            (pet_type == 'สุนัข') ? vaccinationDog : vaccinationCat;
-
         vaccination_Table =
             (pet_type == 'สุนัข') ? vaccinationDog_Table : vaccinationCat_Table;
 
         _fetchVaccinationData();
-
+        _getVaccines_petData();
         isLoading = false;
       });
       print(
@@ -378,7 +414,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
     try {
-      List<String> breeds = await _profileService.fetchVacData('dog_vac');
+      List<String> breeds =
+          await _profileService.fetchVacDataDog('vaccines_more');
       setState(() {
         _vacOfDog = breeds;
       });
@@ -390,7 +427,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Cat
   void _fetchVacDataCat() async {
     try {
-      List<String> breeds = await _profileService.fetchVacData('cat_vac');
+      List<String> breeds =
+          await _profileService.fetchVacDataCat('vaccines_more');
       setState(() {
         _vacOfCat = breeds;
       });
@@ -619,9 +657,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Text(
-                                des,
-                                style: const TextStyle(fontSize: 16),
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  des,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
                             )
                           ],
@@ -1309,7 +1349,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           return Colors.red;
         case 'พร้อมผสมพันธุ์':
           return Colors.pinkAccent;
-        case 'ไม่พร้อมผสมพันธ์ุ':
+        case 'ไม่พร้อมผสมพันธุ์':
           return Colors.grey;
         default:
           return Colors.green;
@@ -1659,7 +1699,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildStatusOption(context, 'เสียชีวิต', currentStatus),
-              _buildStatusOption(context, 'พร้อมผสมพันธ์ุ', currentStatus),
+              _buildStatusOption(context, 'พร้อมผสมพันธุ์', currentStatus),
               _buildStatusOption(context, 'ไม่พร้อมผสมพันธุ์', currentStatus),
             ],
           ),
@@ -1760,7 +1800,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                           context: context,
                           initialDate: DateTime.now(),
                           firstDate: DateTime(2000),
-                          lastDate: DateTime(2101),
+                          lastDate: DateTime.now(),
                         );
 
                         if (pickedDate != null) {
@@ -1809,16 +1849,31 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         child: TextButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              NotificationHelper.scheduledNotification(
-                                'Pet fluffy',
-                                '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
-                                _dateController.text,
-                                pet_type,
-                                user!.uid,
-                                pet_id,
-                              );
-                              _saveReportToFirestore();
-                              Navigator.of(context).pop();
+                              final inputDate =
+                                  DateTime.parse(_dateController.text);
+                              final today = DateTime.now();
+
+                              if (inputDate.isAfter(today)) {
+                                // วันที่ใน _dateController.text เป็นวันในอนาคต
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('ไม่สามารถเลือกวันในอนาคตได้'),
+                                  ),
+                                );
+                                return;
+                              } else {
+                                NotificationHelper.scheduledNotification(
+                                  'Pet fluffy',
+                                  '$petName ถึงช่วงเวลาผสมพันธุ์ที่ดีที่สุดแล้ว',
+                                  _dateController.text,
+                                  pet_type,
+                                  user!.uid,
+                                  pet_id,
+                                );
+                                _saveReportToFirestore();
+                                Navigator.of(context).pop();
+                              }
                             }
                           },
                           style: TextButton.styleFrom(
@@ -2084,7 +2139,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                 context: context,
                                 initialDate: DateTime.now(),
                                 firstDate: DateTime(2000),
-                                lastDate: DateTime(2101),
+                                lastDate: DateTime.now(),
                               );
 
                               if (pickedDate != null) {
@@ -2344,7 +2399,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                               context: context,
                               initialDate: DateTime.now(),
                               firstDate: DateTime(2000),
-                              lastDate: DateTime(2101),
+                              lastDate: DateTime.now(),
                             );
 
                             if (pickedDate != null) {
@@ -2485,8 +2540,14 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
   // แสดงตารางการฉีดวัคซีนตามเกณฑ์
   void _showVaccinationScheduleDialog(BuildContext context, String petType) {
-    List<Map<String, String>> vaccinationSchedule =
-        (petType == 'สุนัข') ? vaccinationDog : vaccinationCat;
+    List<Map<String, String>> vaccinationSchedule = vaccinePetDatas.map((data) {
+      // แปลง Map<String, dynamic> เป็น Map<String, String>
+      return {
+        'age': data['age']?.toString() ?? '',
+        'vaccine': data['vaccine']?.toString() ?? '',
+        'dose': data['dose']?.toString() ?? '',
+      };
+    }).toList();
 
     showDialog(
       context: context,

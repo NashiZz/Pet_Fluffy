@@ -72,7 +72,7 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
           }
 
           _selectedGender = userDocSnapshot['gender'];
-          String? countyFromFirestore = userDocSnapshot['county'];
+          String? countyFromFirestore = userDocSnapshot['country'];
           if (countyFromFirestore != null &&
               _county.contains(countyFromFirestore)) {
             _selectedCounty = countyFromFirestore;
@@ -404,6 +404,7 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
     String phone = _phoneController.text;
     String facebook = _facebookController.text;
     String line = _lineController.text;
+    String country = _selectedCounty.toString();
 
     String img = _image != null ? uint8ListToBase64(_image!) : '';
 
@@ -418,6 +419,7 @@ class _Edit_Profile_PageState extends State<Edit_Profile_Page> {
       'facebook': facebook,
       'line': line,
       'photoURL': img,
+      'country': country,
     }).then((_) {
       setState(() {
         isSigningUp = false;

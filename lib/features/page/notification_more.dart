@@ -51,6 +51,13 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
           };
         }).toList();
 
+        // Sort notifications by date in descending order
+        notifications.sort((a, b) {
+          DateTime dateA = DateTime.parse(a['scheduled_at']);
+          DateTime dateB = DateTime.parse(b['scheduled_at']);
+          return dateB.compareTo(dateA); // Descending order
+        });
+
         setState(() {
           petUserDataList_wait = notifications;
           isLoading = false;
@@ -70,7 +77,7 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
     Map<String, List<Map<String, dynamic>>> groupedNotifications = {};
 
     for (var notification in notifications) {
-      String dateString = notification['date'] ?? '';
+      String dateString = notification['scheduled_at'] ?? '';
       DateTime notificationDate;
       try {
         notificationDate = DateTime.parse(dateString);
@@ -87,7 +94,49 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
       groupedNotifications[formattedDate]!.add(notification);
     }
 
-    return groupedNotifications;
+    // Convert the map to a list and sort by date in descending order
+    List<MapEntry<String, List<Map<String, dynamic>>>> sortedEntries =
+        groupedNotifications.entries.toList()
+          ..sort((a, b) {
+            DateTime dateA = DateFormat('dd MMMM yyyy', 'th_TH').parse(a.key);
+            DateTime dateB = DateFormat('dd MMMM yyyy', 'th_TH').parse(b.key);
+            return dateB.compareTo(dateA); // Descending order
+          });
+
+    return Map.fromEntries(sortedEntries);
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      try {
+        QuerySnapshot notificationQuerySnapshot = await FirebaseFirestore
+            .instance
+            .collection('notification')
+            .doc(userId)
+            .collection('pet_notification')
+            .get();
+
+        // Delete all documents in the collection
+        for (var doc in notificationQuerySnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // Refresh the notification list
+        setState(() {
+          petUserDataList_wait.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว')),
+        );
+      } catch (e) {
+        print('Error deleting notifications: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการลบการแจ้งเตือน')),
+        );
+      }
+    }
   }
 
   @override
@@ -111,6 +160,70 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
         ),
         centerTitle: true,
         automaticallyImplyLeading: false,
+        actions: [
+          GestureDetector(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Column(
+                      children: [
+                        const Icon(LineAwesomeIcons.trash,
+                            color: Colors.deepPurple, size: 50),
+                        SizedBox(height: 20),
+                        Text('คุณต้องการลบข้อมูลการแจ้งเตือนทั้งหมด',
+                            style: TextStyle(fontSize: 18)),
+                      ],
+                    ),
+                    actions: <Widget>[
+                      Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            SizedBox(
+                              height: 40,
+                              width: 90,
+                              child: TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                child: const Text("ยกเลิก"),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              height: 40,
+                              width: 90,
+                              child: TextButton(
+                                onPressed: () {
+                                  _deleteAllNotifications();
+                                },
+                                child: const Text("ยืนยัน"),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text('ลบทั้งหมด',
+                  style: TextStyle(color: Colors.white, fontSize: 18)),
+            ),
+          )
+        ],
       ),
       backgroundColor:
           Colors.white, // Set the background color of the Scaffold to white
@@ -175,8 +288,8 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
   }
 
   Widget _buildNotificationCard(Map<String, dynamic> notification) {
-    String dateString =
-        notification['scheduled_at'] ?? ''; // Changed from 'created_at' to 'date'
+    String dateString = notification['scheduled_at'] ??
+        ''; // Changed from 'created_at' to 'date'
     DateTime notificationDate;
     try {
       notificationDate = DateTime.parse(dateString);

@@ -6,7 +6,6 @@ import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
-import 'package:Pet_Fluffy/features/page/setNotiandLocation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -184,7 +183,32 @@ class _Setting_PageState extends State<Setting_Page> {
                       title: "โปรไฟล์สัตว์เลี้ยง",
                       icon: LineAwesomeIcons.dog,
                       onPress: () {
-                        if (petId != '') {
+                        if (petId.isEmpty) {
+                          // แสดงข้อความเตือนเมื่อ petId เป็นค่าว่าง
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              Future.delayed(const Duration(seconds: 3), () {
+                                Navigator.of(context)
+                                    .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                              });
+                              return AlertDialog(
+                                title: Column(
+                                  children: [
+                                    const Icon(Icons.pets_rounded,
+                                        color: Colors.deepPurple, size: 50),
+                                    SizedBox(height: 20),
+                                    Text(
+                                      'กรุณาเลือกสัตว์เลี้ยงตัวหลักก่อนที่จะเข้าถึงโปรไฟล์สัตว์เลี้ยง',
+                                      style: TextStyle(fontSize: 18),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        } else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
