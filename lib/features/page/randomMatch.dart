@@ -263,47 +263,52 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           SharedPreferences prefs = await SharedPreferences.getInstance();
           String? storedPetId = prefs.getString(userId.toString());
 
-          // ตรวจสอบว่าค่าของ storedPetId ไม่เป็น null ก่อนที่จะทำการใช้งาน
           if (storedPetId != null && storedPetId.isNotEmpty) {
-            QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
+            // Query สำหรับ pet_request
+            QuerySnapshot petRequestQuerySnapshot = await FirebaseFirestore
                 .instance
                 .collection('match')
                 .where('pet_request', isEqualTo: storedPetId)
                 .get();
 
-            List<dynamic> petResponses = petUserQuerySnapshot.docs
-                .map((doc) => doc.data() as Map<String, dynamic>)
-                .toList();
+            // Query สำหรับ pet_respone
+            QuerySnapshot petResponeQuerySnapshot = await FirebaseFirestore
+                .instance
+                .collection('match')
+                .where('pet_respone', isEqualTo: storedPetId)
+                .get();
+
+            // รวมผลลัพธ์จากทั้งสอง query
+            List<dynamic> combinedResponses = [
+              ...petRequestQuerySnapshot.docs,
+              ...petResponeQuerySnapshot.docs,
+            ];
 
             List<Map<String, dynamic>> allPetDataList = [];
 
-            for (var petRespone in petResponses) {
-              String? petResponeId = petRespone['pet_respone'] as String?;
+            for (var doc in combinedResponses) {
+              Map<String, dynamic> petData = doc.data() as Map<String, dynamic>;
 
-              if (petResponeId != null) {
-                // ดึงข้อมูลจาก Pet_User
-                QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
-                    .instance
-                    .collection('Pet_User')
-                    .where('pet_id', isEqualTo: petResponeId)
-                    .where('type_pet', isEqualTo: petType)
-                    .get();
+              // ตรวจสอบว่าค่าของ pet_request หรือ pet_respone มีค่าเป็น null หรือไม่
+              String? petResponeId = petData['pet_respone'] as String?;
+              String? petRequestId = petData['pet_request'] as String?;
 
-                List<Map<String, dynamic>> petDataList = getPetQuerySnapshot
-                    .docs
-                    .map((doc) => doc.data() as Map<String, dynamic>)
-                    .toList();
+              // ดึงข้อมูลจาก Pet_User
+              QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+                  .instance
+                  .collection('Pet_User')
+                  .where('pet_id', whereIn: [petResponeId, petRequestId])
+                  .where('type_pet', isEqualTo: petType)
+                  .get();
 
-                // กรองสัตว์เลี้ยงที่ไม่ใช่ตัวที่กำลังขอจับคู่
-                petDataList
-                    .removeWhere((petData) => petData['pet_id'] == storedPetId);
+              List<Map<String, dynamic>> petDataList = getPetQuerySnapshot.docs
+                  .map((doc) => doc.data() as Map<String, dynamic>)
+                  .toList();
 
-                allPetDataList.addAll(petDataList);
-              }
+              allPetDataList.addAll(petDataList);
             }
 
             // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
-            print(allPetDataList.length);
             setState(() {
               petDataMatchList = allPetDataList;
               isLoading = false;
@@ -1186,7 +1191,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                 // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
                 if (filteredPetData.isEmpty) {
-                  
                   filteredPetData = [];
                 }
 
@@ -1221,8 +1225,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     return Center(
                       child: Column(
                         children: [
-                          SizedBox(height:MediaQuery.of(context).size.height /3,),
-                          Text('คุณได้จับคู่หมดแล้ว หรือ ไม่มีข้อมูลสัตว์เลี้ยง'),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height / 3,
+                          ),
+                          Text(
+                              'คุณได้จับคู่หมดแล้ว หรือ ไม่มีข้อมูลสัตว์เลี้ยง'),
                         ],
                       ),
                     );

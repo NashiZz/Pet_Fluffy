@@ -148,13 +148,17 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
   Future<void> _refreshHomePage() async {
-    setState(() {
-      isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = true;
+      });
+    }
     await _loadAllPet(widget.petId); // โหลดข้อมูลใหม่
-    setState(() {
-      isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   // ดึงข้อมูล User
@@ -166,9 +170,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
           await _profileService.getUserData(userId!);
       if (userDataFromFirestore != null) {
         userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
-        setState(() {
-          isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
       }
     }
   }
@@ -217,7 +223,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         age = _ageCalculatorService.calculateAge(birthdate);
         status = petData['status'] ?? 'พร้อมผสมพันธุ์';
         _firestoreImages = firestoreImages;
-
 
         vaccination_Table =
             (pet_type == 'สุนัข') ? vaccinationDog_Table : vaccinationCat_Table;
@@ -2543,7 +2548,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         'dose': data['dose']?.toString() ?? '',
       };
     }).toList();
-    
 
     showDialog(
       context: context,
