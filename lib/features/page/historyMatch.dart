@@ -207,7 +207,9 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
       try {
         SharedPreferences prefs = await SharedPreferences.getInstance();
         String? petId = prefs.getString(userId);
-        // ดึงข้อมูลจากคอลเล็กชัน favorites
+        print('petID: $petId');
+
+        // ดึงข้อมูลจากคอลเล็กชัน match สำหรับ pet_request
         QuerySnapshot petUserQuerySnapshot_pair = await FirebaseFirestore
             .instance
             .collection('match')
@@ -215,25 +217,36 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             .where('status', isEqualTo: "จับคู่แล้ว")
             .get();
 
-        // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
+        // ดึงข้อมูลจากคอลเล็กชัน match สำหรับ pet_respone
+        QuerySnapshot petUserQuerySnapshot_resp = await FirebaseFirestore
+            .instance
+            .collection('match')
+            .where('pet_respone', isEqualTo: petId)
+            .where('status', isEqualTo: "จับคู่แล้ว")
+            .get();
+
+        // รวมผลลัพธ์ของทั้งสอง query
         List<dynamic> petResponses = petUserQuerySnapshot_pair.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
+        petResponses.addAll(petUserQuerySnapshot_resp.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList());
 
-        // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
         List<Map<String, dynamic>> allPetDataList_pair = [];
 
-        // ลูปเพื่อดึงข้อมูลแต่ละรายการ
+        // ลูปเพื่อดึงข้อมูลแต่ละรายการจาก pet_request และ pet_respone
         for (var petRespone in petResponses) {
-          String petResponeId = petRespone['pet_respone'];
+          String petResponeId =
+              petRespone['pet_respone'] ?? petRespone['pet_request'];
 
-          // ดึงข้อมูลจาก pet_user
+          print('petRespone: $petResponeId');
+
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('Pet_User')
               .where('pet_id', isEqualTo: petResponeId)
               .get();
 
-          // เพิ่มข้อมูลลงใน List
           allPetDataList_pair.addAll(getPetQuerySnapshot.docs
               .map((doc) => doc.data() as Map<String, dynamic>)
               .toList());
@@ -248,6 +261,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         List<Map<String, dynamic>> pet_Deleted = allPetDataList_pair
             .where((pet) => pet['status'] == 'ถูกลบ')
             .toList();
+
         for (var idpet_res in pet_Deleted) {
           String petResId = idpet_res['pet_id'];
 
@@ -255,29 +269,21 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
               FirebaseFirestore.instance.collection('match').doc(userId);
           CollectionReference petFavoriteRef =
               userFavoritesRef.collection('match_pet');
-          // ดึงเอกสารที่มี pet_respone ตรงกับ petId
+
           QuerySnapshot querySnapshot = await petFavoriteRef
               .where('pet_respone', isEqualTo: petResId)
               .get();
+
           if (querySnapshot.docs.isNotEmpty) {
-            // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
             DocumentSnapshot docSnapshot = querySnapshot.docs.first;
-
-            // ดึง id_fav จากเอกสาร
             String id_match = docSnapshot.get('id_match');
-
-            // อ้างอิงถึงเอกสารที่มี id_fav
             DocumentReference docRef = petFavoriteRef.doc(id_match);
 
-            // ตรวจสอบเอกสารก่อนที่จะลบ
             DocumentSnapshot docToCheck = await docRef.get();
 
             if (docToCheck.exists) {
-              // ลบเอกสารโดยใช้ id_fav
               await docRef.delete();
-
-              // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
-              _getPetUserDataFromMatch_wait(); // รอ
+              _getPetUserDataFromMatch_wait();
               _getPetUserDataFromMatch_paired();
 
               print('Document with id_fav $id_match deleted successfully');
@@ -288,7 +294,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
             print('No document found with pet_id: $petId');
           }
         }
-        // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+
         setState(() {
           petUserDataList_pair = nonDeletedPets;
           isLoading = false;
@@ -559,7 +565,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
     );
   }
 
-   void _deletePetData(String petId_res, String Userid_res) async {
+  void _deletePetData(String petId_res, String Userid_res) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? petId_req = prefs.getString(userId);

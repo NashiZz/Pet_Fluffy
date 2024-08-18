@@ -306,7 +306,7 @@ class _Notification_PageState extends State<Notification_Page>
             children: [
               IconButton(
                 onPressed: () {
-                  print('petid: ${widget.idPet}');
+                  print('petrespone: ${widget.idPet}, petrequest: ${petUserData['pet_id']}');
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
