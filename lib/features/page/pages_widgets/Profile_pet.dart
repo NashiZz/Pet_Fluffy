@@ -77,7 +77,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   List<Map<String, dynamic>> vaccinationDataFromFirestore = [];
   List<String> _selectedVaccines = []; // เก็บวัคซีนที่ถูกเลือกแล้ว
   List<Map<String, String>> _availableVaccinations = [];
-
+  late List<Map<String, dynamic>> vaccinePetDatas = [];
   String? _vacStatus_Table;
   String? _selectedVac;
   String? _selectedVac_Table;
@@ -112,6 +112,39 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   void dispose() {
     _tabController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _getVaccines_petData() async {
+    String idTypePet = '';
+
+    if (pet_type == 'แมว') {
+      idTypePet = '5yWv1hawXz6Gh15gEed1';
+    } else if (pet_type == 'สุนัข') {
+      idTypePet = 'Qy38o0xCXKQlIngPz9jb';
+    }
+
+    try {
+      QuerySnapshot vaccinesPetQuerySnapshot = await FirebaseFirestore.instance
+          .collection('pet_vaccines')
+          .doc(idTypePet)
+          .collection("pet_vaccines")
+          .orderBy("id_table_vacc", descending: false)
+          .get();
+
+      List<Map<String, dynamic>> allVaccine = vaccinesPetQuerySnapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      setState(() {
+        vaccinePetDatas = allVaccine;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error getting pet vaccines data from Firestore: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _refreshHomePage() async {
@@ -185,14 +218,12 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         status = petData['status'] ?? 'พร้อมผสมพันธุ์';
         _firestoreImages = firestoreImages;
 
-        vaccinationSchedule =
-            (pet_type == 'สุนัข') ? vaccinationDog : vaccinationCat;
 
         vaccination_Table =
             (pet_type == 'สุนัข') ? vaccinationDog_Table : vaccinationCat_Table;
 
         _fetchVaccinationData();
-
+        _getVaccines_petData();
         isLoading = false;
       });
       print(
@@ -378,7 +409,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
     try {
-      List<String> breeds = await _profileService.fetchVacDataDog('vaccines_more');
+      List<String> breeds =
+          await _profileService.fetchVacDataDog('vaccines_more');
       setState(() {
         _vacOfDog = breeds;
       });
@@ -390,7 +422,8 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   // ดึงข้อมูล Vac Cat
   void _fetchVacDataCat() async {
     try {
-      List<String> breeds = await _profileService.fetchVacDataCat('vaccines_more');
+      List<String> breeds =
+          await _profileService.fetchVacDataCat('vaccines_more');
       setState(() {
         _vacOfCat = breeds;
       });
@@ -1309,7 +1342,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       switch (status) {
         case 'เสียชีวิต':
           return Colors.red;
-        case 'พร้อมผสมพันธุ์': 
+        case 'พร้อมผสมพันธุ์':
           return Colors.pinkAccent;
         case 'ไม่พร้อมผสมพันธุ์':
           return Colors.grey;
@@ -1778,7 +1811,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                         }
                         return null;
                       },
-                      
                     ),
                     SizedBox(height: 20),
                     Align(
@@ -2503,8 +2535,15 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
   // แสดงตารางการฉีดวัคซีนตามเกณฑ์
   void _showVaccinationScheduleDialog(BuildContext context, String petType) {
-    List<Map<String, String>> vaccinationSchedule =
-        (petType == 'สุนัข') ? vaccinationDog : vaccinationCat;
+    List<Map<String, String>> vaccinationSchedule = vaccinePetDatas.map((data) {
+      // แปลง Map<String, dynamic> เป็น Map<String, String>
+      return {
+        'age': data['age']?.toString() ?? '',
+        'vaccine': data['vaccine']?.toString() ?? '',
+        'dose': data['dose']?.toString() ?? '',
+      };
+    }).toList();
+    
 
     showDialog(
       context: context,
