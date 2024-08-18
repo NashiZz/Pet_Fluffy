@@ -415,8 +415,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       }
       petList.shuffle();
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
       return petList;
     } catch (e) {
@@ -1175,6 +1174,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
                   String oppositeGender =
                       (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
+                  print(oppositeGender);
+
                   filteredPetData = snapshot.data!
                       .where((pet) =>
                           pet['type_pet'] == petType &&
@@ -1185,8 +1186,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                 // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
                 if (filteredPetData.isEmpty) {
-                  // หากว่างเปล่า ให้แสดงสัตว์เลี้ยงทั้งหมด
-                  filteredPetData = snapshot.data!;
+                  
+                  filteredPetData = [];
                 }
 
                 return FutureBuilder<List<Map<String, dynamic>>>(
@@ -1218,7 +1219,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   if (filteredSnapshot.data == null ||
                       filteredSnapshot.data!.isEmpty) {
                     return Center(
-                      child: Text('คุณได้จับคู่หมดแล้ว'),
+                      child: Column(
+                        children: [
+                          SizedBox(height:MediaQuery.of(context).size.height /3,),
+                          Text('คุณได้จับคู่หมดแล้ว หรือ ไม่มีข้อมูลสัตว์เลี้ยง'),
+                        ],
+                      ),
                     );
                   }
 
@@ -1536,6 +1542,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                     }).toList();
                     petUserDataList = filteredPets;
                   }
+                  print(petUserDataList);
 
                   return Expanded(
                     child: RefreshIndicator(
