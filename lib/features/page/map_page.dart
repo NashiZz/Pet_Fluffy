@@ -149,6 +149,7 @@ class _MapsPageState extends State<Maps_Page> {
     _locationSubscription?.cancel();
     super.dispose();
   }
+
   void _getImageUser() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -168,7 +169,7 @@ class _MapsPageState extends State<Maps_Page> {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
-      
+
       isAnonymous = userData.isAnonymous;
       if (isAnonymous) {
         setState(() {
@@ -176,7 +177,6 @@ class _MapsPageState extends State<Maps_Page> {
         });
       } else {
         try {
-          
           DocumentSnapshot idpetDocSnapshot = await FirebaseFirestore.instance
               .collection('Usage_pet')
               .doc(userId)
@@ -4323,18 +4323,26 @@ class _MapsPageState extends State<Maps_Page> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+        });
         return AlertDialog(
-          title: const Text('เลือกสัตว์เลี้ยงตัวหลัก'),
-          content: const Text(
-              'กรุณาเลือกสัตว์เลี้ยงตัวหลักที่จะใช้ในการจับคู่และกดถูกใจก่อน'),
-          actions: [
-            TextButton(
-              child: const Text('ตกลง'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+          title: Column(
+            children: [
+              const Icon(Icons.pets_rounded, color: Colors.deepPurple, size: 50),
+              SizedBox(height: 20),
+              Text(
+                'กรุณาเลือกสัตว์เลี้ยงตัวหลัก',
+                style: TextStyle(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            'ที่จะใช้ในการจับคู่และกดถูกใจก่อน',
+            style: TextStyle(fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
         );
       },
     );

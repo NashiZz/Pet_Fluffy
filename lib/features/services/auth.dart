@@ -178,7 +178,7 @@ class AuthService {
           'phone': phone,
           'nickname': nickname,
           'gender': selectedGender,
-          'birtdate': birthdate,
+          'birthdate': birthdate,
           'country': selectedCounty,
           'facebook': facbook,
           'line': line,
@@ -218,7 +218,7 @@ class AuthService {
       'nickname': nickname,
       'gender': gender ?? '',
       'birthdate': birthdate ?? '',
-      'county': county ?? '',
+      'country': county ?? '',
       'facebook': facebook,
       'line': line,
       'status': 'สมาชิก'

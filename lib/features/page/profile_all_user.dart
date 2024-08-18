@@ -306,7 +306,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                     child: Text('อายุ : $age',
                                         style: TextStyle(fontSize: 16)),
                                   ),
-                                  Text('จังหวัด : ${userData['county'] ?? ''}',
+                                  Text('จังหวัด : ${userData['country'] ?? ''}',
                                       style: TextStyle(fontSize: 16)),
                                 ],
                               )

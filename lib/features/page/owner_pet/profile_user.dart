@@ -101,7 +101,7 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
       setState(() {
         userData = userDocSnapshot.data() as Map<String, dynamic>;
         userImageBase64 = userData['photoURL'] ?? '';
-        String birthdateString = userData['birtdate'] ?? '';
+        String birthdateString = userData['birthdate'] ?? '';
 
         // แปลงวันเกิดจากสตริงเป็น DateTime
         DateTime birthdate = DateTime.parse(birthdateString);
