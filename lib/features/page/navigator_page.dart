@@ -102,8 +102,42 @@ class _NavigatorPageState extends State<Navigator_Page> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        body: Center(
-          child: widgetOption.elementAt(currentIndex),
+        body: Stack(
+          children: [
+            Center(
+              child: widgetOption.elementAt(currentIndex),
+            ),
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                    left: 16.0,
+                    bottom: 15.0), // ปรับระยะห่างจากขอบซ้ายและขอบล่าง
+                child: Visibility(
+                  visible: isAnonymousUser,
+                  child: FloatingActionButton.extended(
+                    onPressed: () async {
+                      User? user = FirebaseAuth.instance.currentUser;
+                      try {
+                        await user?.delete();
+                        print("Anonymous account deleted");
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const Home_Page()),
+                          (Route<dynamic> route) => false,
+                        );
+                      } catch (e) {
+                        print("Error deleting anonymous account: $e");
+                      }
+                    },
+                    label: const Text('สมัครสมาชิก/เข้าสู่ระบบ'),
+                    icon: const Icon(Icons.login),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: Visibility(
           visible: shouldShowNavigationBar(currentIndex),
@@ -126,27 +160,6 @@ class _NavigatorPageState extends State<Navigator_Page> {
             },
           ),
         ),
-        floatingActionButton: isAnonymousUser
-            ? FloatingActionButton.extended(
-                onPressed: () async {
-                  User? user = FirebaseAuth.instance.currentUser;
-                  try {
-                    await user?.delete();
-                    print("Anonymous account deleted");
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const Home_Page()),
-                      (Route<dynamic> route) => false,
-                    );
-                  } catch (e) {
-                    print("Error deleting anonymous account: $e");
-                  }
-                },
-                label: const Text('สมัครสมาชิก/เข้าสู่ระบบ'),
-                icon: const Icon(Icons.login),
-              )
-            : null,
       ),
     );
   }

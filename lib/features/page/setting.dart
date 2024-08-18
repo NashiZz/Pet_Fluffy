@@ -188,18 +188,23 @@ class _Setting_PageState extends State<Setting_Page> {
                           showDialog(
                             context: context,
                             builder: (BuildContext context) {
+                              Future.delayed(const Duration(seconds: 3), () {
+                                Navigator.of(context)
+                                    .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+                              });
                               return AlertDialog(
-                                title: const Text('ยังไม่ได้เลือกสัตว์เลี้ยง'),
-                                content: const Text(
-                                    'กรุณาเลือกสัตว์เลี้ยงตัวหลักก่อนที่จะเข้าถึงโปรไฟล์สัตว์เลี้ยง'),
-                                actions: [
-                                  TextButton(
-                                    child: const Text('ตกลง'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                  ),
-                                ],
+                                title: Column(
+                                  children: [
+                                    const Icon(Icons.pets_rounded,
+                                        color: Colors.deepPurple, size: 50),
+                                    SizedBox(height: 20),
+                                    Text(
+                                      'กรุณาเลือกสัตว์เลี้ยงตัวหลักก่อนที่จะเข้าถึงโปรไฟล์สัตว์เลี้ยง',
+                                      style: TextStyle(fontSize: 18),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
                               );
                             },
                           );

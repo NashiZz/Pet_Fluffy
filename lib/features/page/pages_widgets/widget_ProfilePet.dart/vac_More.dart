@@ -28,13 +28,13 @@ class VaccineCard extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.blueAccent.withOpacity(0.2),
+                color: Colors.blueAccent,
                 borderRadius: BorderRadius.circular(10),
               ),
               padding: EdgeInsets.all(8),
               child: Icon(
                 LineAwesomeIcons.syringe,
-                color: Colors.deepPurple,
+                color: Colors.white,
                 size: 30,
               ),
             ),

@@ -77,7 +77,7 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
     Map<String, List<Map<String, dynamic>>> groupedNotifications = {};
 
     for (var notification in notifications) {
-      String dateString = notification['date'] ?? '';
+      String dateString = notification['scheduled_at'] ?? '';
       DateTime notificationDate;
       try {
         notificationDate = DateTime.parse(dateString);

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/notification_more.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:geolocator/geolocator.dart';
@@ -66,7 +67,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   bool hasPrimaryPet = false;
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolledToTop = false;
-  bool _isAtTop = true; // ตรวจสอบว่าอยู่ที่ตำแหน่งบนสุดหรือไม่
 
   bool _isAnimating = false;
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
@@ -416,7 +416,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       petList.shuffle();
       if (mounted) {
         setState(() {
-          // Update your UI with the fetched petList
         });
       }
       return petList;
@@ -487,25 +486,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
         });
       }
     });
-
-    // _scrollController.addListener(() {
-    //   // ตรวจสอบว่า ScrollController อยู่ที่ตำแหน่งบนสุดหรือไม่
-    //   if (_scrollController.offset <=
-    //           _scrollController.position.minScrollExtent &&
-    //       !_scrollController.position.outOfRange) {
-    //     if (!_isAtTop) {
-    //       setState(() {
-    //         _isAtTop = true;
-    //       });
-    //     }
-    //   } else {
-    //     if (_isAtTop) {
-    //       setState(() {
-    //         _isAtTop = false;
-    //       });
-    //     }
-    //   }
-    // });
   }
 
   void _scrollToTop() {
@@ -786,21 +766,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   Widget build(BuildContext context) {
     _initializeOffsets(context);
     return Scaffold(
-      body:
-          // NotificationListener<ScrollNotification>(
-          //   onNotification: (scrollNotification) {
-          //     // ใช้สำหรับตรวจสอบเมื่อผู้ใช้เลื่อนขึ้นสุด
-          //     if (scrollNotification is ScrollUpdateNotification) {
-          //       if (_scrollController.offset <=
-          //           _scrollController.position.minScrollExtent) {
-          //         // การรีเฟรชข้อมูลหรือการทำงานที่ต้องการเมื่อเลื่อนขึ้นสุด
-          //         print('Reached the top');
-          //       }
-          //     }
-          //     return false;
-          //   },
-          //   child:
-          SafeArea(
+      body: SafeArea(
         child: Column(
           children: [
             Card(
@@ -1901,7 +1867,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           ],
         ),
       ),
-      // ),
       floatingActionButton: _isAnimating
           ? AnimatedBuilder(
               animation: _animationController,
@@ -2052,17 +2017,49 @@ class _randomMathch_PageState extends State<randomMathch_Page>
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('กรุณาลงทะเบียน'),
-          content: const Text('คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้'),
+          content: const Text(
+            'คุณต้องลงทะเบียนเพื่อใช้ฟังก์ชันนี้',
+            style: TextStyle(fontSize: 16),
+          ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('ลงทะเบียน'),
-              onPressed: () {},
+            SizedBox(
+              height: 40,
+              width: 90,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text("ยกเลิก"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
+                ),
+              ),
             ),
-            TextButton(
-              child: const Text('ยกเลิก'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+            SizedBox(
+              height: 40,
+              width: 90,
+              child: TextButton(
+                onPressed: () async {
+                  try {
+                    await user?.delete();
+                    print("Anonymous account deleted");
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginPage()),
+                      (Route<dynamic> route) => false,
+                    );
+                  } catch (e) {
+                    print("Error deleting anonymous account: $e");
+                  }
+                },
+                child: const Text("ลงทะเบียน"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.blue,
+                ),
+              ),
             ),
           ],
         );
@@ -2287,18 +2284,27 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
+        });
         return AlertDialog(
-          title: const Text('เลือกสัตว์เลี้ยงตัวหลัก'),
-          content: const Text(
-              'กรุณาเลือกสัตว์เลี้ยงตัวหลักที่จะใช้ในการจับคู่และกดถูกใจก่อน'),
-          actions: [
-            TextButton(
-              child: const Text('ตกลง'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
+          title: Column(
+            children: [
+              const Icon(Icons.pets_rounded,
+                  color: Colors.deepPurple, size: 50),
+              SizedBox(height: 20),
+              Text(
+                'กรุณาเลือกสัตว์เลี้ยงตัวหลัก',
+                style: TextStyle(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            'ที่จะใช้ในการจับคู่และกดถูกใจก่อน',
+            style: TextStyle(fontSize: 18),
+            textAlign: TextAlign.center,
+          ),
         );
       },
     );
