@@ -45,11 +45,14 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
   }
 
   Future<void> _getIsCheckMatchSuccess() async {
+    print('user_req: ${widget.userId}');
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
 
       // ดึง petId จาก SharedPreferences
-      String? petId = prefs.getString(widget.userId_req);
+      String? petId = prefs.getString(widget.userId);
+
+      print('petID: $petId');
 
       // ตรวจสอบว่า petId มีค่าไหม
       if (petId == null) {
@@ -63,22 +66,24 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
       CollectionReference matchRef =
           FirebaseFirestore.instance.collection('match');
 
-      // ค้นหาข้อมูลการจับคู่
-      QuerySnapshot querySnapshot = await matchRef
-          .where('pet_respone', isEqualTo: petId)
+      // ค้นหาข้อมูลการจับคู่ทั้ง user_req และ user_res
+      QuerySnapshot userReqSnapshot = await matchRef
+          .where('user_req', isEqualTo: widget.userId)
+          .where('status', isEqualTo: 'จับคู่แล้ว')
+          .get();
+
+      QuerySnapshot userResSnapshot = await matchRef
+          .where('user_res', isEqualTo: widget.userId)
           .where('status', isEqualTo: 'จับคู่แล้ว')
           .get();
 
       // ตรวจสอบผลลัพธ์และตั้งค่าตัวแปร isCheckMatch
-      if (querySnapshot.docs.isNotEmpty) {
-        setState(() {
-          isCheckMatch = true;
-        });
-      } else {
-        setState(() {
-          isCheckMatch = false;
-        });
-      }
+      bool hasMatch =
+          userReqSnapshot.docs.isNotEmpty || userResSnapshot.docs.isNotEmpty;
+
+      setState(() {
+        isCheckMatch = hasMatch;
+      });
     } catch (e) {
       // พิมพ์ข้อผิดพลาดออกมาเพื่อช่วยในการดีบัก
       print('Error checking match status: $e');
@@ -142,7 +147,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
     }
   }
 
-   int _calculateAge(DateTime birthdate) {
+  int _calculateAge(DateTime birthdate) {
     final now = DateTime.now();
     int age = now.year - birthdate.year;
 

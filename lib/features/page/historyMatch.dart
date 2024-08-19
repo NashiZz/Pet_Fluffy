@@ -228,6 +228,7 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
         // รวมผลลัพธ์ของทั้งสอง query
         List<dynamic> petResponses = petUserQuerySnapshot_pair.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
+            
             .toList();
         petResponses.addAll(petUserQuerySnapshot_resp.docs
             .map((doc) => doc.data() as Map<String, dynamic>)

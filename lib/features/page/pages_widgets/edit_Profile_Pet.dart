@@ -1,7 +1,5 @@
 // ignore_for_file: file_names, camel_case_types, avoid_print, no_leading_underscores_for_local_identifiers
 
-import 'dart:developer';
-
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/services/profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
