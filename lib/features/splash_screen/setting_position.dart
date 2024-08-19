@@ -12,10 +12,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 //หน้า Set ตำแหน่ง Pet ก่อนใช้งาน
 =======
 //หน้า Set ตำแหน่ง Pet ก่อนใช้งาน 
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+//หน้า Set ตำแหน่ง Pet ก่อนใช้งาน
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 class LocationSelectionPage extends StatefulWidget {
   const LocationSelectionPage({super.key});
 
@@ -40,6 +44,9 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   @override
   Widget build(BuildContext context) {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     return WillPopScope(
       onWillPop: () async {
         // Return false to prevent the back action
@@ -61,6 +68,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                     colors: [Colors.blue, Colors.purple],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
+<<<<<<< HEAD
 =======
     return Scaffold(
       body: Container(
@@ -112,6 +120,10 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                   ),
                 ),
 <<<<<<< HEAD
+=======
+                  ),
+                ),
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -119,6 +131,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       Icons.add_location_alt_rounded,
                       size: 80,
                       color: Colors.white,
+<<<<<<< HEAD
 =======
                 const SizedBox(width: 20),
                 if (!_isLocationAdded) ...[
@@ -130,6 +143,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       minimumSize: WidgetStateProperty.all(const Size(
                           260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                     ),
                     const SizedBox(height: 20),
                     const Padding(
@@ -183,11 +198,15 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   void _showLocationPickerDialog() async {
 =======
   // Show Dialog Map ขึ้นมา
   void _showLocationPickerDialog() {
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+  void _showLocationPickerDialog() async {
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -290,7 +309,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
-  // หลังจากผู้ใช้เลือกตำแหน่งจะมาทำงานในนี้ต่อ
   void _selectLocation(LatLng position) {
     final Marker newMarker = Marker(
       markerId: const MarkerId('userSelectedLocation'),
@@ -305,11 +323,15 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   Future<void> getLocation() async {
 =======
   //ดึงเอาตำแหน่งปัจจุบันของผู้ใช้
   void getLocation() async {
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+  Future<void> getLocation() async {
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     Location location = Location();
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
@@ -333,7 +355,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _locationData = await location.getLocation();
   }
 
-  // บันทึกข้อมูลลงฐานข้อมูล
   Future<void> _saveLocationToFirestore(LatLng location) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -370,7 +391,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     }
   }
 
-  // ทำการเช็คว่า ถ้าผู้ใช้มีการตั้งค่า ตำแหน่งแล้วให้ผู้ใช้ไปหน้าอื่น
   void checkLocationData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {

@@ -39,11 +39,16 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
 <<<<<<< HEAD
+<<<<<<< HEAD
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
 
 =======
   Future<void> _getPetUserDataFromFirestore() async {
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+  Future<void> _getPetUserDataFromFirestore(String searchValue) async {
+
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     try {
       // ดึงข้อมูลจากคอลเลคชัน Usage_pet เพื่อหาข้อมูล pet_id
       QuerySnapshot petIdQuerySnapshot = await FirebaseFirestore.instance
@@ -145,6 +150,9 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
@@ -154,9 +162,12 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   }
 
   //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว)
+<<<<<<< HEAD
 =======
   //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว) 
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   List<Map<String, dynamic>> get filteredDogPets =>
       petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
 
@@ -218,6 +229,9 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
             ),
           ),
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
           body: isLoading
               ? Center(
                   child: Column(
@@ -247,6 +261,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
               );
             },
             child: const Icon(Icons.add),
+<<<<<<< HEAD
           ),
         ),
 =======
@@ -277,6 +292,10 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           child: const Icon(Icons.add),
         ),
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+          ),
+        ),
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
       ),
     );
   }
@@ -549,6 +568,9 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   void _shufflePet(String petId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(user!.uid, petId);
@@ -589,8 +611,11 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     }
   }
 
+<<<<<<< HEAD
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   //ปุ่มลบข้อมูลสัตว์เลี้ยง
   void _deletePetData(String petId) async {
     try {

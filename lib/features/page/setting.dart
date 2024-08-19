@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
 import 'package:Pet_Fluffy/features/page/faverite_page.dart';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
@@ -13,6 +14,13 @@ import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 // import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
+import 'package:Pet_Fluffy/features/page/login_page.dart';
+import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +28,6 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-//หน้า Menu Setting ใน App
 class Setting_Page extends StatefulWidget {
   const Setting_Page({super.key});
 
@@ -43,11 +50,11 @@ class _Setting_PageState extends State<Setting_Page> {
     _getUserDataFromFirestore();
   }
 
-  //ดึงข้อมูลของผู้ใช้จาก Firestore
   Future<void> _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
+<<<<<<< HEAD
 <<<<<<< HEAD
       isAnonymous = userData.isAnonymous;
       if (isAnonymous) {
@@ -66,6 +73,10 @@ class _Setting_PageState extends State<Setting_Page> {
 
         // อัปเดตสถานะของ State
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+      isAnonymous = userData.isAnonymous;
+      if (isAnonymous) {
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
         setState(() {
           userName = 'บัญชีผู้เยี่ยมชม';
           userEmail = '';
@@ -175,6 +186,9 @@ class _Setting_PageState extends State<Setting_Page> {
                     ),
                     const SizedBox(height: 10),
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                     if (!isAnonymous)
                       Column(
                         children: [
@@ -202,6 +216,7 @@ class _Setting_PageState extends State<Setting_Page> {
                           ),
                           const SizedBox(height: 10),
                         ],
+<<<<<<< HEAD
 =======
                     SizedBox(
                       width: 200,
@@ -222,6 +237,8 @@ class _Setting_PageState extends State<Setting_Page> {
                             style: TextStyle(
                                 color: Color.fromARGB(255, 255, 255, 255))),
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                       ),
                     const Divider(),
                     const SizedBox(height: 10),
@@ -230,6 +247,9 @@ class _Setting_PageState extends State<Setting_Page> {
                       icon: LineAwesomeIcons.dog,
                       onPress: () {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                         if (petId.isEmpty) {
                           // แสดงข้อความเตือนเมื่อ petId เป็นค่าว่าง
                           showDialog(
@@ -264,9 +284,12 @@ class _Setting_PageState extends State<Setting_Page> {
                             ),
                           );
                         }
+<<<<<<< HEAD
 =======
                         
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                       },
                       isAnonymous: isAnonymous,
                     ),
@@ -286,10 +309,14 @@ class _Setting_PageState extends State<Setting_Page> {
                     MenuWidget(
                       title: "สัตว์เลี้ยงรายการโปรด",
 <<<<<<< HEAD
+<<<<<<< HEAD
                       icon: LineAwesomeIcons.star,
 =======
                       icon: LineAwesomeIcons.gratipay__gittip_,
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+                      icon: LineAwesomeIcons.star,
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                       onPress: () {
                         Navigator.push(
                           context,
@@ -298,9 +325,13 @@ class _Setting_PageState extends State<Setting_Page> {
                         );
                       },
 <<<<<<< HEAD
+<<<<<<< HEAD
                       isAnonymous: isAnonymous,
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+                      isAnonymous: isAnonymous,
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(

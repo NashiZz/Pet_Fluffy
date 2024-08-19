@@ -8,10 +8,14 @@ import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // หน้า Menu ของ App (Home,Maps,Pets,Setting)
 =======
 //หน้า Menu ของ App (Home,Maps,Pets,Setting)
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+=======
+// หน้า Menu ของ App (Home,Maps,Pets,Setting)
+>>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 class Navigator_Page extends StatefulWidget {
   final int initialIndex;
 

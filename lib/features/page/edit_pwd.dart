@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
-//หน้า ลืมรหัสผ่าน ตอน Login
 class EditPassPage extends StatefulWidget {
   const EditPassPage({Key? key}) : super(key: key);
 
