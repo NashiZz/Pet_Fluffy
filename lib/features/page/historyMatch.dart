@@ -237,10 +237,17 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
 
         // ลูปเพื่อดึงข้อมูลแต่ละรายการจาก pet_request และ pet_respone
         for (var petRespone in petResponses) {
-          String petResponeId =
-              petRespone['pet_respone'] ?? petRespone['pet_request'];
+          
+          String petResponeId = '';
+          if (petId == petRespone['pet_respone']) {
+            petResponeId = petRespone['pet_request'];
+          }else if (petId == petRespone['pet_request']){
+            petResponeId = petRespone['pet_respone'];
+          }
 
           print('petRespone: $petResponeId');
+          print(petRespone['pet_request']);
+          print(petRespone['pet_respone']);
 
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
               .collection('Pet_User')
