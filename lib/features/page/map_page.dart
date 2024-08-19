@@ -1013,14 +1013,19 @@ class _MapsPageState extends State<Maps_Page> {
                                                   ElevatedButton(
                                                     onPressed: () {
                                                       setState(() {
+                                                        // รีเซ็ตค่า dropdown ให้เป็น null
                                                         _selectedDistance =
                                                             null;
                                                         _selectedAge = null;
+                                                        _selectedPrice = null;
+
+                                                        // รีเซ็ตค่า TextField
                                                         _otherBreedController
                                                             .text = '';
                                                         _otherColor.text = '';
-                                                        _selectedPrice = null;
                                                       });
+                                                      Navigator.of(context)
+                                                          .pop();
                                                     },
                                                     style: ElevatedButton
                                                         .styleFrom(

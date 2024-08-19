@@ -212,7 +212,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
         if (userDocSnapshot.exists) {
           // ดึงข้อมูลผู้ใช้จาก Snapshot
-          petId = userDocSnapshot['pet_id'] as String?;
+          petId = userDocSnapshot['pet_id'];
 
           // ตรวจสอบว่าค่าของ petId ไม่เป็น null และไม่ว่าง
           if (petId != null && petId!.isNotEmpty) {
@@ -226,10 +226,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
             if (petDocSnapshot.exists) {
               setState(() {
-                petName = petDocSnapshot['name'] as String?;
-                petType = petDocSnapshot['type_pet'] as String?;
-                petGender = petDocSnapshot['gender'] as String?;
-                petImg = petDocSnapshot['img_profile'] as String? ?? '';
+                petName = petDocSnapshot['name'];
+                petType = petDocSnapshot['type_pet'];
+                petGender = petDocSnapshot['gender'];
+                petImg = petDocSnapshot['img_profile'] ?? '';
                 isLoading = false;
               });
 
@@ -1082,27 +1082,58 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                                         ],
                                       ),
                                       const SizedBox(height: 15),
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            _selectedDistance =
-                                                _selectedDistance;
-                                            _selectedAge = _selectedAge;
-                                            _otherBreedController.text =
-                                                _otherBreedController.text;
-                                            _otherColor.text = _otherColor.text;
-                                            _selectedPrice = _selectedPrice;
-                                          });
-                                          Navigator.pop(context);
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(30),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                _selectedDistance =
+                                                    _selectedDistance;
+                                                _selectedAge = _selectedAge;
+                                                _otherBreedController.text =
+                                                    _otherBreedController.text;
+                                                _otherColor.text =
+                                                    _otherColor.text;
+                                                _selectedPrice = _selectedPrice;
+                                              });
+                                              Navigator.pop(context);
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(30),
+                                              ),
+                                            ),
+                                            child: const Text('ค้นหา',
+                                                style: TextStyle(fontSize: 16)),
                                           ),
-                                        ),
-                                        child: const Text('ค้นหา',
-                                            style: TextStyle(fontSize: 16)),
+                                          SizedBox(width: 20),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                // รีเซ็ตค่า dropdown ให้เป็น null
+                                                _selectedDistance = null;
+                                                _selectedAge = null;
+                                                _selectedPrice = null;
+
+                                                // รีเซ็ตค่า TextField
+                                                _otherBreedController.text = '';
+                                                _otherColor.text = '';
+                                              });
+                                              Navigator.of(context).pop();
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(30),
+                                              ),
+                                            ),
+                                            child: const Text('ล้างข้อมูลค้นหา',
+                                                style: TextStyle(fontSize: 16)),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
@@ -1169,10 +1200,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
                 bool isAnonymousUser =
                     FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
+                print(
+                    'isAnonymousUser: $isAnonymousUser, hasPrimaryPet: $hasPrimaryPet');
 
                 // กำหนดเพศตรงข้าม
                 List<Map<String, dynamic>> filteredPetData;
-                if (isAnonymousUser) {
+                if (isAnonymousUser || !hasPrimaryPet) {
                   // หากเป็นผู้ใช้ Anonymous ให้แสดงข้อมูลสัตว์เลี้ยงทั้งหมด
                   filteredPetData = snapshot.data!;
                 } else {

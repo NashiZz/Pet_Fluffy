@@ -91,7 +91,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                             minimumSize: MaterialStateProperty.all(const Size(
                                 260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
                           ),
-                          child: const Text('เพิ่มแหน่ง'),
+                          child: const Text('เพิ่มตำแหน่ง'),
                         ),
                         const SizedBox(width: 20),
                         if (!_isLocationAdded)
