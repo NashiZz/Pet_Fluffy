@@ -237,11 +237,10 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
 
         // ลูปเพื่อดึงข้อมูลแต่ละรายการจาก pet_request และ pet_respone
         for (var petRespone in petResponses) {
-          
           String petResponeId = '';
           if (petId == petRespone['pet_respone']) {
             petResponeId = petRespone['pet_request'];
-          }else if (petId == petRespone['pet_request']){
+          } else if (petId == petRespone['pet_request']) {
             petResponeId = petRespone['pet_respone'];
           }
 
@@ -582,79 +581,65 @@ class _Historymatch_PageState extends State<Historymatch_Page> {
       final String formatted =
           formatter.format(now.toUtc().add(Duration(hours: 7)));
 
-      CollectionReference petMatchRef_req =
-          FirebaseFirestore.instance.collection('match');
-
-      // ดึงเอกสารที่มี pet_respone ตรงกับ petId
-      QuerySnapshot querySnapshot_req = await petMatchRef_req
-          .where('pet_request', isEqualTo: petId_req)
-          .where('pet_respone', isEqualTo: petId_res)
-          .where('status', isEqualTo: "จับคู่แล้ว")
-          .get();
-
-      if (querySnapshot_req.docs.isNotEmpty) {
-        // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
-        querySnapshot_req.docs.forEach((doc) async {
-          await doc.reference
-              .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-        });
-
-        CollectionReference petMatchRef_res =
-            FirebaseFirestore.instance.collection('match');
-
-        // ดึงเอกสารที่มี pet_respone ตรงกับ petId
-        QuerySnapshot querySnapshot_res = await petMatchRef_res
-            .where('pet_request', isEqualTo: petId_res)
-            .where('pet_respone', isEqualTo: petId_req)
-            .where('status', isEqualTo: "จับคู่แล้ว")
-            .get();
-
-        if (querySnapshot_res.docs.isNotEmpty) {
-          // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
-          querySnapshot_res.docs.forEach((doc) async {
+      // ฟังก์ชันอัปเดตสถานะ
+      Future<void> updateMatchStatus(QuerySnapshot querySnapshot) async {
+        if (querySnapshot.docs.isNotEmpty) {
+          for (var doc in querySnapshot.docs) {
             await doc.reference
                 .update({'status': 'ไม่ยอมรับ', 'updates_at': formatted});
-          });
+          }
           _getPetUserDataFromMatch_wait();
           _getPetUserDataFromMatch_paired();
         } else {
           print('No document found with pet_id: $petId_res');
         }
-      } else {
-        CollectionReference petMatchRef_req =
-            FirebaseFirestore.instance.collection('match');
+      }
 
-        // ดึงเอกสารที่มี pet_respone ตรงกับ petId
-        QuerySnapshot querySnapshot_req = await petMatchRef_req
-            .where('pet_request', isEqualTo: petId_req)
-            .where('pet_respone', isEqualTo: petId_res)
-            .where('status', isEqualTo: "กำลังรอ")
-            .get();
-        if (querySnapshot_req.docs.isNotEmpty) {
-          // สมมติว่า pet_id มีค่า unique ดังนั้นจะมีเอกสารเพียงเอกสารเดียว
-          DocumentSnapshot docSnapshot = querySnapshot_req.docs.first;
+      // ดึงข้อมูลจาก match สำหรับ pet_request
+      QuerySnapshot querySnapshot_req = await FirebaseFirestore.instance
+          .collection('match')
+          .where('pet_request', isEqualTo: petId_req)
+          .where('pet_respone', isEqualTo: petId_res)
+          .where('status', isEqualTo: "จับคู่แล้ว")
+          .get();
 
-          // ดึง id_fav จากเอกสาร
-          String idFav = docSnapshot.get('id_match');
+      // อัปเดตสถานะสำหรับ pet_request
+      await updateMatchStatus(querySnapshot_req);
 
-          // อ้างอิงถึงเอกสารที่มี id_fav
-          DocumentReference docRef = petMatchRef_req.doc(idFav);
+      // ดึงข้อมูลจาก match สำหรับ pet_respone
+      QuerySnapshot querySnapshot_res = await FirebaseFirestore.instance
+          .collection('match')
+          .where('pet_request', isEqualTo: petId_res)
+          .where('pet_respone', isEqualTo: petId_req)
+          .where('status', isEqualTo: "จับคู่แล้ว")
+          .get();
 
-          // ตรวจสอบเอกสารก่อนที่จะลบ
-          DocumentSnapshot docToCheck = await docRef.get();
+      // อัปเดตสถานะสำหรับ pet_respone
+      await updateMatchStatus(querySnapshot_res);
 
-          if (docToCheck.exists) {
-            // ลบเอกสารโดยใช้ id_fav
-            await docRef.delete();
+      // ตรวจสอบสถานะ 'กำลังรอ' สำหรับ pet_request
+      QuerySnapshot querySnapshot_wait_req = await FirebaseFirestore.instance
+          .collection('match')
+          .where('pet_request', isEqualTo: petId_req)
+          .where('pet_respone', isEqualTo: petId_res)
+          .where('status', isEqualTo: "กำลังรอ")
+          .get();
 
-            // ดึงข้อมูลใหม่หลังจากลบสำเร็จ (ถ้าต้องการ)
-            _getPetUserDataFromMatch_wait();
-            _getPetUserDataFromMatch_paired();
+      if (querySnapshot_wait_req.docs.isNotEmpty) {
+        DocumentSnapshot docSnapshot = querySnapshot_wait_req.docs.first;
+        String idFav = docSnapshot.get('id_match');
+        DocumentReference docRef =
+            FirebaseFirestore.instance.collection('match').doc(idFav);
 
-            print('Document with id_fav $idFav deleted successfully');
-          } else {
-            print('No document found with id_fav: $idFav');
-          }
+        DocumentSnapshot docToCheck = await docRef.get();
+
+        if (docToCheck.exists) {
+          await docRef.delete();
+          _getPetUserDataFromMatch_wait();
+          _getPetUserDataFromMatch_paired();
+          print('Document with id_fav $idFav deleted successfully');
+        } else {
+          print('No document found with id_fav: $idFav');
         }
       }
     } catch (e) {
