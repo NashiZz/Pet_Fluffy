@@ -27,7 +27,6 @@ class _SplashPageState extends State<Splash_Page> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-<<<<<<< HEAD
     _isMounted = true;
 
     // ตรวจสอบสถานะการเชื่อมต่อเริ่มต้น
@@ -52,9 +51,6 @@ class _SplashPageState extends State<Splash_Page> {
         }
       }
     });
-=======
-    _isMounted = true; //วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   }
 
   @override
@@ -81,7 +77,6 @@ class _SplashPageState extends State<Splash_Page> {
     }
   }
 
-<<<<<<< HEAD
   void _handleUserNavigation() async {
     // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
     await Future.delayed(const Duration(seconds: 3));
@@ -127,20 +122,6 @@ class _SplashPageState extends State<Splash_Page> {
                 );
               }
             }
-=======
-    // ทำงานที่ต้องการ
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
-      Future.delayed(const Duration(seconds: 3), () {
-        if (_isMounted) {
-          if (user != null && user.emailVerified) {
-            // หากผู้ใช้ล็อกอินแล้วและยืนยันอีเมลแล้ว นำทางไปยังหน้า Navigator Page
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => const Navigator_Page(initialIndex: 0),
-              ),
-            );
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
           } else {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(

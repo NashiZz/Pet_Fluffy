@@ -3,13 +3,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-<<<<<<< HEAD
 import 'dart:ui' as ui;
 import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:http/http.dart' as http;
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
@@ -36,10 +33,7 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
-<<<<<<< HEAD
   FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   User? user =
       FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
   late List<Map<String, dynamic>> petUserDataList =
@@ -52,21 +46,16 @@ class _MapsPageState extends State<Maps_Page> {
   final Set<Marker> _markers = {};
   StreamSubscription<LocationData>?
       _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
-<<<<<<< HEAD
   final TextEditingController _controllerSearch = TextEditingController();
   late String petId;
   String petImg = '';
   late String pet_type;
   late String petName;
   late String gender;
-=======
-
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   late String userId;
   late String userImageBase64;
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
-<<<<<<< HEAD
   bool isAnonymous = false;
   bool hasPrimaryPet = false;
   bool _isMapInitialized = false; // ใช้เพื่อตรวจสอบการโหลดแผนที่
@@ -80,37 +69,6 @@ class _MapsPageState extends State<Maps_Page> {
   final TextEditingController _otherColor = TextEditingController();
   late List<Map<String, dynamic>> petDataMatchList = [];
   late List<Map<String, dynamic>> petDataFavoriteList = [];
-=======
-
-  // Async func to handle Futures easier; or use Future.then
-      
-
-  //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
-  void _getUserDataFromFirestore() async {
-    User? userData = FirebaseAuth.instance.currentUser;
-    if (userData != null) {
-      userId = userData.uid;
-      try {
-        Map<String, dynamic>? userMap =
-            await ApiUserService.getUserDataFromFirestore(userId);
-
-        if (userMap != null) {
-          userImageBase64 = userMap['photoURL'] ?? '';
-
-          getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
-        } else {
-          print("User data does not exist");
-        }
-      } catch (e) {
-        print('Error getting user data from Firestore: $e');
-      }
-    }
-    setState(() {
-      isLoading = false;
-    });
-  }
-
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   final Completer<GoogleMapController> _controller =
       Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
 
@@ -140,7 +98,6 @@ class _MapsPageState extends State<Maps_Page> {
     'มากกว่า 30000 บาท'
   ];
 
-<<<<<<< HEAD
   // void initState() {
   //   super.initState();
   //   location = Location();
@@ -154,55 +111,6 @@ class _MapsPageState extends State<Maps_Page> {
   //   });
   //   getLocation(); // เรียก getLocation ที่นี่
   //   _getUserDataFromFirestore();
-=======
-  //สร้าง Marker แสดงตำแหน่งปัจจุบันของผู้ใช้
-  void _createUserLocationMarker() {
-    _markers.add(Marker(
-      markerId: const MarkerId('currentLocation'),
-      position: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-      icon: BitmapDescriptor.defaultMarker,
-      infoWindow: const InfoWindow(
-        title: 'ตำแหน่งของคุณ',
-        snippet: 'อยู่ที่นี่',
-      ),
-    ));
-  }
-
-  //เมื่อมีการเปลี่ยนแปลงตำแหน่งของผู้ใช้ marker จะแสดงตามตำแหน่งของผู้ใช้
-  void _updateUserLocationMarker() {
-    setState(() {
-      _markers
-          .removeWhere((marker) => marker.markerId.value == 'currentLocation');
-      _createUserLocationMarker();
-    });
-  }
-
-  // ดึงข้อมูลตำแหน่งปัจจุบันของผู้ใช้และอัปเดต
-  void getLocation() async {
-    Location location = Location();
-    _locationData = await location.getLocation();
-
-    setState(() {
-      _initialCameraPosition = CameraPosition(
-          bearing: 192.8334901395799,
-          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
-          tilt: 59.4407176971435555,
-          zoom: 19.151926040649414);
-      _createUserLocationMarker();
-    });
-
-    _goToTheLake();
-    _loadAllPetLocations(context);
-  }
-
-  // void _initializeFirebase() async {
-  //   try {
-  //     await Firebase.initializeApp();
-  //     print("Firebase Initialized");
-  //   } catch (error) {
-  //     print("Failed to initialize Firebase: $error");
-  //   }
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   // }
 
   @override
@@ -509,7 +417,6 @@ class _MapsPageState extends State<Maps_Page> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-<<<<<<< HEAD
         child: _isMapInitialized
             ? Stack(
                 children: [
@@ -533,75 +440,6 @@ class _MapsPageState extends State<Maps_Page> {
                               "color": "#1d2c4d"
                             }
                           ]
-=======
-        child: Stack(
-          children: [
-            GoogleMap(
-              myLocationButtonEnabled: true,
-              zoomControlsEnabled: false,
-              myLocationEnabled: true,
-              mapType: MapType.normal,
-              initialCameraPosition: _initialCameraPosition,
-              onTap: _isSelectingLocation ? _selectLocation : null,
-              onMapCreated: (GoogleMapController controller) {
-                if (!_controller.isCompleted) {
-                  _controller.complete(controller);
-                }
-              },
-              markers: _markers,
-            ),
-
-            //แสดงรูปภาพโปรไฟล์ผู้ใช้ และ ปุ่มค้นหา
-            Positioned(
-              top: 10,
-              left: 10,
-              right: 10,
-              child: Card(
-                elevation: 4,
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.transparent,
-                        child: ClipOval(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const Profile_user_Page()),
-                              );
-                            },
-                            child: userImageBase64.isNotEmpty
-                                ? Image.memory(
-                                    base64Decode(userImageBase64),
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                  )
-                                : const CircularProgressIndicator(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextField(
-                          decoration: const InputDecoration(
-                            hintText: 'ค้นหา',
-                            border: InputBorder.none,
-                          ),
-                          onChanged: (value) {},
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          // Add code for notification button
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                         },
                         {
                           "elementType": "labels.text.fill",
@@ -1269,20 +1107,6 @@ class _MapsPageState extends State<Maps_Page> {
             : const Center(
                 child: CircularProgressIndicator(),
               ),
-<<<<<<< HEAD
-=======
-            ),
-          ],
-        ),
-      ),
-      //ปุ่มเลือก ตำแหน่งแสดงผลสัตว์เลี้ยง
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _startSelectingLocation();
-        },
-        tooltip: 'Select Location',
-        child: const Icon(Icons.location_on),
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       ),
     );
   }
@@ -1293,7 +1117,6 @@ class _MapsPageState extends State<Maps_Page> {
         .animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
   }
 
-<<<<<<< HEAD
   // ฟังก์ชันโหลดภาพจาก bytes
   Future<ui.Image> _loadImage(Uint8List imgBytes) async {
     final Completer<ui.Image> completer = Completer();
@@ -1482,10 +1305,6 @@ class _MapsPageState extends State<Maps_Page> {
     // สร้างตัวแปรเพื่อเก็บค่า markerId
     final String markerId = 'selected-location';
 
-=======
-  //เลือกตำแหน่งแสดงผลสัตว์เลี้ยง
-  void _startSelectingLocation() {
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1616,7 +1435,6 @@ class _MapsPageState extends State<Maps_Page> {
     );
   }
 
-<<<<<<< HEAD
   void historyMatch() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? petId = prefs.getString(userId.toString());
@@ -1641,13 +1459,6 @@ class _MapsPageState extends State<Maps_Page> {
           );
         },
       ),
-=======
-  //เก็บตำแหน่งที่เลือกมาเก็บไว้ในนี้และ บันทึกลงฐานข้อมูล
-  void _selectLocation(LatLng position) {
-    final Marker newMarker = Marker(
-      markerId: const MarkerId('userSelectedLocation'),
-      position: position,
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     );
   }
 
@@ -1701,13 +1512,8 @@ class _MapsPageState extends State<Maps_Page> {
   //สร้าง Maker สำหรับแสดง รูปภาพสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Widget _createMarkerIcon(Uint8List markerImages) {
     return Container(
-<<<<<<< HEAD
       width: 100,
       height: 100,
-=======
-      width: 80,
-      height: 80,
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -1767,11 +1573,7 @@ class _MapsPageState extends State<Maps_Page> {
     return ageString;
   }
 
-<<<<<<< HEAD
   // ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
-=======
-  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   Future<void> _loadAllPetLocations(BuildContext context) async {
     try {
       setState(() {
@@ -1815,18 +1617,9 @@ class _MapsPageState extends State<Maps_Page> {
               int yearsDifference = now.year - birthDate.year;
               int monthsDifference = now.month - birthDate.month;
 
-<<<<<<< HEAD
               if (now.day < birthDate.day) {
                 monthsDifference--;
               }
-=======
-        double lat = userSnapshot['lat'] ?? 0.0;
-        double lng = userSnapshot['lng'] ?? 0.0;
-        //random ตำแหน่ง ให้สัตว์เลี้ยงไม่ซ้อนกัน
-        lat += Random().nextDouble() * 0.0002;
-        lng += Random().nextDouble() * 0.0002;
-        LatLng petLocation = LatLng(lat, lng);
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 
               if (monthsDifference < 0) {
                 yearsDifference--;
@@ -3681,10 +3474,6 @@ class _MapsPageState extends State<Maps_Page> {
         isLoading = false;
       });
 
-<<<<<<< HEAD
-=======
-      // รายงานข้อผิดพลาดทั้งหมด
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       if (errors.isNotEmpty) {
         for (var error in errors) {
           print(error);
@@ -3695,7 +3484,6 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
-<<<<<<< HEAD
   int convertToMonths(String ageString) {
     int months = 0;
     RegExp regExp = RegExp(r'(\d+)\s*ปี');
@@ -4087,8 +3875,6 @@ class _MapsPageState extends State<Maps_Page> {
     }
   }
 
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   //Show Dialog เมื่อมีการคลิก Maker สัตว์เลี้ยง
   void _showPetDetails(
       BuildContext context,

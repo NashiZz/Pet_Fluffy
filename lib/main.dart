@@ -15,13 +15,8 @@ final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
 Future<void> main() async {
   //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
-<<<<<<< HEAD
   NotificationHelper.init();
   //ทำการเชื่อมต่อแอปกับ Firebase
-=======
-
-  //ทำการเชื่อมต่อแอปกับ Firebase 
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   await Firebase.initializeApp();
   await FirebaseApi().initNotifications();
 
@@ -40,13 +35,8 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-<<<<<<< HEAD
   MyApp({Key? key}) : super(key: key);
 
-=======
-  const MyApp({Key? key}) : super(key: key);
-  
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(

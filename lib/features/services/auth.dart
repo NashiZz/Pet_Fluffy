@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 import 'dart:async';
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -10,16 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-<<<<<<< HEAD
 import 'package:googleapis_auth/auth_io.dart';
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-<<<<<<< HEAD
   // เข้าสู่ระบบโดยไม่สมัครสมาชิก
   Future<User?> signInAnonymously() async {
     try {
@@ -40,19 +33,11 @@ class AuthService {
       String email, String password) async {
     try {
       // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
-=======
-  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
-  Future<User?> signInWithEmailAndPassword(
-      String email, String password) async {
-    try {
-      //เข้าสู่ระบบด้วยบัญชีผู้ใช้ที่มีอยู่
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-<<<<<<< HEAD
         // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
         print('Invalid email or password.');
       } else {
@@ -98,12 +83,6 @@ class AuthService {
     } catch (e) {
       // จัดการข้อผิดพลาดทั่วไป
       print('An unexpected error occurred: $e');
-=======
-        // showToast(message: 'Invalid email or password.');
-      } else {
-        // showToast(message: 'An error occurred: ${e.code}');
-      }
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     }
     return null;
   }
@@ -128,13 +107,8 @@ class AuthService {
             await _auth.signInWithCredential(credential);
         User? user = userCredential.user;
 
-<<<<<<< HEAD
         // await saveUserGoogle(user!);
 
-=======
-        await saveUserGoogle(user!);
-        
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         return user;
       }
     } catch (error) {
@@ -174,7 +148,6 @@ class AuthService {
   }
 
   // บันทึกข้อมูลผู้ใช้ที่ลงทะเบียนด้วย Google
-<<<<<<< HEAD
   Future<void> saveUserGoogle(
     String uid,
     String username,
@@ -210,30 +183,6 @@ class AuthService {
           'facebook': facbook,
           'line': line,
           'status': 'สมาชิก'
-=======
-  Future<void> saveUserGoogle(User user) async {
-    try {
-      final userRef =
-          FirebaseFirestore.instance.collection('user').doc(user.uid);
-      final userData = await userRef.get();
-      String base64Image = await convertImageToBase64(user.photoURL!);
-
-      if (!userData.exists) {
-        await userRef.set({
-          'uid': user.uid,
-          'username': user.displayName,
-          'fullname': '',
-          'email': user.email,
-          'password': '',
-          'photoURL': base64Image,
-          'phone': user.phoneNumber,
-          'nickname': '',
-          'gender': '',
-          'birtdate': '',
-          'country': '',
-          'facebeook': '',
-          'line': ''
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         });
       }
     } catch (error) {
@@ -242,7 +191,6 @@ class AuthService {
   }
 
   // Save Data User
-<<<<<<< HEAD
   Future<void> saveUserDataToFirestore(
       String userId,
       String username,
@@ -257,11 +205,6 @@ class AuthService {
       String? gender,
       String? birthdate,
       String? county) async {
-=======
-  Future<void> saveUserDataToFirestore(String userId, String username,
-      String name, String email, String password, Uint8List? image) async {
-    String img = uint8ListToBase64(image!);
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     DocumentReference userRef = _firestore.collection('user').doc(userId);
 
     await userRef.set({
@@ -270,7 +213,6 @@ class AuthService {
       'fullname': name,
       'email': email,
       'password': password,
-<<<<<<< HEAD
       'photoURL': imageBase64 ?? '', // ใช้ค่าว่างถ้า imageBase64 เป็น null
       'phone': phone,
       'nickname': nickname,
@@ -280,16 +222,6 @@ class AuthService {
       'facebook': facebook,
       'line': line,
       'status': 'สมาชิก'
-=======
-      'photoURL': img,
-      'phone': '',
-      'nickname': '',
-      'gender': '',
-      'birthdate': '',
-      'country': '',
-      'facebook': '',
-      'line': ''
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     }).then((_) {
       print("User data added to Firestore");
     }).catchError((error) {
@@ -335,7 +267,6 @@ class AuthService {
     }
   }
 }
-<<<<<<< HEAD
 
 class FirebaseAccessToken {
   static String firebaseMsgScope =
@@ -373,5 +304,3 @@ class FirebaseAccessToken {
     return '';
   }
 }
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3

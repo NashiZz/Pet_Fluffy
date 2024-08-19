@@ -38,12 +38,8 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   }
 
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
-<<<<<<< HEAD
   Future<void> _getPetUserDataFromFirestore(String searchValue) async {
 
-=======
-  Future<void> _getPetUserDataFromFirestore() async {
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     try {
       // ดึงข้อมูลจากคอลเลคชัน Usage_pet เพื่อหาข้อมูล pet_id
       QuerySnapshot petIdQuerySnapshot = await FirebaseFirestore.instance
@@ -144,7 +140,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     }
   }
 
-<<<<<<< HEAD
   void _logSearchValue() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final searchValue = _controller.text;
@@ -154,9 +149,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   }
 
   //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว)
-=======
-  //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว) 
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   List<Map<String, dynamic>> get filteredDogPets =>
       petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
 
@@ -217,7 +209,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
               ),
             ),
           ),
-<<<<<<< HEAD
           body: isLoading
               ? Center(
                   child: Column(
@@ -249,34 +240,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
             child: const Icon(Icons.add),
           ),
         ),
-=======
-          centerTitle: true,
-          automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'สุนัข'),
-              Tab(text: 'แมว'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            //สุนัข
-            _buildPetList(filteredDogPets),
-            //แมว
-            _buildPetList(filteredCatPets),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const Pet_Page()),
-            );
-          },
-          child: const Icon(Icons.add),
-        ),
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       ),
     );
   }
@@ -548,7 +511,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     );
   }
 
-<<<<<<< HEAD
   void _shufflePet(String petId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(user!.uid, petId);
@@ -589,8 +551,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     }
   }
 
-=======
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   //ปุ่มลบข้อมูลสัตว์เลี้ยง
   void _deletePetData(String petId) async {
     try {

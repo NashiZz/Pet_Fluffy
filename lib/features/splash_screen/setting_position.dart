@@ -11,11 +11,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
-<<<<<<< HEAD
 //หน้า Set ตำแหน่ง Pet ก่อนใช้งาน
-=======
-//หน้า Set ตำแหน่ง Pet ก่อนใช้งาน 
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 class LocationSelectionPage extends StatefulWidget {
   const LocationSelectionPage({super.key});
 
@@ -39,7 +35,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     return WillPopScope(
       onWillPop: () async {
         // Return false to prevent the back action
@@ -61,57 +56,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                     colors: [Colors.blue, Colors.purple],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
-=======
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue, Colors.purple],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.add_location_alt_rounded,
-              size: 80,
-              color: Colors.white,
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                'ก่อนเริ่มใช้งานแอป กรุณาเพิ่มตำแหน่งในการแสดงบนแผนที่ของสัตว์เลี้ยงคุณ',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontStyle: FontStyle.italic,
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
-              ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    _showLocationPickerDialog();
-                  },
-                  style: ButtonStyle(
-                    minimumSize: WidgetStateProperty.all(
-                        const Size(260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                   ),
                 ),
-<<<<<<< HEAD
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -119,17 +65,6 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       Icons.add_location_alt_rounded,
                       size: 80,
                       color: Colors.white,
-=======
-                const SizedBox(width: 20),
-                if (!_isLocationAdded) ...[
-                  ElevatedButton(
-                    onPressed: () {
-                      Get.to(() => const Setting_Pet_Page());
-                    },
-                    style: ButtonStyle(
-                      minimumSize: WidgetStateProperty.all(const Size(
-                          260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                     ),
                     const SizedBox(height: 20),
                     const Padding(
@@ -182,12 +117,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
-<<<<<<< HEAD
   void _showLocationPickerDialog() async {
-=======
-  // Show Dialog Map ขึ้นมา
-  void _showLocationPickerDialog() {
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -304,12 +234,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _saveLocationToFirestore(position);
   }
 
-<<<<<<< HEAD
   Future<void> getLocation() async {
-=======
-  //ดึงเอาตำแหน่งปัจจุบันของผู้ใช้
-  void getLocation() async {
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     Location location = Location();
     bool _serviceEnabled;
     PermissionStatus _permissionGranted;
