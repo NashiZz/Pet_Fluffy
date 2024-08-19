@@ -22,7 +22,7 @@ class Pet_Page extends StatefulWidget {
 
 class _Pet_PageState extends State<Pet_Page> {
   User? user = FirebaseAuth.instance.currentUser;
-
+  final _formKey = GlobalKey<FormState>();
   static const String tempPetImageUrl =
       "https://e7.pngegg.com/pngimages/59/659/png-clipart-computer-icons-scalable-graphics-avatar-emoticon-animal-fox-jungle-safari-zoo-icon-animals-orange-thumbnail.png";
   final TextEditingController _nameController = TextEditingController();
@@ -31,7 +31,7 @@ class _Pet_PageState extends State<Pet_Page> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _desController = TextEditingController();
 // Obtain shared preferences.
-  
+
   Uint8List? _profileImage;
   Uint8List? _normalImage;
   final TextEditingController _imageFileController = TextEditingController();
@@ -39,19 +39,25 @@ class _Pet_PageState extends State<Pet_Page> {
   String? _selectedType;
   String? _selectedBreed;
   String? _selectedGender;
+  String? _selectedStatus;
 
   DateTime? _selectedDate;
   final TextEditingController _dateController = TextEditingController();
 
   final List<String> _genders = ['ตัวผู้', 'ตัวเมีย'];
+  final List<String> _status = [
+    'เสียชีวิต',
+    'พร้อมผสมพันธุ์',
+    'ไม่พร้อมผสมพันธุ์'
+  ];
   List<String> _types = [];
   List<String> _breedsOfType1 = [];
   List<String> _breedsOfType2 = [];
+  final TextEditingController _otherBreedController = TextEditingController();
+  bool _isOtherBreed = false;
 
   bool _isLoading = false;
-  
 
-  
   //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
@@ -67,13 +73,20 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  //พันธ์สุนัข
+// พันธุ์สุนัข
   void _fetchBreadDataDog() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('pet_bread').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc("Qy38o0xCXKQlIngPz9jb")
+          .collection('gene_pet')
+          .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+
+      // เรียงลำดับพันธุ์ตามตัวอักษร
+      breeds.sort((a, b) => a.compareTo(b));
+
       setState(() {
         _breedsOfType1 = breeds;
       });
@@ -82,13 +95,20 @@ class _Pet_PageState extends State<Pet_Page> {
     }
   }
 
-  //พันธ์แมว
+// พันธุ์แมว
   void _fetchBreadDataCat() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('pet_bread_1').get();
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('gene_pet')
+          .doc("5yWv1hawXz6Gh15gEed1")
+          .collection('gene_pet')
+          .get();
       List<String> breeds =
           querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+
+      // เรียงลำดับพันธุ์ตามตัวอักษร
+      breeds.sort((a, b) => a.compareTo(b));
+
       setState(() {
         _breedsOfType2 = breeds;
       });
@@ -161,6 +181,8 @@ class _Pet_PageState extends State<Pet_Page> {
   @override
   void dispose() {
     _dateController.dispose(); // ล้างทรัพยากร
+    _priceController.dispose();
+    _desController.dispose();
     super.dispose();
   }
 
@@ -172,6 +194,12 @@ class _Pet_PageState extends State<Pet_Page> {
       _fetchBreadDataDog();
       _fetchBreadDataCat();
     }
+    _priceController.addListener(() {
+      setState(() {}); // Refresh the UI when text changes
+    });
+    _desController.addListener(() {
+      setState(() {}); // Refresh the UI when text changes
+    });
   }
 
   @override
@@ -198,85 +226,83 @@ class _Pet_PageState extends State<Pet_Page> {
             : SingleChildScrollView(
                 child: Padding(
                 padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Stack(
-                      children: [
-                        _profileImage != null
-                            ? CircleAvatar(
-                                radius: 64,
-                                backgroundImage: MemoryImage(_profileImage!),
-                              )
-                            : const CircleAvatar(
-                                radius: 64,
-                                backgroundImage: NetworkImage(tempPetImageUrl),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        children: [
+                          _profileImage != null
+                              ? CircleAvatar(
+                                  radius: 64,
+                                  backgroundImage: MemoryImage(_profileImage!),
+                                )
+                              : const CircleAvatar(
+                                  radius: 64,
+                                  backgroundImage:
+                                      NetworkImage(tempPetImageUrl),
+                                ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 35,
+                              height: 35,
+                              decoration: BoxDecoration(
+                                color: Colors.deepPurple,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 2,
+                                ),
                               ),
-                        Positioned(
-                          bottom: -10,
-                          left: 80,
-                          child: IconButton(
-                            onPressed: selectImage,
-                            icon: const Icon(Icons.add_a_photo),
-                          ),
-                        )
-                      ],
-                    ),
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    Form(
-                        child: Column(
-                      children: [
-                        TextField(
-                          style: const TextStyle(fontSize: 14),
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'ชื่อสัตว์เลี้ยง',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30.0)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 10, horizontal: 15),
-                          ),
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedType,
-                                items: _types.map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    _selectedType = newValue;
-                                    _selectedBreed = null;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  labelText: 'ประเภทสัตว์เลี้ยง',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 10, horizontal: 10),
+                              child: Center(
+                                child: IconButton(
+                                  onPressed: selectImage,
+                                  icon: const Icon(Icons.add_a_photo,
+                                      color: Colors.white),
+                                  iconSize: 15,
                                 ),
                               ),
                             ),
-                            const Padding(padding: EdgeInsets.all(5)),
-                            if (_selectedType != null)
+                          ),
+                        ],
+                      ),
+                      const SizedBox(
+                        height: 30,
+                      ),
+                      Column(
+                        children: [
+                          TextFormField(
+                            style: const TextStyle(fontSize: 14),
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'ชื่อสัตว์เลี้ยง',
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(30.0)),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 10, horizontal: 15),
+                              counterText: '',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'กรุณากรอกชื่อสัตว์เลี้ยง';
+                              }
+                              return null;
+                            },
+                            maxLength: 20,
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _selectedBreed,
-                                  items: _getBreedsByType(_selectedType!)
-                                      .map((String value) {
+                                  value: _selectedType,
+                                  items: _types.map((String value) {
                                     return DropdownMenuItem<String>(
                                       value: value,
                                       child: Text(value),
@@ -284,212 +310,343 @@ class _Pet_PageState extends State<Pet_Page> {
                                   }).toList(),
                                   onChanged: (String? newValue) {
                                     setState(() {
-                                      _selectedBreed = newValue;
+                                      _selectedType = newValue;
+                                      _selectedBreed = null;
+                                      _isOtherBreed = false; // รีเซ็ตค่าอื่นๆ
                                     });
                                   },
                                   decoration: InputDecoration(
-                                    labelText: 'พันธุ์สัตว์เลี้ยง',
+                                    labelText: 'ประเภทสัตว์เลี้ยง',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(30.0),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 10, horizontal: 8),
+                                        vertical: 10, horizontal: 10),
                                   ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกประเภทสัตว์เลี้ยง';
+                                    }
+                                    return null;
+                                  },
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _selectedGender,
-                                items: _genders.map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    _selectedGender = newValue;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  labelText: 'เพศ',
-                                  border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(30.0)),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 10, horizontal: 15),
-                                ),
-                              ),
-                            ),
-                            const Padding(padding: EdgeInsets.all(5)),
-                            Expanded(
-                              child: TextField(
-                                style: const TextStyle(fontSize: 14),
-                                controller: _colorController,
-                                decoration: InputDecoration(
-                                  labelText: 'สี',
-                                  border: OutlineInputBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(30.0)),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 10, horizontal: 15),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                readOnly: true,
-                                controller: _dateController,
-                                style: const TextStyle(fontSize: 14),
-                                decoration: InputDecoration(
-                                  labelText: 'วันเกิด',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 15,
-                                  ),
-                                ),
-                                onTap: () => selectDate(context),
-                              ),
-                            ),
-                            const Padding(padding: EdgeInsets.all(5)),
-                            Expanded(
-                              child: TextField(
-                                style: const TextStyle(fontSize: 14),
-                                controller: _weightController,
-                                keyboardType: TextInputType
-                                    .number, // กำหนดให้แสดงช่องใส่เฉพาะตัวเลข
-                                inputFormatters: <TextInputFormatter>[
-                                  FilteringTextInputFormatter
-                                      .digitsOnly // จำกัดให้ใส่เฉพาะตัวเลข
-                                ],
-                                decoration: InputDecoration(
-                                  labelText: 'น้ำหนัก',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 15,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(
-                          height: 15,
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                style: const TextStyle(fontSize: 14),
-                                controller: _priceController,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: <TextInputFormatter>[
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                decoration: InputDecoration(
-                                  labelText: 'ราคา (ค่าผสมพันธุ์)',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(30.0),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 10,
-                                    horizontal: 15,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const Padding(padding: EdgeInsets.all(5)),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: selectNormalImage,
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.grey),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.image),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        _imageFileController.text.isNotEmpty
-                                            ? _imageFileController.text
-                                            : 'เลือกรูปใบเพ็ดดีกรี',
-                                        overflow: TextOverflow.ellipsis,
+                              const Padding(padding: EdgeInsets.all(5)),
+                              if (_selectedType != null)
+                                // ตรวจสอบว่า `_isOtherBreed` เป็น `true` หรือไม่
+                                if (!_isOtherBreed)
+                                  SizedBox(
+                                    width: 230,
+                                    child: DropdownButtonFormField<String>(
+                                      value: _selectedBreed,
+                                      items: [
+                                        ..._getBreedsByType(_selectedType!)
+                                            .map((String value) {
+                                          return DropdownMenuItem<String>(
+                                            value: value,
+                                            child: Text(value),
+                                          );
+                                        }).toList(),
+                                        DropdownMenuItem<String>(
+                                          value: 'อื่นๆ',
+                                          child: Text('อื่นๆ'),
+                                        ),
+                                      ],
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          if (newValue == 'อื่นๆ') {
+                                            _isOtherBreed = true;
+                                            _selectedBreed = null;
+                                          } else {
+                                            _isOtherBreed = false;
+                                            _selectedBreed = newValue;
+                                          }
+                                        });
+                                      },
+                                      decoration: InputDecoration(
+                                        labelText: 'พันธุ์สัตว์เลี้ยง',
+                                        border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(30.0),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                vertical: 10, horizontal: 8),
                                       ),
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'กรุณากรอกพันธุ์สัตว์เลี้ยง';
+                                        }
+                                        return null;
+                                      },
                                     ),
-                                    IconButton(
-                                      // เพิ่ม IconButton สำหรับลบรูปภาพ
-                                      onPressed: deleteNormalImage,
-                                      icon: Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
+                                  ),
+                              if (_isOtherBreed)
+                                Expanded(
+                                  child: TextFormField(
+                                    style: const TextStyle(fontSize: 14),
+                                    controller: _otherBreedController,
+                                    decoration: InputDecoration(
+                                      labelText: 'ป้อนพันธุ์สัตว์เลี้ยงเอง',
+                                      border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(30.0),
                                       ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 5, horizontal: 8),
+                                      counterText: '',
                                     ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'กรุณากรอกพันธุ์สัตว์เลี้ยง';
+                                      }
+                                      return null;
+                                    },
+                                    maxLength: 30,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedGender,
+                                  items: _genders.map((String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      _selectedGender = newValue;
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: 'เพศ',
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(30.0)),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 15),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกเพศ';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const Padding(padding: EdgeInsets.all(5)),
+                              Expanded(
+                                child: TextFormField(
+                                  style: const TextStyle(fontSize: 14),
+                                  controller: _colorController,
+                                  decoration: InputDecoration(
+                                    labelText: 'สี',
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(30.0)),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 15),
+                                    counterText: '',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกสีสัตว์เลี้ยง';
+                                    }
+                                    return null;
+                                  },
+                                  maxLength: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  readOnly: true,
+                                  controller: _dateController,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: InputDecoration(
+                                    labelText: 'วันเกิด',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 15,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกวันเกิดสัตว์เลี้ยง';
+                                    }
+                                    return null;
+                                  },
+                                  onTap: () => selectDate(context),
+                                ),
+                              ),
+                              const Padding(padding: EdgeInsets.all(5)),
+                              Expanded(
+                                child: TextFormField(
+                                  style: const TextStyle(fontSize: 14),
+                                  controller: _weightController,
+                                  keyboardType: TextInputType
+                                      .number, // กำหนดให้แสดงช่องใส่เฉพาะตัวเลข
+                                  inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter
+                                        .digitsOnly // จำกัดให้ใส่เฉพาะตัวเลข
                                   ],
+                                  decoration: InputDecoration(
+                                    labelText: 'น้ำหนัก',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 15,
+                                    ),
+                                    counterText: '',
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกน้ำหนักสัตว์เลี้ยง';
+                                    }
+                                    return null;
+                                  },
+                                  maxLength: 2,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 15),
-                        TextField(
-                          style: const TextStyle(
-                            fontSize: 18,
+                            ],
                           ),
-                          textAlign: TextAlign.left,
-                          controller: _desController,
-                          decoration: InputDecoration(
-                            labelText: 'รายละเอียดเพิ่มเติม',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),
-                            contentPadding:
-                                const EdgeInsets.fromLTRB(10, 40, 15, 10),
+                          const SizedBox(
+                            height: 15,
                           ),
-                        ),
-                        const SizedBox(height: 15),
-                        ButtonTheme(
-                          minWidth: 300,
-                          height: 100,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              addPetToFirestore();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  style: const TextStyle(fontSize: 14),
+                                  controller: _priceController,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: <TextInputFormatter>[
+                                    FilteringTextInputFormatter.digitsOnly
+                                  ],
+                                  decoration: InputDecoration(
+                                    labelText: 'ราคา (ค่าผสมพันธุ์)',
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30.0),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 10,
+                                      horizontal: 15,
+                                    ),
+                                    counterText: '',
+                                  ),
+                                  maxLength: 7,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedStatus,
+                                  items: _status.map((String value) {
+                                    return DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      _selectedStatus = newValue;
+                                    });
+                                  },
+                                  decoration: InputDecoration(
+                                    labelText: 'สถานะ',
+                                    border: OutlineInputBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(30.0)),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10, horizontal: 15),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'กรุณากรอกสถานะสัตว์เลี้ยง';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          TextField(
+                            style: const TextStyle(
+                              fontSize: 18,
+                            ),
+                            textAlign: TextAlign.left,
+                            controller: _desController,
+                            decoration: InputDecoration(
+                              labelText: 'รายละเอียดเพิ่มเติม',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30.0),
+                              ),
+                              contentPadding:
+                                  const EdgeInsets.fromLTRB(10, 40, 15, 10),
+                            ),
+                            maxLength: 100,
+                          ),
+                          const SizedBox(height: 15),
+                          ButtonTheme(
+                            minWidth: 300,
+                            height: 100,
+                            child: GestureDetector(
+                              onTap: () {
+                                if (_formKey.currentState!.validate()) {
+                                  // Form validation passed
+                                  addPetToFirestore();
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Center(
+                                    child: _isLoading
+                                        ? const CircularProgressIndicator(
+                                            color: Colors.white,
+                                          )
+                                        : const Text(
+                                            "เพิ่มสัตว์เลี้ยง",
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18),
+                                          )),
                               ),
                             ),
-                            child: const Text('เพิ่มสัตว์เลี้ยง',
-                                style: TextStyle(fontSize: 16)),
                           ),
-                        ),
-                      ],
-                    ))
-                  ],
+                        ],
+                      )
+                    ],
+                  ),
                 ),
               )));
   }
@@ -499,7 +656,21 @@ class _Pet_PageState extends State<Pet_Page> {
     setState(() {
       _isLoading = true;
     });
-    
+
+    // ตรวจสอบว่าผู้ใช้ได้เพิ่มรูปภาพหรือไม่
+    if (_profileImage == null) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณาเพิ่มรูปภาพ'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     String userId = user!.uid;
     String profileBase64 =
         _profileImage != null ? base64Encode(_profileImage!) : '';
@@ -507,13 +678,26 @@ class _Pet_PageState extends State<Pet_Page> {
     String color = _colorController.text;
     String birtdate = _dateController.text;
     String weight = _weightController.text;
-    String price = _priceController.text;
+    String price;
+    if (_priceController.text == '') {
+      price = '0';
+    } else {
+      price = _priceController.text;
+    }
+
     String petdegreeBase64 =
         _normalImage != null ? base64Encode(_normalImage!) : '';
     String description = _desController.text;
     String type = _selectedType ?? '';
-    String breed = _selectedBreed ?? '';
+    String breed;
     String gender = _selectedGender ?? '';
+    String status = _selectedStatus ?? '';
+
+    if (_isOtherBreed) {
+      breed = _otherBreedController.text;
+    } else {
+      breed = _selectedBreed ?? '';
+    }
 
     CollectionReference pets =
         FirebaseFirestore.instance.collection('Pet_User');
@@ -531,17 +715,24 @@ class _Pet_PageState extends State<Pet_Page> {
         'description': description,
         'type_pet': type,
         'breed_pet': breed,
+        'status': status,
         'gender': gender,
       });
 
       String docId = newPetRef.id;
 
       await newPetRef.update({'pet_id': docId});
+
       // Async func to handle Futures easier; or use Future.then
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('idPet', docId);
-      
-      
+      prefs.setString(userId, docId);
+
+      CollectionReference usagePet =
+          FirebaseFirestore.instance.collection('Usage_pet');
+      await usagePet.doc(userId).set({
+        'pet_id': docId,
+        'user_id': userId,
+      });
 
       setState(() {
         _isLoading = false;

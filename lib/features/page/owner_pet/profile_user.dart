@@ -25,6 +25,7 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
   late int numPet = 0;
   late Map<String, dynamic> userData = {};
   late User? user;
+  int age = 0;
   late List<Map<String, dynamic>> petUserDataList = [];
   late String userImageBase64 = '';
   int dogCount = 0;
@@ -66,7 +67,8 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
           .collection('Pet_User')
           .where('user_id', isEqualTo: user!.uid)
           .get();
-      //นับจำนวนสัตว์เลี้ยงทั้งหมด
+
+      // นับจำนวนสัตว์เลี้ยงทั้งหมด
       numPet = petUserQuerySnapshot.docs.length;
 
       // นับจำนวนสัตว์เลี้ยงแต่ละชนิด
@@ -99,11 +101,30 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
       setState(() {
         userData = userDocSnapshot.data() as Map<String, dynamic>;
         userImageBase64 = userData['photoURL'] ?? '';
+        String birthdateString = userData['birthdate'] ?? '';
 
+        // แปลงวันเกิดจากสตริงเป็น DateTime
+        DateTime birthdate = DateTime.parse(birthdateString);
+
+        // คำนวณอายุ
+        age = _calculateAge(birthdate);
       });
     } catch (e) {
       print('Error getting user data from Firestore: $e');
     }
+  }
+
+  int _calculateAge(DateTime birthdate) {
+    final now = DateTime.now();
+    int age = now.year - birthdate.year;
+
+    // ตรวจสอบว่าได้ผ่านวันเกิดปีนี้หรือยัง
+    if (now.month < birthdate.month ||
+        (now.month == birthdate.month && now.day < birthdate.day)) {
+      age--;
+    }
+
+    return age;
   }
 
   @override
@@ -121,42 +142,16 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
         ),
         centerTitle: true,
         actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'menu1',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('แก้ไขข้อมูลส่วนตัว'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'menu2',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem),
-                      SizedBox(width: 8),
-                      Text('รายงานปัญหา'),
-                    ],
-                  ),
-                ),
-              ];
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const Edit_Profile_Page()));
             },
-            onSelected: (value) {
-              // เมื่อเลือกเมนู
-              if (value == 'menu1') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Edit_Profile_Page()));
-              } else if (value == 'menu2') {
-                _showNotification();
-              }
-            },
+            icon: const Icon(
+              Icons.edit,
+            ),
           ),
         ],
       ),
@@ -187,9 +182,7 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
                     Text(
                       userData['username'] ?? '',
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold
-                      ),
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -278,14 +271,14 @@ class _Profile_user_PageState extends State<Profile_user_Page> {
                                       style: const TextStyle(fontSize: 16)),
                                 ],
                               ),
-                              const Row(
+                              Row(
                                 children: [
                                   Padding(
                                     padding: EdgeInsets.fromLTRB(20, 0, 50, 0),
-                                    child: Text('อายุ : 21',
+                                    child: Text('อายุ : $age',
                                         style: TextStyle(fontSize: 16)),
                                   ),
-                                  Text('จังหวัด : อุดรธานี',
+                                  Text('จังหวัด : ${userData['country'] ?? ''}',
                                       style: TextStyle(fontSize: 16)),
                                 ],
                               )

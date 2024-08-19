@@ -41,7 +41,7 @@ class _HomePageState extends State<Home_Page> {
                     children: [
                       Image.asset(
                         'assets/images/logo.png',
-                        width: 250,
+                        width: 200,
                       )
                     ],
                   ),
@@ -62,8 +62,9 @@ class _HomePageState extends State<Home_Page> {
                       child: Container(
                         height: 50,
                         decoration: const BoxDecoration(
-                          color: Colors.blue,
+                          color: Colors.deepPurpleAccent,
                           borderRadius: BorderRadius.all(Radius.circular(30)),
+                          
                         ),
                         child: const Center(
                           child: Text(

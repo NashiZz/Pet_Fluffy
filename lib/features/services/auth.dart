@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -6,25 +7,82 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:googleapis_auth/auth_io.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+  // เข้าสู่ระบบโดยไม่สมัครสมาชิก
+  Future<User?> signInAnonymously() async {
+    try {
+      UserCredential userCredential = await _auth.signInAnonymously();
+      return userCredential.user;
+    } catch (e) {
+      print('Error during anonymous sign-in: $e');
+      return null;
+    }
+  }
+
+  bool isAnonymous() {
+    User? user = _auth.currentUser;
+    return user != null && user.isAnonymous;
+  }
+
   Future<User?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
-      //เข้าสู่ระบบด้วยบัญชีผู้ใช้ที่มีอยู่
+      // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        // showToast(message: 'Invalid email or password.');
+        // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
+        print('Invalid email or password.');
       } else {
-        // showToast(message: 'An error occurred: ${e.code}');
+        // จัดการข้อผิดพลาดอื่นๆ
+        print('An error occurred: ${e.code}');
       }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
+    }
+    return null;
+  }
+
+  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+  Future<User?> signInWithUsernameAndPassword(
+      String username, String password) async {
+    try {
+      // ดึงข้อมูลของผู้ใช้จาก Firestore โดยใช้ชื่อผู้ใช้
+      QuerySnapshot userQuery = await FirebaseFirestore.instance
+          .collection('user')
+          .where('username', isEqualTo: username)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        // ใช้ข้อมูลผู้ใช้ที่ดึงมาเพื่อเข้าสู่ระบบ
+        String email =
+            userQuery.docs.first['email']; // ดึงอีเมลของผู้ใช้จากเอกสาร
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        return userCredential.user;
+      } else {
+        print('Username not found.');
+      }
+    } on FirebaseAuthException catch (e) {
+      // จัดการข้อผิดพลาดของ FirebaseAuthException
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        print('Invalid username or password.');
+      } else {
+        print('An error occurred: ${e.code}');
+      }
+    } catch (e) {
+      // จัดการข้อผิดพลาดทั่วไป
+      print('An unexpected error occurred: $e');
     }
     return null;
   }
@@ -49,8 +107,8 @@ class AuthService {
             await _auth.signInWithCredential(credential);
         User? user = userCredential.user;
 
-        await saveUserGoogle(user!);
-        
+        // await saveUserGoogle(user!);
+
         return user;
       }
     } catch (error) {
@@ -90,28 +148,41 @@ class AuthService {
   }
 
   // บันทึกข้อมูลผู้ใช้ที่ลงทะเบียนด้วย Google
-  Future<void> saveUserGoogle(User user) async {
+  Future<void> saveUserGoogle(
+    String uid,
+    String username,
+    String fullname,
+    String email,
+    String password,
+    String image,
+    String nickname,
+    String phone,
+    String facbook,
+    String line,
+    String? selectedGender,
+    String birthdate,
+    String? selectedCounty,
+  ) async {
     try {
-      final userRef =
-          FirebaseFirestore.instance.collection('user').doc(user.uid);
+      final userRef = FirebaseFirestore.instance.collection('user').doc(uid);
       final userData = await userRef.get();
-      String base64Image = await convertImageToBase64(user.photoURL!);
 
       if (!userData.exists) {
         await userRef.set({
-          'uid': user.uid,
-          'username': user.displayName,
-          'fullname': '',
-          'email': user.email,
-          'password': '',
-          'photoURL': base64Image,
-          'phone': user.phoneNumber,
-          'nickname': '',
-          'gender': '',
-          'birtdate': '',
-          'country': '',
-          'facebeook': '',
-          'line': ''
+          'uid': uid,
+          'username': username,
+          'fullname': fullname,
+          'email': email,
+          'password': password,
+          'photoURL': image,
+          'phone': phone,
+          'nickname': nickname,
+          'gender': selectedGender,
+          'birthdate': birthdate,
+          'country': selectedCounty,
+          'facebook': facbook,
+          'line': line,
+          'status': 'สมาชิก'
         });
       }
     } catch (error) {
@@ -120,9 +191,20 @@ class AuthService {
   }
 
   // Save Data User
-  Future<void> saveUserDataToFirestore(String userId, String username,
-      String name, String email, String password, Uint8List? image) async {
-    String img = uint8ListToBase64(image!);
+  Future<void> saveUserDataToFirestore(
+      String userId,
+      String username,
+      String name,
+      String email,
+      String password,
+      String? imageBase64, // เปลี่ยนชื่อเป็น imageBase64 เพื่อชัดเจน
+      String nickname,
+      String phone,
+      String facebook,
+      String line,
+      String? gender,
+      String? birthdate,
+      String? county) async {
     DocumentReference userRef = _firestore.collection('user').doc(userId);
 
     await userRef.set({
@@ -131,14 +213,15 @@ class AuthService {
       'fullname': name,
       'email': email,
       'password': password,
-      'photoURL': img,
-      'phone': '',
-      'nickname': '',
-      'gender': '',
-      'birthdate': '',
-      'country': '',
-      'facebook': '',
-      'line': ''
+      'photoURL': imageBase64 ?? '', // ใช้ค่าว่างถ้า imageBase64 เป็น null
+      'phone': phone,
+      'nickname': nickname,
+      'gender': gender ?? '',
+      'birthdate': birthdate ?? '',
+      'country': county ?? '',
+      'facebook': facebook,
+      'line': line,
+      'status': 'สมาชิก'
     }).then((_) {
       print("User data added to Firestore");
     }).catchError((error) {
@@ -182,5 +265,42 @@ class AuthService {
     } else {
       return '';
     }
+  }
+}
+
+class FirebaseAccessToken {
+  static String firebaseMsgScope =
+      "https://www.googleapis.com/auth/firebase/firebase.messaging";
+  Future<String> getToken() async {
+    try {
+      final credentials = ServiceAccountCredentials.fromJson({
+        "type": "service_account",
+        "project_id": "",
+        "private_key_id": " ",
+        "private_key": "",
+        "client_email": "",
+        "client_id": "",
+        "auth_uri": "",
+        "token_uri": "",
+        "auth_provider_x509_cert_url": "",
+        "client_x509_cert_url": "",
+        "universe_domain": "googleapis.com"
+      });
+      List<String> scopes = [
+        "https://www.googleapis.com/auth/firebase.messaging"
+      ];
+
+      final client = await obtainAccessCredentialsViaServiceAccount(
+          credentials, scopes, http.Client());
+      final accessToken = client;
+      Timer.periodic(const Duration(minutes: 59), (timer) {
+        accessToken.refreshToken;
+      });
+      return accessToken.accessToken.data;
+    } catch (e) {
+      print(e);
+    }
+
+    return '';
   }
 }

@@ -1,26 +1,29 @@
 import 'dart:convert';
 
-import 'package:Pet_Fluffy/features/page/owner_pet/edit_profile.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:buttons_tabbar/buttons_tabbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 //หน้า Profile ของ ผู้ใช้ทั้งหมด
 class ProfileAllUserPage extends StatefulWidget {
   final String userId;
-  const ProfileAllUserPage({Key? key, required this.userId}) : super(key: key);
+  final String userId_req;
+  const ProfileAllUserPage(
+      {Key? key, required this.userId, required this.userId_req})
+      : super(key: key);
 
   @override
   State<ProfileAllUserPage> createState() => _ProfileAllUserPageState();
 }
 
 class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
-  late FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin;
   late int numPet = 0;
+  int age = 0;
   late Map<String, dynamic> userData = {};
   late User? user;
   late List<Map<String, dynamic>> petUserDataList = [];
@@ -28,34 +31,66 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
   late String username = '';
   int dogCount = 0;
   int catCount = 0;
+  bool isCheckMatch = false;
 
   @override
   void initState() {
     super.initState();
-    _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
     user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _getUserDataFromFirestore(widget.userId);
       _getPetUserDataFromFirestore(widget.userId);
+      _getIsCheckMatchSuccess();
     }
   }
 
-  Future<void> _showNotification() async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails('Pet_Fluffy', 'แจ้งเตือนทั่วไป',
-            importance: Importance.max,
-            priority: Priority.high,
-            ticker: 'ticker');
+  Future<void> _getIsCheckMatchSuccess() async {
+    print('user_req: ${widget.userId}');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    const NotificationDetails platformChannelDetail = NotificationDetails(
-      android: androidNotificationDetails,
-    );
+      // ดึง petId จาก SharedPreferences
+      String? petId = prefs.getString(widget.userId);
 
-    await _flutterLocalNotificationsPlugin.show(
-        0,
-        'ใกล้ถึงเวลาการผสมพันธุ์แล้วนะ',
-        'น้องสุนัข: ชินโนะสุเกะ ใกล้ถึงเวลาการผสมพันธุ์ในอีก 9 วัน',
-        platformChannelDetail);
+      print('petID: $petId');
+
+      // ตรวจสอบว่า petId มีค่าไหม
+      if (petId == null) {
+        setState(() {
+          isCheckMatch = false;
+        });
+        return;
+      }
+
+      // ใช้ CollectionReference แทน DocumentReference
+      CollectionReference matchRef =
+          FirebaseFirestore.instance.collection('match');
+
+      // ค้นหาข้อมูลการจับคู่ทั้ง user_req และ user_res
+      QuerySnapshot userReqSnapshot = await matchRef
+          .where('user_req', isEqualTo: widget.userId)
+          .where('status', isEqualTo: 'จับคู่แล้ว')
+          .get();
+
+      QuerySnapshot userResSnapshot = await matchRef
+          .where('user_res', isEqualTo: widget.userId)
+          .where('status', isEqualTo: 'จับคู่แล้ว')
+          .get();
+
+      // ตรวจสอบผลลัพธ์และตั้งค่าตัวแปร isCheckMatch
+      bool hasMatch =
+          userReqSnapshot.docs.isNotEmpty || userResSnapshot.docs.isNotEmpty;
+
+      setState(() {
+        isCheckMatch = hasMatch;
+      });
+    } catch (e) {
+      // พิมพ์ข้อผิดพลาดออกมาเพื่อช่วยในการดีบัก
+      print('Error checking match status: $e');
+      setState(() {
+        isCheckMatch = false;
+      });
+    }
   }
 
   Future<void> _getPetUserDataFromFirestore(String userId) async {
@@ -99,19 +134,52 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
         userData = userDocSnapshot.data() as Map<String, dynamic>;
         userImageBase64 = userData['photoURL'] ?? '';
         username = userData['username'] ?? '';
+        String birthdateString = userData['birthdate'] ?? '';
+
+        // แปลงวันเกิดจากสตริงเป็น DateTime
+        DateTime birthdate = DateTime.parse(birthdateString);
+
+        // คำนวณอายุ
+        age = _calculateAge(birthdate);
       });
     } catch (e) {
       print('Error getting user data from Firestore: $e');
     }
   }
 
+  int _calculateAge(DateTime birthdate) {
+    final now = DateTime.now();
+    int age = now.year - birthdate.year;
+
+    // ตรวจสอบว่าได้ผ่านวันเกิดปีนี้หรือยัง
+    if (now.month < birthdate.month ||
+        (now.month == birthdate.month && now.day < birthdate.day)) {
+      age--;
+    }
+
+    return age;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final RouteSettings settings = ModalRoute.of(context)!.settings;
+    final String? previousPage = settings.name;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
             onPressed: () {
-              Navigator.pop(context);
+              // Navigator.pop(context);
+
+              if (previousPage.toString() == 'matchSuccess') {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => Navigator_Page(initialIndex: 0)),
+                  (Route<dynamic> route) => false,
+                );
+              } else {
+                Navigator.pop(context);
+              }
             },
             icon: const Icon(LineAwesomeIcons.angle_left)),
         title: Text(
@@ -119,45 +187,6 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         centerTitle: true,
-        actions: [
-          PopupMenuButton(
-            itemBuilder: (BuildContext context) {
-              return [
-                const PopupMenuItem(
-                  value: 'menu1',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('แก้ไขข้อมูลส่วนตัว'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'menu2',
-                  child: Row(
-                    children: [
-                      Icon(Icons.report_problem),
-                      SizedBox(width: 8),
-                      Text('รายงานปัญหา'),
-                    ],
-                  ),
-                ),
-              ];
-            },
-            onSelected: (value) {
-              // เมื่อเลือกเมนู
-              if (value == 'menu1') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Edit_Profile_Page()));
-              } else if (value == 'menu2') {
-                _showNotification();
-              }
-            },
-          ),
-        ],
       ),
       body: Container(
         padding: const EdgeInsets.all(40),
@@ -275,14 +304,14 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                                       style: const TextStyle(fontSize: 16)),
                                 ],
                               ),
-                              const Row(
+                              Row(
                                 children: [
                                   Padding(
                                     padding: EdgeInsets.fromLTRB(20, 0, 50, 0),
-                                    child: Text('อายุ : 21',
+                                    child: Text('อายุ : $age',
                                         style: TextStyle(fontSize: 16)),
                                   ),
-                                  Text('จังหวัด : อุดรธานี',
+                                  Text('จังหวัด : ${userData['country'] ?? ''}',
                                       style: TextStyle(fontSize: 16)),
                                 ],
                               )
@@ -294,22 +323,30 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 20, 80, 10),
-                                child: Text(
-                                    'เบอร์โทรศัพท์ : ${userData['phone'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch == false
+                                    ? Text('เบอร์โทรศัพท์ : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text(
+                                        'เบอร์โทรศัพท์ : ${userData['phone']}',
+                                        style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: Text(
-                                    'Facebook : ${userData['facebook'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch == false
+                                    ? Text('Facebook : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text('Facebook : ${userData['facebook']}',
+                                        style: const TextStyle(fontSize: 16)),
                               ),
                               Padding(
                                 padding:
                                     const EdgeInsets.fromLTRB(20, 10, 80, 10),
-                                child: Text('Line : ${userData['line'] ?? ''}',
-                                    style: const TextStyle(fontSize: 16)),
+                                child: isCheckMatch == false
+                                    ? Text('Line : ',
+                                        style: const TextStyle(fontSize: 16))
+                                    : Text('Line : ${userData['line']}',
+                                        style: const TextStyle(fontSize: 16)),
                               )
                             ],
                           ),

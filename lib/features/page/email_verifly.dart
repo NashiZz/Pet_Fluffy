@@ -63,7 +63,16 @@ class _EmailVerifly_PageState extends State<EmailVerifly_Page> {
   void initState() {
     super.initState();
 
-    isEmailVerify = FirebaseAuth.instance.currentUser!.emailVerified;
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      isEmailVerify = user.emailVerified;
+    } else {
+      // Handle the case where there's no current user
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginPage()),
+      );
+    }
 
     if (!isEmailVerify) {
       _startTimer();
@@ -117,7 +126,7 @@ class _EmailVerifly_PageState extends State<EmailVerifly_Page> {
                     ),
                     SizedBox(height: 15),
                     Text(
-                      'เราเพิ่งส่งลิงก์ยืนยันอีเมลไปที่อีเมลของคุณ โปรดตรวจสอบอีเมลและคลิกลิงก์นั้นเพื่อยืนยันที่อยู่อีเมลของคุณ',
+                      'เราได้ส่งลิงก์ยืนยันอีเมลไปที่อีเมลของคุณ โปรดตรวจสอบอีเมลและคลิกลิงก์นั้นเพื่อยืนยันที่อยู่อีเมลของคุณ',
                       style: TextStyle(
                         fontStyle: FontStyle.normal,
                         color: Colors.white,

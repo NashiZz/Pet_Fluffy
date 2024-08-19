@@ -1,15 +1,18 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
+import 'package:Pet_Fluffy/features/page/addData_Google.dart';
+import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
 import 'package:Pet_Fluffy/features/page/sign_up_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
 //หน้า Login
 class LoginPage extends StatefulWidget {
@@ -22,6 +25,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isSigning = false;
   bool _isLoading = false;
+  bool _isPasswordVisible = false; // สถานะการมองเห็นรหัสผ่าน
 
   final AuthService _authService = AuthService();
 
@@ -47,9 +51,10 @@ class _LoginPageState extends State<LoginPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const Home_Page()),
-                (route) => false);
+              context,
+              MaterialPageRoute(builder: (context) => const Home_Page()),
+              (route) => false,
+            );
           },
         ),
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -57,196 +62,222 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         children: [
           SingleChildScrollView(
-            child: Container(
-              width: size.width,
-              height: size.height,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 15, vertical: 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "เข้าสู่ระบบ",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 30,
-                      color: Colors.black,
+            padding: EdgeInsets.symmetric(
+                horizontal: 15, vertical: size.height * 0.1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text(
+                  "เข้าสู่ระบบ",
+                  style: TextStyle(fontSize: 40, color: Colors.black),
+                ),
+                const SizedBox(height: 30),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: "อีเมล/ชื่อผู้ใช้",
+                      border: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 15),
+                      prefixIcon:
+                          Icon(Icons.email_outlined, color: Colors.grey),
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        child: TextField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            hintText: "อีเมล์",
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 15),
-                          ),
-                        ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: !_isPasswordVisible, // ซ่อนรหัสผ่านตามสถานะ
+                    decoration: InputDecoration(
+                      labelText: "รหัสผ่าน",
+                      border: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        child: TextField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            hintText: "รหัสผ่าน",
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 15),
-                          ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20, horizontal: 15),
+                      prefixIcon:
+                          Icon(Icons.lock_outline_rounded, color: Colors.grey),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey,
                         ),
-                      ),
-                      forgetPassword(context),
-                      const SizedBox(height: 50),
-                      ElevatedButton(
                         onPressed: () {
-                          _signIn();
+                          setState(() {
+                            _isPasswordVisible =
+                                !_isPasswordVisible; // สลับสถานะการมองเห็นรหัสผ่าน
+                          });
                         },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 30),
-                          backgroundColor:
-                              Colors.blue, // ตั้งค่าสีพื้นหลังของปุ่มเป็นสีฟ้า
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                30), // ปรับรูปร่างของปุ่มเป็นรูปวงกลม
-                          ),
-                        ),
-                        child: Center(
-                          child: _isSigning
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : const Text(
-                                  "เข้าสู่ระบบ",
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18),
-                                ),
-                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Container(
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: const Divider(
-                                color: Colors.grey,
-                                thickness: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                forgetPassword(context),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () {
+                    _signIn();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 20),
+                    backgroundColor:
+                        Colors.blue, // ตั้งค่าสีพื้นหลังของปุ่มเป็นสีฟ้า
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          20), // ปรับรูปร่างของปุ่มเป็นรูปวงกลม
+                    ),
+                  ),
+                  child: Center(
+                    child: _isSigning
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "เข้าสู่ระบบ",
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Divider(color: Colors.grey, thickness: 2),
+                      ),
+                    ),
+                    const Text("OR",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Divider(color: Colors.grey, thickness: 2),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    signInwithGoogle();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 20),
+                    backgroundColor: Colors.deepPurple,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: Center(
+                    child: _isSigning
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icon/google.svg', // เปลี่ยนเป็นที่อยู่ไฟล์ SVG ของคุณ
+                                color: Colors.white,
+                                height: 32,
                               ),
-                            ),
-                          ),
-                          const Text(
-                            "OR",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Expanded(
-                            child: Container(
-                              margin:
-                                  const EdgeInsets.symmetric(horizontal: 20),
-                              child: const Divider(
-                                color: Colors.grey,
-                                thickness: 2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          signInwithGoogle();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 30),
-                          backgroundColor:
-                              const Color.fromARGB(255, 228, 216, 216),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: Center(
-                          child: _isSigning
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      LineAwesomeIcons.gofore,
-                                      size: 32,
-                                    ),
-                                    SizedBox(
-                                        width:
-                                            10), // เพิ่มระยะห่างระหว่างไอคอนและข้อความ
-                                    Text(
-                                      "เข้าสู่ระบบด้วย Google",
-                                      style: TextStyle(
-                                        color: Colors.deepPurple,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 60,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("คุณยังไม่มีบัญชี?",
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          GestureDetector(
-                              onTap: () {
-                                Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const SignUpPage()),
-                                    (route) => false);
-                              },
-                              child: const Text(
-                                "  สมัครสมาชิก",
+                              const SizedBox(
+                                  width: 10), // ระยะห่างระหว่างไอคอนและข้อความ
+                              const Text(
+                                "เข้าสู่ระบบด้วย Google",
                                 style: TextStyle(
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.bold),
-                              ))
-                        ],
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    _signInAnonymously();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 15, horizontal: 20),
+                    backgroundColor:
+                        Colors.deepPurple, // ตั้งค่าสีพื้นหลังของปุ่มเป็นสีฟ้า
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                          20), // ปรับรูปร่างของปุ่มเป็นรูปวงกลม
+                    ),
+                  ),
+                  child: Center(
+                    child: _isSigning
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/icon/incognito-circle.svg', // เปลี่ยนเป็นที่อยู่ไฟล์ SVG ของคุณ
+                                color: Colors.white,
+                                height: 32,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                "เข้าสู่ระบบด้วยบัญชีผู้เยี่ยมชม",
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("คุณยังไม่มีบัญชี?",
+                        style: TextStyle(fontSize: 16)),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignUpPage()),
+                          (route) => false,
+                        );
+                      },
+                      child: const Text(
+                        "  สมัครสมาชิก",
+                        style: TextStyle(color: Colors.blue, fontSize: 16),
                       ),
-                      const SizedBox(height: 30)
-                    ],
-                  )
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
             ),
           ),
           if (_isLoading)
             Container(
-              color: Colors.white, // สีพื้นหลังสีดำทึบ
+              color: Colors.white,
               child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -256,11 +287,39 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ), // แสดงหน้าโหลด
               ),
-            )
+            ),
         ],
       ),
     );
   }
+
+  void _signInAnonymously() async {
+    setState(() {
+      _isSigning = true;
+    });
+
+    User? user = await _authService.signInAnonymously();
+
+    setState(() {
+      _isSigning = false;
+    });
+
+    if (user != null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => Navigator_Page(initialIndex: 0)),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('เข้าสู่ระบบแบบไม่สมัครสมาชิกไม่สำเร็จ'),
+        ),
+      );
+    }
+  }
+
   // เข้าสู่ระบบ และ สมัครสมาชิกด้วย Google
   Future<void> signInwithGoogle() async {
     setState(() {
@@ -276,13 +335,95 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) => const LocationSelectionPage()),
-        );
+        try {
+          // เช็คว่าผู้ใช้มีข้อมูลในระบบหรือไม่
+          QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
+              .collection('user')
+              .where('uid', isEqualTo: user.uid)
+              .get();
+
+          if (getPetQuerySnapshot.docs.isNotEmpty) {
+            // ตรวจสอบสถานะของผู้ใช้
+            DocumentSnapshot userDoc = getPetQuerySnapshot.docs.first;
+            String status = userDoc['status'] ?? '';
+
+            if (status == 'แอดมิน') {
+              // หากเป็นผู้ดูแลระบบ
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบ แอดมิน สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      const AdminHomePage(), // หน้าแรกสำหรับผู้ดูแลระบบ
+                ),
+              );
+            } else if (status == 'สมาชิก') {
+              // หากเป็นสมาชิก
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('เข้าสู่ระบบด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LocationSelectionPage(),
+                ),
+              );
+            } else {
+              // หากไม่มีข้อมูลในระบบ
+              Map<String, dynamic> userData = {
+                'uid': user.uid,
+                'email': user.email,
+                'password': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'username': user.displayName,
+                'fullname': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+                'image': user.photoURL != null
+                    ? await _authService.convertImageToBase64(user.photoURL!)
+                    : null,
+              };
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('สมัครสมาชิกด้วย Google สำเร็จ')),
+              );
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => addDataGoogle_Page(userData: userData),
+                ),
+              );
+            }
+          } else {
+            // หากไม่มีข้อมูลในระบบ
+            Map<String, dynamic> userData = {
+              'uid': user.uid,
+              'email': user.email,
+              'password': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+              'username': user.displayName,
+              'fullname': '', // คุณอาจต้องเพิ่มข้อมูลนี้ตามที่ต้องการ
+              'image': user.photoURL != null
+                  ? await _authService.convertImageToBase64(user.photoURL!)
+                  : null,
+            };
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('สมัครสมาชิกด้วย Google สำเร็จ')),
+            );
+
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => addDataGoogle_Page(userData: userData),
+              ),
+            );
+          }
+        } catch (e) {
+          print('Error: $e');
+        }
       } else {
-        // Handle case when user is null
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to sign in with Google')),
         );
@@ -307,9 +448,23 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    //ดึงค่าอีเมลและรหัสผ่านจากตัวควบคุม
-    String email = _emailController.text;
-    String password = _passwordController.text;
+    // ดึงค่าอีเมลหรือชื่อผู้ใช้ และรหัสผ่านจากตัวควบคุม
+    String emailOrUsername = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    // ตรวจสอบว่าผู้ใช้กรอกข้อมูลทั้งสองช่องหรือไม่
+    if (emailOrUsername.isEmpty || password.isEmpty) {
+      setState(() {
+        _isSigning = false;
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('กรุณากรอกอีเมล/ชื่อผู้ใช้และรหัสผ่าน'),
+        ),
+      );
+      return;
+    }
 
     // เช็ครูปแบบของอีเมล
     RegExp emailRegex = RegExp(
@@ -318,30 +473,26 @@ class _LoginPageState extends State<LoginPage> {
       multiLine: false,
     );
 
-    if (!emailRegex.hasMatch(email)) {
-      // หากรูปแบบของอีเมลไม่ถูกต้อง
-      setState(() {
-        _isSigning = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รูปแบบของอีเมลไม่ถูกต้อง'),
-        ),
-      );
-      return;
-    }
+    bool isEmail = emailRegex.hasMatch(emailOrUsername);
 
     try {
-      //เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      User? user =
-          await _authService.signInWithEmailAndPassword(email, password);
+      User? user;
+      if (isEmail) {
+        // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
+        user = await _authService.signInWithEmailAndPassword(
+            emailOrUsername, password);
+      } else {
+        // เข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่าน
+        user = await _authService.signInWithUsernameAndPassword(
+            emailOrUsername, password);
+      }
 
       setState(() {
         _isSigning = false;
         _isLoading = false;
       });
 
-      //ตรวจสอบการเข้าสู่ระบบ
+      // ตรวจสอบการเข้าสู่ระบบ
       if (user != null) {
         // ตรวจสอบว่าอีเมลได้รับการยืนยันหรือไม่
         if (user.emailVerified) {
@@ -366,7 +517,7 @@ class _LoginPageState extends State<LoginPage> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('อีเมลหรือรหัสผ่านไม่ถูกต้อง'),
+            content: Text('อีเมล/ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'),
           ),
         );
       }
@@ -374,6 +525,7 @@ class _LoginPageState extends State<LoginPage> {
       print("Error signing in: $error");
       setState(() {
         _isSigning = false;
+        _isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -390,8 +542,8 @@ class _LoginPageState extends State<LoginPage> {
       alignment: Alignment.bottomRight,
       child: TextButton(
         child: const Text(
-          "ลืมรหัสผ่าน?",
-          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+          "ลืมรหัสผ่าน ?",
+          style: TextStyle(fontSize: 16),
           textAlign: TextAlign.right,
         ),
         onPressed: () {

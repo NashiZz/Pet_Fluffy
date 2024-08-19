@@ -1,10 +1,12 @@
+import 'package:Pet_Fluffy/features/api/notification_api.dart';
+import 'package:Pet_Fluffy/features/services/notification_helper.dart';
 import 'package:Pet_Fluffy/features/splash_screen/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:intl/date_symbol_data_local.dart';
 
 final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
@@ -12,9 +14,10 @@ final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
 Future<void> main() async {
   //Flutter framework ถูกเรียกใช้งานก่อนที่จะเริ่มทำงานต่างๆกับ plugin หรือ firebase
   WidgetsFlutterBinding.ensureInitialized();
-
-  //ทำการเชื่อมต่อแอปกับ Firebase 
+  NotificationHelper.init();
+  //ทำการเชื่อมต่อแอปกับ Firebase
   await Firebase.initializeApp();
+  await FirebaseApi().initNotifications();
 
   //กำหนดการตั้งค่าเริ่มต้นสำหรับการแจ้ง
   const AndroidInitializationSettings androidInitializationSettings =
@@ -25,13 +28,14 @@ Future<void> main() async {
       InitializationSettings(android: androidInitializationSettings);
 
   await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  await initializeDateFormatting('th_TH');
 
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-  
+  MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
