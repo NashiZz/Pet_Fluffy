@@ -1471,7 +1471,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
   void _showRequestDialog(BuildContext context, petName, petId, petUser, Img) {
     TextEditingController des = TextEditingController();
-    print('petrequest: $petId_main ,petrespone: $petId, userid: $petUser');
+    print('petrequest: $petId_main ,petrespone: $petId, userid: $petUser, name: $namePet' );
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1834,7 +1834,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
             userIdd, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
             pet_respone,
             "คุณมีคำขอใหม่!",
-            "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
+            "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $namePet ไปดูรายละเอียดได้เลย!");
         setState(() {
           isLoading = false;
         });
