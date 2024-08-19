@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Profile ของ ผู้ใช้ทั้งหมด
 class ProfileAllUserPage extends StatefulWidget {
   final String userId;
   const ProfileAllUserPage({Key? key, required this.userId}) : super(key: key);
@@ -63,7 +64,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
           .collection('Pet_User')
           .where('user_id', isEqualTo: userId)
           .get();
-      
+
       //นับจำนวนสัตว์เลี้ยงทั้งหมด
       numPet = petUserQuerySnapshot.docs.length;
 
@@ -84,7 +85,6 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
       });
-      
     } catch (e) {
       print('Error getting pet user data from Firestore: $e');
     }
@@ -208,7 +208,7 @@ class _ProfileAllUserPageState extends State<ProfileAllUserPage> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(10.0),
+                          padding: const EdgeInsets.all(8.0),
                           child: Row(
                             children: [
                               Text(

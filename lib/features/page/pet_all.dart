@@ -10,6 +10,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า แสดงสัตว์เลี้ยงของผู้ใช้ ใน menu
 class Pet_All_Page extends StatefulWidget {
   const Pet_All_Page({Key? key}) : super(key: key);
 
@@ -30,6 +31,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     }
   }
 
+  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้
   Future<void> _getPetUserDataFromFirestore() async {
     try {
       QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
@@ -47,6 +49,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     }
   }
 
+  //กรองข้อมูลสัตว์เลี้ยงโดยแยกตามประเภทของสัตว์เลี้ยง (สุนัข และ แมว) 
   List<Map<String, dynamic>> get filteredDogPets =>
       petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
 
@@ -65,12 +68,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           ),
           centerTitle: true,
           automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
-          // actions: [
-          //   IconButton(
-          //     onPressed: () {},
-          //     icon: const Icon(LineAwesomeIcons.info_circle),
-          //   )
-          // ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'สุนัข'),
@@ -80,7 +77,9 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
         ),
         body: TabBarView(
           children: [
+            //สุนัข
             _buildPetList(filteredDogPets),
+            //แมว
             _buildPetList(filteredCatPets),
           ],
         ),
@@ -100,7 +99,6 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
   Widget _buildPetList(List<Map<String, dynamic>> petList) {
     return petList.isEmpty
         ? const Center(
-            // แสดงข้อความหรือวิดเจ็ตที่ต้องการให้แสดงเมื่อไม่มีข้อมูล
             child: Text(
               'ไม่มีข้อมูลสัตว์เลี้ยง',
               style: TextStyle(fontSize: 16),
@@ -125,6 +123,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
           );
   }
 
+  // ข้อมูลสัตว์เลี้ยงที่แสดงผล
   Widget _buildPetCard(Map<String, dynamic> petUserData) {
     return GestureDetector(
       onTap: () {
@@ -210,6 +209,7 @@ class _Pet_All_PageState extends State<Pet_All_Page> {
     );
   }
 
+  //ปุ่มลบข้อมูลสัตว์เลี้ยง
   void _deletePetData(String petId) async {
     try {
       await FirebaseFirestore.instance

@@ -3,10 +3,11 @@
 import 'dart:convert';
 
 import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
+import 'package:Pet_Fluffy/features/page/faverite_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+// import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Menu Setting ใน App
 class Setting_Page extends StatefulWidget {
   const Setting_Page({super.key});
 
@@ -35,6 +37,7 @@ class _Setting_PageState extends State<Setting_Page> {
     _getUserDataFromFirestore();
   }
 
+  //ดึงข้อมูลของผู้ใช้จาก Firestore
   Future<void> _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -50,10 +53,6 @@ class _Setting_PageState extends State<Setting_Page> {
         userName = userDocSnapshot['username'];
         userEmail = userDocSnapshot['email'];
         userImageBase64 = userDocSnapshot['photoURL'] ?? '';
-
-        // แสดงผลลัพธ์ในคอนโซล
-        print('User Name: $userName');
-        print('User Email: $userEmail');
 
         // อัปเดตสถานะของ State
         setState(() {
@@ -115,18 +114,18 @@ class _Setting_PageState extends State<Setting_Page> {
                       width: 200,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //       builder: (context) => const Profile_pet_Page()),
-                          // );
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const Profile_user_Page()),
+                        );
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 const Color.fromARGB(255, 49, 42, 42),
                             side: BorderSide.none,
                             shape: const StadiumBorder()),
-                        child: const Text("โปรไฟล์สัตว์เลี้ยง",
+                        child: const Text("ข้อมูลโปรไฟล์เจ้าของ",
                             style: TextStyle(
                                 color: Color.fromARGB(255, 255, 255, 255))),
                       ),
@@ -135,14 +134,10 @@ class _Setting_PageState extends State<Setting_Page> {
                     const Divider(),
                     const SizedBox(height: 10),
                     MenuWidget(
-                      title: "ข้อมูลโปรไฟล์เจ้าของ",
-                      icon: LineAwesomeIcons.user,
+                      title: "โปรไฟล์สัตว์เลี้ยง",
+                      icon: LineAwesomeIcons.dog,
                       onPress: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const Profile_user_Page()),
-                        );
+                        
                       },
                     ),
                     const SizedBox(height: 10),
@@ -155,7 +150,13 @@ class _Setting_PageState extends State<Setting_Page> {
                     MenuWidget(
                       title: "สัตว์เลี้ยงรายการโปรด",
                       icon: LineAwesomeIcons.gratipay__gittip_,
-                      onPress: () {},
+                      onPress: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const FaveritePage()),
+                        );
+                      },
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(

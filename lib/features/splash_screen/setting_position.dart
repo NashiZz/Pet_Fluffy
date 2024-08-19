@@ -11,6 +11,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
+//หน้า Set ตำแหน่ง Pet ก่อนใช้งาน 
 class LocationSelectionPage extends StatefulWidget {
   const LocationSelectionPage({super.key});
 
@@ -78,7 +79,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                     _showLocationPickerDialog();
                   },
                   style: ButtonStyle(
-                    minimumSize: MaterialStateProperty.all(
+                    minimumSize: WidgetStateProperty.all(
                         const Size(260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
                   ),
                   child: const Text('เพิ่มแหน่ง'),
@@ -90,7 +91,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       Get.to(() => const Setting_Pet_Page());
                     },
                     style: ButtonStyle(
-                      minimumSize: MaterialStateProperty.all(const Size(
+                      minimumSize: WidgetStateProperty.all(const Size(
                           260, 40)), // กำหนดความกว้างและความสูงของปุ่ม
                     ),
                     child: const Text('ต่อไป'),
@@ -104,6 +105,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
+  // Show Dialog Map ขึ้นมา
   void _showLocationPickerDialog() {
     showDialog(
       context: context,
@@ -178,6 +180,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     );
   }
 
+  // หลังจากผู้ใช้เลือกตำแหน่งจะมาทำงานในนี้ต่อ
   void _selectLocation(LatLng position) {
     final Marker newMarker = Marker(
       markerId: const MarkerId('userSelectedLocation'),
@@ -191,11 +194,13 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     _saveLocationToFirestore(position);
   }
 
+  //ดึงเอาตำแหน่งปัจจุบันของผู้ใช้
   void getLocation() async {
     Location location = Location();
     _locationData = await location.getLocation();
   }
 
+  // บันทึกข้อมูลลงฐานข้อมูล
   Future<void> _saveLocationToFirestore(LatLng location) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -232,6 +237,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
     }
   }
 
+  // ทำการเช็คว่า ถ้าผู้ใช้มีการตั้งค่า ตำแหน่งแล้วให้ผู้ใช้ไปหน้าอื่น
   void checkLocationData() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {

@@ -1,20 +1,17 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
-import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
 import 'package:Pet_Fluffy/features/page/sign_up_page.dart';
+import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
-import 'package:Pet_Fluffy/pages/auth_service.dart';
-import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Login
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -26,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _isSigning = false;
   bool _isLoading = false;
 
-  final FirebaseAuthService _auth = FirebaseAuthService();
+  final AuthService _authService = AuthService();
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -264,109 +261,46 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
-  Future<String> convertImageToBase64(String imageUrl) async {
-    // โหลดรูปภาพจาก URL
-    http.Response response = await http.get(Uri.parse(imageUrl));
-
-    // ตรวจสอบว่าโหลดรูปภาพสำเร็จหรือไม่
-    if (response.statusCode == 200) {
-      // แปลงข้อมูลรูปภาพเป็น Base64
-      String base64Image = base64Encode(response.bodyBytes);
-      return base64Image;
-    } else {
-      // หากโหลดรูปภาพไม่สำเร็จ คืนค่าว่าง
-      return '';
-    }
-  }
-
-  Future<void> saveUserGoogle(User user) async {
-    // ตรวจสอบว่ามีข้อมูลของผู้ใช้ใน Firestore หรือไม่
-    final userRef = FirebaseFirestore.instance.collection('user').doc(user.uid);
-    final userData = await userRef.get();
-    String base64Image = await convertImageToBase64(user.photoURL!);
-
-    if (!userData.exists) {
-      // หากยังไม่มีข้อมูล จะทำการเพิ่มข้อมูลลงใน Firestore
-      await userRef.set({
-        'uid': user.uid,
-        'username': user.displayName,
-        'fullname': '',
-        'email': user.email,
-        'password': '',
-        'photoURL': base64Image,
-        'phone': user.phoneNumber,
-        'nickname': '',
-        'gender': '',
-        'birtdate': '',
-        'country': '',
-        'facebeook': '',
-        'line': ''
-      }).then((_) {
-        print("User data added to Firestore");
-      }).catchError((error) {
-        print("Failed to add user data: $error");
-      });
-    }
-  }
-
+  // เข้าสู่ระบบ และ สมัครสมาชิกด้วย Google
   Future<void> signInwithGoogle() async {
     setState(() {
       _isSigning = true;
       _isLoading = true;
     });
-    print("Hi Google Login");
-
-    //gSn ส่งไปยังระบบการเข้าสู่ระบบของ Google
-    final GoogleSignIn gSn = GoogleSignIn();
-    //สร้างมาเก็บข้อมูลข้องผู้ใช้;
-    User? user;
 
     try {
-      //auth ส่งไปยังระบบการยืนยันสิทธิ์ของ Firebase
-      FirebaseAuth auth = FirebaseAuth.instance;
-      //รอให้ผู้ใช้เข้าสู่ระบบด้วยบัญชี Google แล้วเก็บข้อมูลในตัวแปร gAcc
-      final GoogleSignInAccount? gAcc = await gSn.signIn();
+      User? user = await _authService.signInWithGoogle();
       setState(() {
-        _isSigning = true;
-        _isLoading = true;
+        _isSigning = false;
+        _isLoading = false;
       });
 
-      //เช็คการเข้าสู่ระบบ
-      if (gAcc != null) {
-        //รอรับข้อมูลการยืนยันสิทธิ์จาก Google
-        final GoogleSignInAuthentication gAuth = await gAcc.authentication;
-
-        //สร้างข้อมูลประจำตัวสำหรับเข้าสู่ระบบ Firebase
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: gAuth.accessToken,
-          idToken: gAuth.idToken,
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const LocationSelectionPage()),
         );
-
-        try {
-          //รอผลการเข้าสู่ระบบ
-          final UserCredential userCredential =
-              await auth.signInWithCredential(credential);
-          user = userCredential.user;
-          print(user?.email);
-          print(user?.displayName);
-
-          await saveUserGoogle(user!);
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const LocationSelectionPage()),
-          );
-        } on FirebaseAuthException catch (e) {
-          print(e);
-        }
+      } else {
+        // Handle case when user is null
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to sign in with Google')),
+        );
       }
     } catch (e) {
-      print(e);
+      setState(() {
+        _isSigning = false;
+        _isLoading = false;
+      });
+      print("Error signing in with Google: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google')),
+      );
     }
   }
 
+  // เข้าสู่ระบบด้วย email password
   void _signIn() async {
     setState(() {
       _isSigning = true;
@@ -399,7 +333,8 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       //เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      User? user = await _auth.signInWithEmailAndPassword(email, password);
+      User? user =
+          await _authService.signInWithEmailAndPassword(email, password);
 
       setState(() {
         _isSigning = false;
