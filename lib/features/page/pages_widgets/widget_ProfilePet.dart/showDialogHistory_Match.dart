@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -154,7 +154,7 @@ void showHistoryDialog({
                                           PageRouteBuilder(
                                             pageBuilder: (context, animation,
                                                     secondaryAnimation) =>
-                                                Profile_pet_Page(
+                                                Profile_pet_AllPage(
                                               petId: petID,
                                             ),
                                             transitionsBuilder: (context,
