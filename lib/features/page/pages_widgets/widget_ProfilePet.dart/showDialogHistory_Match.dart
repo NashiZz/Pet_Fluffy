@@ -1,9 +1,47 @@
 import 'dart:convert';
-
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+
+Future<List<Map<String, dynamic>>> fetchMatchData(String petId) async {
+  // ดึงข้อมูลที่เกี่ยวข้องกับ pet_request
+  QuerySnapshot requestSnapshot = await FirebaseFirestore.instance
+      .collection('match')
+      .where('pet_request', isEqualTo: petId)
+      .where('status', isEqualTo: "ไม่ยอมรับ")
+      .get();
+
+  // ดึงข้อมูลที่เกี่ยวข้องกับ pet_respone
+  QuerySnapshot responseSnapshot = await FirebaseFirestore.instance
+      .collection('match')
+      .where('pet_respone', isEqualTo: petId)
+      .where('status', isEqualTo: "ไม่ยอมรับ")
+      .get();
+
+  // รวมผลลัพธ์ทั้งสอง โดยเลือกฟิลด์ที่เหมาะสม
+  List<Map<String, dynamic>> combinedResults = [];
+
+  for (var doc in requestSnapshot.docs) {
+    combinedResults.add({
+      'matchedPetId': doc['pet_respone'],
+      'data': doc.data(),
+    });
+  }
+
+  for (var doc in responseSnapshot.docs) {
+    combinedResults.add({
+      'matchedPetId': doc['pet_request'],
+      'data': doc.data(),
+    });
+  }
+
+  return combinedResults;
+}
+
+Future<DocumentSnapshot> fetchPetUserData(String petId) async {
+  return FirebaseFirestore.instance.collection('Pet_User').doc(petId).get();
+}
 
 void showHistoryDialog({
   required BuildContext context,
@@ -19,16 +57,6 @@ void showHistoryDialog({
         ),
         child: StatefulBuilder(
           builder: (context, setState) {
-            Future<QuerySnapshot>? _future;
-
-            if (_future == null) {
-              _future = FirebaseFirestore.instance
-                  .collection('match')
-                  .where('pet_request', isEqualTo: petId)
-                  .where('status', isEqualTo: "ไม่ยอมรับ")
-                  .get();
-            }
-
             return Container(
               width: MediaQuery.of(context).size.width * 0.9,
               height: MediaQuery.of(context).size.height * 0.65,
@@ -71,45 +99,36 @@ void showHistoryDialog({
                     ],
                   ),
                   Expanded(
-                    child: FutureBuilder<QuerySnapshot>(
-                      future: _future,
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: fetchMatchData(petId),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
                           return Center(
-                              child: const CircularProgressIndicator());
+                            child: const CircularProgressIndicator(),
+                          );
                         }
                         if (snapshot.hasError) {
                           return Text('Error: ${snapshot.error}');
                         }
-                        if (snapshot.hasData &&
-                            snapshot.data!.docs.isNotEmpty) {
+                        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                           return ListView.builder(
                             shrinkWrap: true,
-                            itemCount: snapshot.data!.docs.length,
+                            itemCount: snapshot.data!.length,
                             itemBuilder: (context, index) {
-                              DocumentSnapshot reportDoc =
-                                  snapshot.data!.docs[index];
-                              Map<String, dynamic> report =
-                                  reportDoc.data() as Map<String, dynamic>;
-
-                              String petID = report['pet_respone'];
-
-                              // ดึงข้อมูลจาก collection pet_user
-                              Future<DocumentSnapshot> petFuture =
-                                  FirebaseFirestore.instance
-                                      .collection('Pet_User')
-                                      .doc(petID)
-                                      .get();
+                              Map<String, dynamic> reportData =
+                                  snapshot.data![index];
+                              String petID = reportData['matchedPetId'];
+                              Map<String, dynamic> report = reportData['data'];
 
                               return FutureBuilder<DocumentSnapshot>(
-                                future: petFuture,
+                                future: fetchPetUserData(petID),
                                 builder: (context, petSnapshot) {
                                   if (petSnapshot.connectionState ==
                                       ConnectionState.waiting) {
                                     return Center(
-                                        child:
-                                            const CircularProgressIndicator());
+                                      child: const CircularProgressIndicator(),
+                                    );
                                   }
                                   if (petSnapshot.hasError) {
                                     return Text('Error: ${petSnapshot.error}');
