@@ -53,9 +53,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   Location location = Location();
 
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   late Map<String, String> petPosition_ = {};
   late Map<String, String> userLocation_get = {};
   late List<Map<String, dynamic>> petDataMatchList = [];
@@ -99,11 +96,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     '10000-30000 บาท',
     'มากกว่า 30000 บาท'
   ];
-<<<<<<< HEAD
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
@@ -1181,17 +1175,12 @@ class _randomMathch_PageState extends State<randomMathch_Page>
             ),
             // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
 <<<<<<< HEAD
-<<<<<<< HEAD
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _futurePets, // ใช้ Future ที่คงที่
 =======
             StreamBuilder<List<Map<String, dynamic>>>(
               stream: Stream.fromFuture(ApiPetService.loadAllPet()),
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-            FutureBuilder<List<Map<String, dynamic>>>(
-              future: _futurePets, // ใช้ Future ที่คงที่
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
               builder: (BuildContext context,
                   AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1217,15 +1206,11 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                 }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                 // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
                 bool isAnonymousUser =
                     FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
                 print(
                     'isAnonymousUser: $isAnonymousUser, hasPrimaryPet: $hasPrimaryPet');
-<<<<<<< HEAD
 
                 // กำหนดเพศตรงข้าม
                 List<Map<String, dynamic>> filteredPetData;
@@ -1340,97 +1325,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                         if (months > 0) {
                           ageString += ' ';
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-
-                // กำหนดเพศตรงข้าม
-                List<Map<String, dynamic>> filteredPetData;
-                if (isAnonymousUser || !hasPrimaryPet) {
-                  // หากเป็นผู้ใช้ Anonymous ให้แสดงข้อมูลสัตว์เลี้ยงทั้งหมด
-                  filteredPetData = snapshot.data!;
-                } else {
-                  // กรองข้อมูลสัตว์เลี้ยงตามเงื่อนไขที่กำหนด
-                  String oppositeGender =
-                      (petGender == 'ตัวผู้') ? 'ตัวเมีย' : 'ตัวผู้';
-                  print(oppositeGender);
-
-                  filteredPetData = snapshot.data!
-                      .where((pet) =>
-                          pet['type_pet'] == petType &&
-                          pet['gender'] == oppositeGender &&
-                          pet['status'] == 'พร้อมผสมพันธุ์')
-                      .toList();
-                }
-
-                // ตรวจสอบว่า filteredPetData ว่างเปล่าหรือไม่
-                if (filteredPetData.isEmpty) {
-                  filteredPetData = [];
-                }
-
-                return FutureBuilder<List<Map<String, dynamic>>>(
-                    future: () async {
-                  List<Map<String, dynamic>> uniquePetDataMatch =
-                      await filterUniquePetsAsync(
-                          filteredPetData, petDataMatchList, isSamePet);
-                  return await filterUniquePetsAsync(
-                      uniquePetDataMatch, petDataFavoriteList, isSamePet);
-                }(), builder: (context,
-                        AsyncSnapshot<List<Map<String, dynamic>>>
-                            filteredSnapshot) {
-                  if (filteredSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 15),
-                          Text('กำลังโหลดข้อมูล...')
-                        ],
-                      ),
-                    );
-                  }
-                  if (filteredSnapshot.hasError) {
-                    return Text('Error: ${filteredSnapshot.error}');
-                  }
-                  if (filteredSnapshot.data == null ||
-                      filteredSnapshot.data!.isEmpty) {
-                    return Center(
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height / 3,
-                          ),
-                          Text(
-                              'คุณได้จับคู่หมดแล้ว หรือ ไม่มีข้อมูลสัตว์เลี้ยง'),
-                        ],
-                      ),
-                    );
-                  }
-
-                  List<Map<String, dynamic>> filteredData =
-                      filteredSnapshot.data!;
-                  if (_selectedDistance == null &&
-                      _selectedAge == null &&
-                      _otherBreedController.text == '' &&
-                      _otherColor.text == '' &&
-                      _selectedPrice == null) {
-                    if (search.toString() != 'null') {
-                      List<Map<String, dynamic>> filteredPets =
-                          filteredData.where((pet) {
-                        // log(search.toString().toLowerCase());
-                        bool matchesName = pet['name']
-                            .toString()
-                            .toLowerCase()
-                            .contains(search.toString().toLowerCase());
-
-                        DateTime birthDate = DateTime.parse(pet['birthdate']);
-                        DateTime now = DateTime.now();
-                        int yearsDifference = now.year - birthDate.year;
-                        int monthsDifference = now.month - birthDate.month;
-
-                        if (now.day < birthDate.day) {
-                          monthsDifference--;
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                         }
 
                         if (monthsDifference < 0) {
@@ -1500,14 +1394,10 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                       }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                       bool matchesBreed = pet['breed_pet']
                           .toString()
                           .toLowerCase()
                           .contains(_otherBreedController.text.toLowerCase());
-<<<<<<< HEAD
 =======
                       //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
                       return FutureBuilder<DocumentSnapshot>(
@@ -1526,8 +1416,6 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                               userSnapshot.data!.data() as Map<String, dynamic>;
                           String? userImageURL = userData['photoURL'];
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 
                       DateTime birthDate = DateTime.parse(pet['birthdate']);
                       bool matchesAge =

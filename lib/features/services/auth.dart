@@ -1,11 +1,7 @@
 <<<<<<< HEAD
-<<<<<<< HEAD
 import 'dart:async';
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-import 'dart:async';
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -15,22 +11,15 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 <<<<<<< HEAD
-<<<<<<< HEAD
 import 'package:googleapis_auth/auth_io.dart';
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-import 'package:googleapis_auth/auth_io.dart';
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   // เข้าสู่ระบบโดยไม่สมัครสมาชิก
   Future<User?> signInAnonymously() async {
     try {
@@ -47,7 +36,6 @@ class AuthService {
     return user != null && user.isAnonymous;
   }
 
-<<<<<<< HEAD
   Future<User?> signInWithEmailAndPassword(
       String email, String password) async {
     try {
@@ -59,18 +47,11 @@ class AuthService {
     try {
       //เข้าสู่ระบบด้วยบัญชีผู้ใช้ที่มีอยู่
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-  Future<User?> signInWithEmailAndPassword(
-      String email, String password) async {
-    try {
-      // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
       UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-<<<<<<< HEAD
 <<<<<<< HEAD
         // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
         print('Invalid email or password.');
@@ -119,57 +100,10 @@ class AuthService {
       print('An unexpected error occurred: $e');
 =======
         // showToast(message: 'Invalid email or password.');
-=======
-        // จัดการข้อผิดพลาดเมื่ออีเมลหรือรหัสผ่านไม่ถูกต้อง
-        print('Invalid email or password.');
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
       } else {
-        // จัดการข้อผิดพลาดอื่นๆ
-        print('An error occurred: ${e.code}');
+        // showToast(message: 'An error occurred: ${e.code}');
       }
-<<<<<<< HEAD
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-    } catch (e) {
-      // จัดการข้อผิดพลาดทั่วไป
-      print('An unexpected error occurred: $e');
-    }
-    return null;
-  }
-
-  // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
-  Future<User?> signInWithUsernameAndPassword(
-      String username, String password) async {
-    try {
-      // ดึงข้อมูลของผู้ใช้จาก Firestore โดยใช้ชื่อผู้ใช้
-      QuerySnapshot userQuery = await FirebaseFirestore.instance
-          .collection('user')
-          .where('username', isEqualTo: username)
-          .get();
-
-      if (userQuery.docs.isNotEmpty) {
-        // ใช้ข้อมูลผู้ใช้ที่ดึงมาเพื่อเข้าสู่ระบบ
-        String email =
-            userQuery.docs.first['email']; // ดึงอีเมลของผู้ใช้จากเอกสาร
-        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-        return userCredential.user;
-      } else {
-        print('Username not found.');
-      }
-    } on FirebaseAuthException catch (e) {
-      // จัดการข้อผิดพลาดของ FirebaseAuthException
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        print('Invalid username or password.');
-      } else {
-        print('An error occurred: ${e.code}');
-      }
-    } catch (e) {
-      // จัดการข้อผิดพลาดทั่วไป
-      print('An unexpected error occurred: $e');
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     }
     return null;
   }
@@ -195,17 +129,12 @@ class AuthService {
         User? user = userCredential.user;
 
 <<<<<<< HEAD
-<<<<<<< HEAD
         // await saveUserGoogle(user!);
 
 =======
         await saveUserGoogle(user!);
         
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-        // await saveUserGoogle(user!);
-
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
         return user;
       }
     } catch (error) {
@@ -246,9 +175,6 @@ class AuthService {
 
   // บันทึกข้อมูลผู้ใช้ที่ลงทะเบียนด้วย Google
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   Future<void> saveUserGoogle(
     String uid,
     String username,
@@ -264,7 +190,6 @@ class AuthService {
     String birthdate,
     String? selectedCounty,
   ) async {
-<<<<<<< HEAD
     try {
       final userRef = FirebaseFirestore.instance.collection('user').doc(uid);
       final userData = await userRef.get();
@@ -287,15 +212,14 @@ class AuthService {
           'status': 'สมาชิก'
 =======
   Future<void> saveUserGoogle(User user) async {
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     try {
-      final userRef = FirebaseFirestore.instance.collection('user').doc(uid);
+      final userRef =
+          FirebaseFirestore.instance.collection('user').doc(user.uid);
       final userData = await userRef.get();
+      String base64Image = await convertImageToBase64(user.photoURL!);
 
       if (!userData.exists) {
         await userRef.set({
-<<<<<<< HEAD
           'uid': user.uid,
           'username': user.displayName,
           'fullname': '',
@@ -310,22 +234,6 @@ class AuthService {
           'facebeook': '',
           'line': ''
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-          'uid': uid,
-          'username': username,
-          'fullname': fullname,
-          'email': email,
-          'password': password,
-          'photoURL': image,
-          'phone': phone,
-          'nickname': nickname,
-          'gender': selectedGender,
-          'birthdate': birthdate,
-          'country': selectedCounty,
-          'facebook': facbook,
-          'line': line,
-          'status': 'สมาชิก'
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
         });
       }
     } catch (error) {
@@ -335,9 +243,6 @@ class AuthService {
 
   // Save Data User
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   Future<void> saveUserDataToFirestore(
       String userId,
       String username,
@@ -352,14 +257,11 @@ class AuthService {
       String? gender,
       String? birthdate,
       String? county) async {
-<<<<<<< HEAD
 =======
   Future<void> saveUserDataToFirestore(String userId, String username,
       String name, String email, String password, Uint8List? image) async {
     String img = uint8ListToBase64(image!);
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     DocumentReference userRef = _firestore.collection('user').doc(userId);
 
     await userRef.set({
@@ -369,9 +271,6 @@ class AuthService {
       'email': email,
       'password': password,
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
       'photoURL': imageBase64 ?? '', // ใช้ค่าว่างถ้า imageBase64 เป็น null
       'phone': phone,
       'nickname': nickname,
@@ -381,7 +280,6 @@ class AuthService {
       'facebook': facebook,
       'line': line,
       'status': 'สมาชิก'
-<<<<<<< HEAD
 =======
       'photoURL': img,
       'phone': '',
@@ -392,8 +290,6 @@ class AuthService {
       'facebook': '',
       'line': ''
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     }).then((_) {
       print("User data added to Firestore");
     }).catchError((error) {
@@ -440,9 +336,6 @@ class AuthService {
   }
 }
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 
 class FirebaseAccessToken {
   static String firebaseMsgScope =
@@ -480,8 +373,5 @@ class FirebaseAccessToken {
     return '';
   }
 }
-<<<<<<< HEAD
 =======
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a

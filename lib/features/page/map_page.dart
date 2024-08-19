@@ -3,6 +3,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+<<<<<<< HEAD
+import 'dart:ui' as ui;
+import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
+import 'package:http/http.dart' as http;
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
@@ -29,6 +36,10 @@ class Maps_Page extends StatefulWidget {
 }
 
 class _MapsPageState extends State<Maps_Page> {
+<<<<<<< HEAD
+  FirebaseAccessToken firebaseAccessToken = FirebaseAccessToken();
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   User? user =
       FirebaseAuth.instance.currentUser; //ใช้เก็บข้อมูลของผู้ใช้ปัจจุบัน
   late List<Map<String, dynamic>> petUserDataList =
@@ -41,16 +52,212 @@ class _MapsPageState extends State<Maps_Page> {
   final Set<Marker> _markers = {};
   StreamSubscription<LocationData>?
       _locationSubscription; //ติดตามการเปลี่ยนแปลงของตำแหน่งทางภูมิศาสตร์ที่มาจาก GPS
+<<<<<<< HEAD
+  final TextEditingController _controllerSearch = TextEditingController();
+  late String petId;
+  String petImg = '';
+  late String pet_type;
+  late String petName;
+  late String gender;
+=======
 
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   late String userId;
   late String userImageBase64;
   List<String> userAllImg = []; //เก็บรูปภาพไว้ show Maker บน Maps
   bool isLoading = true;
+<<<<<<< HEAD
+  bool isAnonymous = false;
+  bool hasPrimaryPet = false;
+  bool _isMapInitialized = false; // ใช้เพื่อตรวจสอบการโหลดแผนที่
+  bool isAnonymousUser = false;
+  String? search;
+  String? _selectedDistance;
+  String? _selectedAge;
+  String? _selectedPrice;
+  final AuthService _authService = AuthService();
+  final TextEditingController _otherBreedController = TextEditingController();
+  final TextEditingController _otherColor = TextEditingController();
+  late List<Map<String, dynamic>> petDataMatchList = [];
+  late List<Map<String, dynamic>> petDataFavoriteList = [];
+=======
 
   // Async func to handle Futures easier; or use Future.then
       
 
   //ดึงข้อมูลผู้ใช้ และ ตำแหน่งปัจจุบัน
+  void _getUserDataFromFirestore() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      try {
+        Map<String, dynamic>? userMap =
+            await ApiUserService.getUserDataFromFirestore(userId);
+
+        if (userMap != null) {
+          userImageBase64 = userMap['photoURL'] ?? '';
+
+          getLocation(); // เมื่อโหลดข้อมูลผู้ใช้เสร็จสิ้นแล้ว ก็โหลดตำแหน่งและแสดง Marker
+        } else {
+          print("User data does not exist");
+        }
+      } catch (e) {
+        print('Error getting user data from Firestore: $e');
+      }
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
+
+  CameraPosition _initialCameraPosition = const CameraPosition(
+    target: LatLng(37.42796133580664, -122.085749655962),
+    zoom: 14.4746,
+  );
+  final List<String> _Distance = [
+    '0 - 500 เมตร',
+    '500 - 1000 เมตร ',
+    '1 - 5 กิโลเมตร',
+    '5 - 20 กิโลเมตร',
+    '20 - 100 กิโลเมตร',
+    'มากกว่า 100 กิโลเมตร'
+  ];
+  final List<String> _Age = [
+    '6 เดือน - 1 ปี',
+    '1 ปี - 1 ปี 6 เดือน',
+    '1 ปี 6 เดือน - 2 ปี',
+    'มากกว่า 2 ปี'
+  ];
+  final List<String> _Price = [
+    'น้อยกว่า 1000 บาท',
+    '1000-5000 บาท',
+    '5000-10000 บาท',
+    '10000-30000 บาท',
+    'มากกว่า 30000 บาท'
+  ];
+
+<<<<<<< HEAD
+  // void initState() {
+  //   super.initState();
+  //   location = Location();
+  //   _locationSubscription =
+  //       location.onLocationChanged.listen((LocationData currentLocation) {
+  //     _updateUserLocationMarker();
+  //     setState(() {
+  //       _locationData = currentLocation;
+  //       _loadSelectedLocation();
+  //     });
+  //   });
+  //   getLocation(); // เรียก getLocation ที่นี่
+  //   _getUserDataFromFirestore();
+=======
+  //สร้าง Marker แสดงตำแหน่งปัจจุบันของผู้ใช้
+  void _createUserLocationMarker() {
+    _markers.add(Marker(
+      markerId: const MarkerId('currentLocation'),
+      position: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+      icon: BitmapDescriptor.defaultMarker,
+      infoWindow: const InfoWindow(
+        title: 'ตำแหน่งของคุณ',
+        snippet: 'อยู่ที่นี่',
+      ),
+    ));
+  }
+
+  //เมื่อมีการเปลี่ยนแปลงตำแหน่งของผู้ใช้ marker จะแสดงตามตำแหน่งของผู้ใช้
+  void _updateUserLocationMarker() {
+    setState(() {
+      _markers
+          .removeWhere((marker) => marker.markerId.value == 'currentLocation');
+      _createUserLocationMarker();
+    });
+  }
+
+  // ดึงข้อมูลตำแหน่งปัจจุบันของผู้ใช้และอัปเดต
+  void getLocation() async {
+    Location location = Location();
+    _locationData = await location.getLocation();
+
+    setState(() {
+      _initialCameraPosition = CameraPosition(
+          bearing: 192.8334901395799,
+          target: LatLng(_locationData!.latitude!, _locationData!.longitude!),
+          tilt: 59.4407176971435555,
+          zoom: 19.151926040649414);
+      _createUserLocationMarker();
+    });
+
+    _goToTheLake();
+    _loadAllPetLocations(context);
+  }
+
+  // void _initializeFirebase() async {
+  //   try {
+  //     await Firebase.initializeApp();
+  //     print("Firebase Initialized");
+  //   } catch (error) {
+  //     print("Failed to initialize Firebase: $error");
+  //   }
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+  // }
+
+  @override
+  void initState() {
+    super.initState();
+    _getImageUser();
+    location = Location();
+    isAnonymousUser = _authService.isAnonymous();
+    _locationSubscription =
+        location.onLocationChanged.listen((LocationData currentLocation) {
+      setState(() {
+        _locationData = currentLocation;
+        _updateUserLocationMarker();
+        _loadSelectedLocation();
+      });
+    });
+
+    // แยกการโหลดข้อมูลเป็นครั้งๆ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        getLocation();
+        _loadPetDataAsync();
+      }
+    });
+  }
+
+  void _loadPetDataAsync() async {
+    // ทำการโหลดข้อมูลสัตว์เลี้ยง
+    _getUserDataFromFirestore();
+
+    // โหลดข้อมูลแยกกันเพื่อไม่ให้หนักไปในครั้งเดียว
+    _loadAllPetLocations(context);
+  }
+
+  @override
+  void dispose() {
+    _locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _getImageUser() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      Map<String, dynamic>? userDataFromFirestore =
+          await ApiUserService.getUserDataFromFirestore(userId);
+      if (userDataFromFirestore != null && mounted) {
+        setState(() {
+          userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
@@ -149,16 +356,81 @@ class _MapsPageState extends State<Maps_Page> {
             });
           }
 
-  final Completer<GoogleMapController> _controller =
-      Completer<GoogleMapController>(); //เก็บตัวควบคุมแผนที่
+          // ส่วน Favorite
+          try {
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            String? petId = prefs.getString(userId.toString());
+            // ดึงข้อมูลจากคอลเล็กชัน favorites
+            QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore
+                .instance
+                .collection('favorites')
+                .doc(userId)
+                .collection('pet_favorite')
+                .where('pet_request', isEqualTo: petId)
+                .get();
 
-  //เก็บตำแหน่งเริ่มต้นของมุมกล้องบนแผนที่
-  CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(37.42796133580664, -122.085749655962),
-    zoom: 14.4746,
-  );
+            // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
+            List<dynamic> petResponses = petUserQuerySnapshot.docs
+                .map((doc) => doc.data() as Map<String, dynamic>)
+                .toList();
 
-  //สร้าง Marker แสดงตำแหน่งปัจจุบันของผู้ใช้
+            // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
+            List<Map<String, dynamic>> allPetDataList = [];
+
+            // ลูปเพื่อดึงข้อมูลแต่ละรายการ
+            for (var petRespone in petResponses) {
+              String petResponeId = petRespone['pet_respone'];
+
+              // ดึงข้อมูลจาก pet_user
+              QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore
+                  .instance
+                  .collection('Pet_User')
+                  .where('pet_id', isEqualTo: petResponeId)
+                  .where('type_pet', isEqualTo: pet_type)
+                  .get();
+
+              // เพิ่มข้อมูลลงใน List
+              allPetDataList.addAll(getPetQuerySnapshot.docs
+                  .map((doc) => doc.data() as Map<String, dynamic>)
+                  .toList());
+            }
+
+            // อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+            setState(() {
+              petDataFavoriteList = allPetDataList;
+              isLoading = false;
+            });
+          } catch (e) {
+            print('Error getting pet user data from Firestore: $e');
+            setState(() {
+              isLoading = false;
+            });
+          }
+        }
+      }
+    }
+  }
+
+  String calculateDistance(LatLng start, LatLng end) {
+    // คำนวณระยะทางในหน่วยเมตร
+    double distanceInMeters = Geolocator.distanceBetween(
+      start.latitude,
+      start.longitude,
+      end.latitude,
+      end.longitude,
+    );
+
+    // ตรวจสอบและแปลงหน่วย
+    if (distanceInMeters >= 1000) {
+      // แปลงเป็นกิโลเมตรและคืนค่าเป็นสตริง
+      double distanceInKilometers = distanceInMeters / 1000;
+      return '${distanceInKilometers.toStringAsFixed(2)} กิโลเมตร';
+    } else {
+      // คืนค่าเป็นเมตร
+      return '${distanceInMeters.toStringAsFixed(0)} เมตร';
+    }
+  }
+
   void _createUserLocationMarker() {
     if (_locationData != null) {
       _markers.add(Marker(
@@ -203,56 +475,65 @@ class _MapsPageState extends State<Maps_Page> {
     _loadAllPetLocations(context);
   }
 
-  // void _initializeFirebase() async {
-  //   try {
-  //     await Firebase.initializeApp();
-  //     print("Firebase Initialized");
-  //   } catch (error) {
-  //     print("Failed to initialize Firebase: $error");
-  //   }
-  // }
-
-  //จะถูกเรียกเมื่อหน้าจอถูกโหลด
-  @override
-  void initState() {
-    super.initState();
-    _getUserDataFromFirestore();
-    location = Location();
-    _locationSubscription =
-        location.onLocationChanged.listen((LocationData currentLocation) {
+  void _logSearchValue() {
+    if (mounted) {
       setState(() {
-        _locationData = currentLocation;
-        _updateUserLocationMarker();
+        _selectedDistance = null;
+        _selectedAge = null;
+        _otherBreedController.text = '';
+        _otherColor.text = '';
+        _selectedPrice = null;
       });
-    });
-    // _initializeFirebase();
-    getLocation(); //เพื่อดึงข้อมูลตำแหน่งที่ตั้งของผู้ใช้
-  }
+    }
 
-  @override
-  void dispose() {
-    _locationSubscription?.cancel();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final searchValue = _controllerSearch.text;
+      search = searchValue.toString();
+      location = Location();
+      _locationSubscription =
+          location.onLocationChanged.listen((LocationData currentLocation) {
+        if (mounted) {
+          setState(() {
+            _locationData = currentLocation;
+            _updateUserLocationMarker();
+          });
+        }
+      });
+
+      getLocation(); // เรียก getLocation ที่นี่
+      _getUserDataFromFirestore();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 15),
-              Text('กำลังโหลดแผนที่ รอสักครู่....')
-            ],
-          ), // แสดง indicator ในระหว่างโหลด
-        ),
-      );
-    }
     return Scaffold(
       body: SafeArea(
+<<<<<<< HEAD
+        child: _isMapInitialized
+            ? Stack(
+                children: [
+                  GoogleMap(
+                    myLocationButtonEnabled: true,
+                    zoomControlsEnabled: false,
+                    myLocationEnabled: true,
+                    mapType: MapType.normal,
+                    initialCameraPosition: _initialCameraPosition,
+                    onTap: _isSelectingLocation ? _selectLocation : null,
+                    onMapCreated: (GoogleMapController controller) {
+                      if (!_controller.isCompleted) {
+                        _controller.complete(controller);
+                      }
+                      controller.setMapStyle('''
+                       [
+                        {
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+=======
         child: Stack(
           children: [
             GoogleMap(
@@ -320,13 +601,676 @@ class _MapsPageState extends State<Maps_Page> {
                       IconButton(
                         onPressed: () {
                           // Add code for notification button
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                         },
-                        icon: const Icon(Icons.notifications),
-                      ),
-                    ],
+                        {
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#8ec3b9"
+                            }
+                          ]
+                        },
+                        {
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1a3646"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.country",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#4b6878"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.land_parcel",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#64779e"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "administrative.province",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#4b6878"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "landscape.man_made",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#334e87"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "landscape.natural",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#283d6a"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#6f9ba5"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi.park",
+                          "elementType": "geometry.fill",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "poi.park",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#3C7680"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#304a7d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#98a5be"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#2c6675"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "geometry.stroke",
+                          "stylers": [
+                            {
+                              "color": "#255763"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#b0d5ce"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "road.highway",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#023e58"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#98a5be"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit",
+                          "elementType": "labels.text.stroke",
+                          "stylers": [
+                            {
+                              "color": "#1d2c4d"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit.line",
+                          "elementType": "geometry.fill",
+                          "stylers": [
+                            {
+                              "color": "#283d6a"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "transit.station",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#3a4762"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "water",
+                          "elementType": "geometry",
+                          "stylers": [
+                            {
+                              "color": "#0e1626"
+                            }
+                          ]
+                        },
+                        {
+                          "featureType": "water",
+                          "elementType": "labels.text.fill",
+                          "stylers": [
+                            {
+                              "color": "#4e6d70"
+                            }
+                          ]
+                        }
+                      ]
+                      ''');
+                    },
+                    markers: _markers,
                   ),
-                ),
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    child: Card(
+                      elevation: 4,
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.transparent,
+                                  child: ClipOval(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const Profile_user_Page()),
+                                        );
+                                      },
+                                      child: isAnonymous
+                                          ? Image.asset(
+                                              'assets/images/user-286-512.png',
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : petImg.isNotEmpty
+                                              ? Image.memory(
+                                                  base64Decode(petImg),
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Image.memory(
+                                                  base64Decode(userImageBase64),
+                                                  width: 40,
+                                                  height: 40,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _controllerSearch,
+                                    decoration: InputDecoration(
+                                      hintText: 'ค้นหา',
+                                      border: InputBorder.none,
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(Icons.search),
+                                        onPressed: _logSearchValue,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: isAnonymousUser
+                                      ? null
+                                      : () {
+                                          historyMatch();
+                                        },
+                                  icon: const Icon(
+                                    Icons.favorite,
+                                    color: Colors.pinkAccent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            InkWell(
+                              onTap: () {
+                                showModalBottomSheet<void>(
+                                  context: context,
+                                  isScrollControlled:
+                                      true, // เพิ่มการตั้งค่านี้เพื่อให้สามารถเลื่อนขึ้นลงได้
+                                  builder: (BuildContext context) {
+                                    return SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.8, // ปรับขนาดความสูงตามต้องการ
+                                      child: SingleChildScrollView(
+                                        // เพิ่ม SingleChildScrollView เพื่อให้สามารถเลื่อนขึ้นลงได้
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(20.0),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              const Text('การค้นหาขั้นสูง',
+                                                  style:
+                                                      TextStyle(fontSize: 20)),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child:
+                                                        DropdownButtonFormField<
+                                                            String>(
+                                                      value: _selectedDistance,
+                                                      items: _Distance.map(
+                                                          (String value) {
+                                                        return DropdownMenuItem<
+                                                            String>(
+                                                          value: value,
+                                                          child: Text(value),
+                                                        );
+                                                      }).toList(),
+                                                      onChanged:
+                                                          (String? newValue) {
+                                                        setState(() {
+                                                          _selectedDistance =
+                                                              newValue;
+                                                        });
+                                                      },
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText:
+                                                            'ระยะความห่าง',
+                                                        border:
+                                                            OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      30.0),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 10,
+                                                          horizontal: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child:
+                                                        DropdownButtonFormField<
+                                                            String>(
+                                                      value: _selectedAge,
+                                                      items: _Age.map(
+                                                          (String value) {
+                                                        return DropdownMenuItem<
+                                                            String>(
+                                                          value: value,
+                                                          child: Text(value),
+                                                        );
+                                                      }).toList(),
+                                                      onChanged:
+                                                          (String? newValue) {
+                                                        setState(() {
+                                                          _selectedAge =
+                                                              newValue;
+                                                        });
+                                                      },
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText: 'ช่วงอายุ',
+                                                        border:
+                                                            OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      30.0),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 10,
+                                                          horizontal: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextField(
+                                                      style: const TextStyle(
+                                                          fontSize: 15),
+                                                      controller:
+                                                          _otherBreedController,
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText: 'สายพันธุ์',
+                                                        border:
+                                                            OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      30.0),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 10,
+                                                          horizontal: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextField(
+                                                      style: const TextStyle(
+                                                          fontSize: 15),
+                                                      controller: _otherColor,
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText: 'สี',
+                                                        border:
+                                                            OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      30.0),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 10,
+                                                          horizontal: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child:
+                                                        DropdownButtonFormField<
+                                                            String>(
+                                                      value: _selectedPrice,
+                                                      items: _Price.map(
+                                                          (String value) {
+                                                        return DropdownMenuItem<
+                                                            String>(
+                                                          value: value,
+                                                          child: Text(value),
+                                                        );
+                                                      }).toList(),
+                                                      onChanged:
+                                                          (String? newValue) {
+                                                        setState(() {
+                                                          _selectedPrice =
+                                                              newValue;
+                                                        });
+                                                      },
+                                                      decoration:
+                                                          InputDecoration(
+                                                        labelText:
+                                                            'ราคา (ค่าผสมพันธุ์)',
+                                                        border:
+                                                            OutlineInputBorder(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(
+                                                                      30.0),
+                                                        ),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          vertical: 10,
+                                                          horizontal: 15,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 15),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        location = Location();
+                                                        _locationSubscription = location
+                                                            .onLocationChanged
+                                                            .listen((LocationData
+                                                                currentLocation) {
+                                                          setState(() {
+                                                            _locationData =
+                                                                currentLocation;
+                                                            _updateUserLocationMarker();
+                                                          });
+                                                        });
+                                                        getLocation(); // เรียก getLocation ที่นี่
+                                                        _getUserDataFromFirestore();
+                                                        _selectedDistance =
+                                                            _selectedDistance;
+                                                        _selectedAge =
+                                                            _selectedAge;
+                                                        _otherBreedController
+                                                                .text =
+                                                            _otherBreedController
+                                                                .text;
+                                                        _otherColor.text =
+                                                            _otherColor.text;
+                                                        _selectedPrice =
+                                                            _selectedPrice;
+                                                      });
+                                                      Navigator.pop(context);
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text('ค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
+                                                  ),
+                                                  SizedBox(width: 20),
+                                                  ElevatedButton(
+                                                    onPressed: () {
+                                                      setState(() {
+                                                        // รีเซ็ตค่า dropdown ให้เป็น null
+                                                        _selectedDistance =
+                                                            null;
+                                                        _selectedAge = null;
+                                                        _selectedPrice = null;
+
+                                                        // รีเซ็ตค่า TextField
+                                                        _otherBreedController
+                                                            .text = '';
+                                                        _otherColor.text = '';
+                                                      });
+                                                      Navigator.of(context)
+                                                          .pop();
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      shape:
+                                                          RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(30),
+                                                      ),
+                                                    ),
+                                                    child: const Text(
+                                                        'ล้างข้อมูลค้นหา',
+                                                        style: TextStyle(
+                                                            fontSize: 16)),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                // ใช้ขนาดที่จำเป็นเท่านั้น
+                                children: [
+                                  Text(
+                                    'ค้นหาขั้นสูง',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: const Color.fromARGB(
+                                          255, 110, 110, 110), // สีของตัวอักษร
+                                    ),
+                                  ),
+                                  const SizedBox(
+                                      width:
+                                          8.0), // ระยะห่างระหว่าง Text และ Icon
+                                  Icon(
+                                    Icons.keyboard_arrow_down_sharp,
+                                    color: const Color.fromARGB(
+                                        255, 110, 110, 110), // สีของไอคอน
+                                  ),
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 30,
+                    right: 20,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        _startSelectingLocation();
+                      },
+                      tooltip: 'Add Pet Location',
+                      child: const Icon(Icons.location_on),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 30,
+                    left: 20,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        _goToTheLake();
+                      },
+                      tooltip: 'My Location',
+                      child: const Icon(Icons.my_location),
+                    ),
+                  ),
+                ],
+              )
+            : const Center(
+                child: CircularProgressIndicator(),
               ),
+<<<<<<< HEAD
+=======
             ),
           ],
         ),
@@ -338,6 +1282,7 @@ class _MapsPageState extends State<Maps_Page> {
         },
         tooltip: 'Select Location',
         child: const Icon(Icons.location_on),
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       ),
     );
   }
@@ -346,189 +1291,6 @@ class _MapsPageState extends State<Maps_Page> {
     final GoogleMapController controller = await _controller.future;
     controller
         .animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
-  }
-
-  // ฟังก์ชันโหลดภาพจาก bytes
-  Future<ui.Image> _loadImage(Uint8List imgBytes) async {
-    final Completer<ui.Image> completer = Completer();
-    ui.decodeImageFromList(imgBytes, (ui.Image img) {
-      if (img != null) {
-        completer.complete(img);
-      } else {
-        completer.completeError('Failed to decode image');
-      }
-    });
-    return completer.future;
-  }
-
-  Future<BitmapDescriptor> _createCustomMarker(Uint8List imageBytes) async {
-    final double markerSize = 120; // ขนาดของ Marker
-    final double triangleHeight = 30; // ความสูงของสามเหลี่ยม
-
-    // สร้าง ui.Image จาก bytes
-    ui.Image image = await _loadImage(Uint8List.fromList(imageBytes));
-
-    // ขนาดที่แท้จริงของ Canvas ที่รองรับทั้ง Marker และสามเหลี่ยม
-    final double canvasWidth = markerSize;
-    final double canvasHeight = markerSize + triangleHeight;
-
-    // สร้าง Canvas สำหรับการวาดภาพ
-    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
-    final Canvas canvas = Canvas(pictureRecorder,
-        Rect.fromLTWH(0, 0, canvasWidth, canvasHeight)); // กำหนดขนาดของ Canvas
-
-    // วาดพื้นหลังกลม
-    final Paint circlePaint = Paint()
-      ..color = Colors.blueAccent // สีพื้นหลัง
-      ..style = PaintingStyle.fill; // เปลี่ยนเป็น fill สำหรับการเติมสี
-    canvas.drawCircle(
-        Offset(markerSize / 2, markerSize / 2), markerSize / 2, circlePaint);
-
-    // วาดเงา
-    final Paint shadowPaint = Paint()
-      ..color = Colors.black26
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(Offset(markerSize / 2, markerSize / 2 + 2),
-        markerSize / 2, shadowPaint);
-
-    // สร้าง Path เป็นรูปวงกลมเพื่อตัดภาพ (Clip)
-    final Path clipPath = Path()
-      ..addOval(Rect.fromCircle(
-          center: Offset(markerSize / 2, markerSize / 2),
-          radius: markerSize / 2 - 8)); // ใช้ borderWidth เพื่อ Clip
-
-    canvas.clipPath(clipPath);
-
-    // วาดรูปภาพที่เป็น marker
-    final double imageSize = markerSize - 16; // ลดขนาดให้เข้ากับขอบ
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTRB(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(8, 8, imageSize, imageSize),
-      Paint(),
-    );
-
-    // วาด Polygon ที่มุมล่างให้เป็นรูปสามเหลี่ยมชี้ลง
-    final Paint trianglePaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill; // เปลี่ยนเป็น fill สำหรับการเติมสี
-    final Path trianglePath = Path()
-      ..moveTo(markerSize / 2 - 20, markerSize) // จุดซ้ายล่างของสามเหลี่ยม
-      ..lineTo(markerSize / 2 + 20, markerSize) // จุดขวาล่างของสามเหลี่ยม
-      ..lineTo(
-          markerSize / 2, markerSize + triangleHeight) // จุดล่างสุดที่ชี้ลง
-      ..close();
-
-    // วาด Polygon
-    canvas.drawPath(trianglePath, trianglePaint);
-
-    // เพิ่มเงาให้กับสามเหลี่ยม
-    canvas.drawPath(
-        trianglePath.shift(Offset(0, 2)),
-        Paint()
-          ..color = Colors.black26
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4));
-
-    // แปลง Canvas เป็น BitmapDescriptor
-    final ui.Image markerAsImage = await pictureRecorder.endRecording().toImage(
-          canvasWidth.toInt(),
-          canvasHeight.toInt(),
-        );
-
-    final ByteData? byteData = await markerAsImage.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
-
-    final Uint8List markerBytes = byteData!.buffer.asUint8List();
-    return BitmapDescriptor.fromBytes(markerBytes);
-  }
-
-  Future<void> _loadSelectedLocation() async {
-    User? userData = FirebaseAuth.instance.currentUser;
-    if (userData != null) {
-      String userId = userData.uid;
-
-      try {
-        // ระบุคอลเลคชันที่จะใช้ใน Firestore
-        DocumentReference userDocRef =
-            FirebaseFirestore.instance.collection('user').doc(userId);
-
-        DocumentSnapshot userDoc = await userDocRef.get();
-
-        if (userDoc.exists) {
-          // ดึงข้อมูล lat และ lng จาก Firestore
-          double lat = userDoc.get('lat');
-          double lng = userDoc.get('lng');
-
-          // เก็บตำแหน่งใน _selectedLocation
-          setState(() {
-            _selectedLocation = LatLng(lat, lng);
-          });
-
-          // เพิ่ม Marker บนแผนที่
-          await _addExistingMarker(LatLng(lat,
-              lng)); // ใช้ await เพื่อให้แน่ใจว่า Marker ถูกเพิ่มก่อนที่จะอัปเดต UI
-        }
-      } catch (e) {
-        print('Error loading location from Firestore: $e');
-      }
-    }
-  }
-
-  void _debugBase64Image(String base64String) {
-    if (base64String == null || base64String.isEmpty) {
-      print('Base64 string is null or empty');
-    } else {
-      print('Base64 string length: ${base64String.length}');
-    }
-  }
-
-  Uint8List _base64ToUint8List(String base64String) {
-    try {
-      return base64Decode(base64String);
-    } catch (e) {
-      print('Error decoding Base64 string: $e');
-      return Uint8List(0); // ส่งกลับ Uint8List ว่างเปล่า
-    }
-  }
-
-  Future<void> _addExistingMarker(LatLng position) async {
-    try {
-      // ตรวจสอบ Base64 string
-      _debugBase64Image(petImg);
-
-      // แปลง Base64 string เป็น Uint8List
-      Uint8List imageBytes = _base64ToUint8List(petImg);
-
-      // ตรวจสอบว่าภาพถูกถอดรหัสอย่างถูกต้อง
-      if (imageBytes.isEmpty) {
-        throw Exception('Decoded image data is empty');
-      }
-
-      // สร้าง BitmapDescriptor ที่สวยงาม
-      final BitmapDescriptor customIcon = await _createCustomMarker(imageBytes);
-
-      // สร้าง Marker
-      final Marker existingMarker = Marker(
-        markerId: const MarkerId('userSelectedLocation'),
-        position: position,
-        icon: customIcon, // ใช้ไอคอนที่กำหนดเอง
-        infoWindow: InfoWindow(
-          title: '$petName',
-          snippet: 'สัตว์เลี้ยงของคุณอยู่ที่นี่', // ข้อความเพิ่มเติม
-        ),
-      );
-
-      setState(() {
-        // ลบ Marker ที่มีอยู่ก่อนหน้าออกจากแผนที่
-        _markers.removeWhere(
-            (marker) => marker.markerId.value == 'userSelectedLocation');
-        // เพิ่ม Marker ใหม่ที่ตำแหน่งใหม่
-        _markers.add(existingMarker);
-      });
-    } catch (e) {
-      print('Error loading pet icon: $e');
-    }
   }
 
 <<<<<<< HEAD
@@ -723,6 +1485,7 @@ class _MapsPageState extends State<Maps_Page> {
 =======
   //เลือกตำแหน่งแสดงผลสัตว์เลี้ยง
   void _startSelectingLocation() {
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -853,23 +1616,43 @@ class _MapsPageState extends State<Maps_Page> {
     );
   }
 
+<<<<<<< HEAD
+  void historyMatch() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? petId = prefs.getString(userId.toString());
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            Historymatch_Page(
+                idPet: petId.toString(), idUser: userId.toString()),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          const curve = Curves.ease;
+
+          var tween =
+              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
+=======
   //เก็บตำแหน่งที่เลือกมาเก็บไว้ในนี้และ บันทึกลงฐานข้อมูล
   void _selectLocation(LatLng position) {
     final Marker newMarker = Marker(
       markerId: const MarkerId('userSelectedLocation'),
       position: position,
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     );
+  }
 
-    setState(() {
-      _markers.add(newMarker);
-      _initialCameraPosition = CameraPosition(
-        target: position,
-        zoom: 14.0,
-      );
-      _isSelectingLocation = false;
-    });
-
-    _goToTheLake();
+  //เก็บตำแหน่งที่เลือกมาเก็บไว้ในนี้และ บันทึกลงฐานข้อมูล
+  void _selectLocation(LatLng position) {
     _addLocationToFirestore(position);
   }
 
@@ -918,8 +1701,13 @@ class _MapsPageState extends State<Maps_Page> {
   //สร้าง Maker สำหรับแสดง รูปภาพสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Widget _createMarkerIcon(Uint8List markerImages) {
     return Container(
+<<<<<<< HEAD
+      width: 100,
+      height: 100,
+=======
       width: 80,
       height: 80,
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
@@ -979,7 +1767,11 @@ class _MapsPageState extends State<Maps_Page> {
     return ageString;
   }
 
+<<<<<<< HEAD
+  // ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
+=======
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   Future<void> _loadAllPetLocations(BuildContext context) async {
     try {
       setState(() {
@@ -1006,9 +1798,68 @@ class _MapsPageState extends State<Maps_Page> {
           FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
       await Future.forEach(petUserDocsSnapshot.docs, (doc) async {
         Map<String, dynamic> data = doc.data();
+        if (isAnonymousUser) {
+          if (_selectedDistance == null &&
+              _selectedAge == null &&
+              _otherBreedController.text == '' &&
+              _otherColor.text == '' &&
+              _selectedPrice == null) {
+            if (search.toString() != 'null') {
+              bool matchesName = data['name']
+                  .toString()
+                  .toLowerCase()
+                  .contains(search.toString().toLowerCase());
 
-        DocumentSnapshot userSnapshot =
-            await ApiUserService.getUserData(data['user_id']);
+              DateTime birthDate = DateTime.parse(data['birthdate']);
+              DateTime now = DateTime.now();
+              int yearsDifference = now.year - birthDate.year;
+              int monthsDifference = now.month - birthDate.month;
+
+<<<<<<< HEAD
+              if (now.day < birthDate.day) {
+                monthsDifference--;
+              }
+=======
+        double lat = userSnapshot['lat'] ?? 0.0;
+        double lng = userSnapshot['lng'] ?? 0.0;
+        //random ตำแหน่ง ให้สัตว์เลี้ยงไม่ซ้อนกัน
+        lat += Random().nextDouble() * 0.0002;
+        lng += Random().nextDouble() * 0.0002;
+        LatLng petLocation = LatLng(lat, lng);
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
+
+              if (monthsDifference < 0) {
+                yearsDifference--;
+                monthsDifference += 12;
+              }
+
+              String ageDifference = '$yearsDifferenceปี$monthsDifferenceเดือน';
+
+              bool matchesAge = ageDifference
+                  .toLowerCase()
+                  .contains(search.toString().toLowerCase());
+
+              bool matchesBreed = data['breed_pet']
+                  .toString()
+                  .toLowerCase()
+                  .contains(search.toString().toLowerCase());
+
+              bool matchesGender = data['gender']
+                  .toString()
+                  .toLowerCase()
+                  .contains(search.toString().toLowerCase());
+
+              bool matchesColor = data['color']
+                  .toString()
+                  .toLowerCase()
+                  .contains(search.toString().toLowerCase());
+              if (matchesName ||
+                  matchesAge ||
+                  matchesBreed ||
+                  matchesGender ||
+                  matchesColor) {
+                DocumentSnapshot userSnapshot =
+                    await ApiUserService.getUserData(data['user_id']);
 
                 double lat = userSnapshot['lat'] ?? 0.0;
                 double lng = userSnapshot['lng'] ?? 0.0;
@@ -2830,7 +3681,10 @@ class _MapsPageState extends State<Maps_Page> {
         isLoading = false;
       });
 
+<<<<<<< HEAD
+=======
       // รายงานข้อผิดพลาดทั้งหมด
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       if (errors.isNotEmpty) {
         for (var error in errors) {
           print(error);
@@ -2838,397 +3692,6 @@ class _MapsPageState extends State<Maps_Page> {
       }
     } catch (e) {
       print('Error loading pet locations from Firestore: $e');
-    }
-  }
-
-  int convertToMonths(String ageString) {
-    int months = 0;
-    RegExp regExp = RegExp(r'(\d+)\s*ปี');
-    Match? match = regExp.firstMatch(ageString);
-    if (match != null) {
-      int years = int.parse(match.group(1)!);
-      months += years * 12;
-    }
-    regExp = RegExp(r'(\d+)\s*เดือน');
-    match = regExp.firstMatch(ageString);
-    if (match != null) {
-      int extraMonths = int.parse(match.group(1)!);
-      months += extraMonths;
-    }
-    return months;
-  }
-
-  bool isAgeInRange(String ageRange, DateTime birthDate) {
-    DateTime now = DateTime.now();
-    int yearsDifference = now.year - birthDate.year;
-    int monthsDifference = now.month - birthDate.month;
-
-    if (now.day < birthDate.day) {
-      monthsDifference--;
-    }
-
-    if (monthsDifference < 0) {
-      yearsDifference--;
-      monthsDifference += 12;
-    }
-
-    // แปลงอายุเป็นเดือน
-    int totalMonths = yearsDifference * 12 + monthsDifference;
-
-    // แปลงช่วงอายุเป็นเดือน
-    List<String> parts = ageRange.split(' - ');
-    if (parts.length == 2) {
-      int minMonths = convertToMonths(parts[0]);
-      int maxMonths = convertToMonths(parts[1]);
-
-      // ตรวจสอบช่วงอายุ
-      return totalMonths >= minMonths && totalMonths <= maxMonths;
-    } else {
-      // กรณีไม่มีการระบุช่วง เช่น 'มากกว่า 2 ปี'
-      if (ageRange == 'มากกว่า 2 ปี') {
-        return totalMonths > 24; // มากกว่า 24 เดือน
-      }
-    }
-
-    return false;
-  }
-
-  bool isPriceInRange(String priceString, String selectedPrice) {
-    // แปลงราคาที่เป็นข้อความเป็นตัวเลข
-    double price = double.tryParse(priceString.replaceAll(',', '')) ?? 0.0;
-
-    // แปลงช่วงราคาที่เลือก
-    double? minPrice;
-    double? maxPrice;
-
-    // ตรวจสอบช่วงราคาที่เลือก
-    if (selectedPrice.contains('น้อยกว่า')) {
-      maxPrice = double.parse(selectedPrice
-          .replaceAll('น้อยกว่า', '')
-          .replaceAll(' บาท', '')
-          .trim());
-    } else if (selectedPrice.contains('มากกว่า')) {
-      minPrice = double.parse(selectedPrice
-          .replaceAll('มากกว่า', '')
-          .replaceAll(' บาท', '')
-          .trim());
-    } else if (selectedPrice.contains('-')) {
-      List<String> parts = selectedPrice.split('-');
-      minPrice = double.parse(parts[0].replaceAll(' บาท', '').trim());
-      maxPrice = double.parse(parts[1].replaceAll(' บาท', '').trim());
-    }
-
-    // ตรวจสอบว่าราคาอยู่ในช่วงที่เลือกหรือไม่
-    if (minPrice != null && maxPrice != null) {
-      return price >= minPrice && price <= maxPrice;
-    } else if (minPrice != null) {
-      return price > minPrice;
-    } else if (maxPrice != null) {
-      return price < maxPrice;
-    } else {
-      return false; // ไม่มีช่วงราคาที่กำหนด
-    }
-  }
-
-  bool isDistanceRange(String distanceStr, String selectedRange) {
-    // แปลง distanceStr เป็นค่าตัวเลข
-    double distance = _parseDistance(distanceStr);
-
-    // แปลง selectedRange เป็นช่วงระยะทาง
-    List<double> range = _parseRange(selectedRange);
-
-    // ตรวจสอบว่าระยะทางอยู่ในช่วงหรือไม่
-    return distance >= range[0] && distance <= range[1];
-  }
-
-  double _parseDistance(String distanceStr) {
-    final RegExp regex = RegExp(r'(\d+\.?\d*)\s*(กิโลเมตร|เมตร)');
-    final match = regex.firstMatch(distanceStr);
-    if (match != null) {
-      double value = double.parse(match.group(1)!);
-      String unit = match.group(2)!;
-
-      // แปลงหน่วยเป็นเมตร
-      if (unit == 'กิโลเมตร') {
-        return value * 1000;
-      } else {
-        return value;
-      }
-    }
-    return 0.0;
-  }
-
-  List<double> _parseRange(String rangeStr) {
-    final RegExp regexRange = RegExp(r'(\d+)\s*-\s*(\d+)\s*(เมตร|กิโลเมตร)');
-    final RegExp regexMoreThan = RegExp(r'มากกว่า\s*(\d+)\s*(เมตร|กิโลเมตร)');
-    final matchRange = regexRange.firstMatch(rangeStr);
-    final matchMoreThan = regexMoreThan.firstMatch(rangeStr);
-
-    if (matchRange != null) {
-      double start = double.parse(matchRange.group(1)!);
-      double end = double.parse(matchRange.group(2)!);
-      String unit = matchRange.group(3)!;
-
-      // แปลงหน่วยเป็นเมตร
-      if (unit == 'กิโลเมตร') {
-        start *= 1000;
-        end *= 1000;
-      }
-
-      return [start, end];
-    } else if (matchMoreThan != null) {
-      double start = double.parse(matchMoreThan.group(1)!);
-      String unit = matchMoreThan.group(2)!;
-
-      // แปลงหน่วยเป็นเมตร
-      if (unit == 'กิโลเมตร') {
-        start *= 1000;
-      }
-
-      return [
-        start,
-        double.infinity
-      ]; // ใช้ double.infinity สำหรับค่าที่ไม่จำกัด
-    }
-
-    return [0.0, 0.0];
-  }
-
-  void add_Faverite(String petIdd) async {
-    // setState(() {
-    //   isLoading = true;
-    // });
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    String? petId = prefs.getString(userId.toString());
-    String pet_request = petId.toString();
-    String pet_respone = petIdd.toString();
-
-    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted =
-        formatter.format(now.toUtc().add(Duration(hours: 7)));
-
-    // อ้างอิงถึงเอกสาร userId ในคอลเลกชัน favorites
-    DocumentReference userFavoritesRef =
-        FirebaseFirestore.instance.collection('favorites').doc(userId);
-
-    // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-    CollectionReference petFavoriteRef =
-        userFavoritesRef.collection('pet_favorite');
-
-    try {
-      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-      QuerySnapshot querySnapshot = await petFavoriteRef
-          .where('pet_request', isEqualTo: pet_request)
-          .where('pet_respone', isEqualTo: pet_respone)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-        // setState(() {
-        //   isLoading = false;
-        // });
-
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            Future.delayed(const Duration(seconds: 2), () {
-              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-            });
-            return AlertDialog(
-              title: Column(
-                children: [
-                  Icon(LineAwesomeIcons.star_1,
-                      color: Colors.yellow.shade800, size: 50),
-                  SizedBox(height: 20),
-                  Text('คุณมีการกดถูกใจนี้อยู่แล้ว',
-                      style: TextStyle(fontSize: 18)),
-                ],
-              ),
-            );
-          },
-        );
-      } else {
-        // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-        DocumentReference newPetfav = await petFavoriteRef.add({
-          'created_at': formatted,
-          'pet_request': pet_request,
-          'pet_respone': pet_respone,
-        });
-
-        String docId = newPetfav.id;
-
-        await newPetfav.update({'id_fav': docId});
-
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            Future.delayed(const Duration(seconds: 1), () {
-              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-            });
-            return AlertDialog(
-              title: Column(
-                children: [
-                  Icon(LineAwesomeIcons.star_1,
-                      color: Colors.yellow.shade800, size: 50),
-                  SizedBox(height: 20),
-                  Text('เพิ่มการกดถูกใจเรียบร้อย',
-                      style: TextStyle(fontSize: 18)),
-                ],
-              ),
-            );
-          },
-        );
-      }
-    } catch (error) {
-      print("Failed to add pet: $error");
-
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  void add_match(String petIdd, petId, petUserId, String img_profile,
-      String name_petrep, String des) async {
-    String pet_request = petIdd.toString();
-    String pet_respone = petId.toString();
-
-    print(pet_request);
-    print(pet_respone);
-
-    // รับวันและเวลาปัจจุบันในโซนเวลาไทย
-    final DateTime now = DateTime.now();
-    final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final String formatted =
-        formatter.format(now.toUtc().add(Duration(hours: 7)));
-
-    CollectionReference petMatchRef =
-        FirebaseFirestore.instance.collection('match');
-    try {
-      // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-      QuerySnapshot querySnapshot = await petMatchRef
-          .where('pet_request', isEqualTo: pet_request)
-          .where('pet_respone', isEqualTo: pet_respone)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        setState(() {
-          isLoading = false;
-        });
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            Future.delayed(const Duration(seconds: 2), () {
-              Navigator.of(context).pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-            });
-            return AlertDialog(
-              title: Column(
-                children: [
-                  Icon(LineAwesomeIcons.heart_1,
-                      color: Colors.pinkAccent, size: 50),
-                  SizedBox(height: 20),
-                  Text('สัตว์เลี้ยงตัวนี้กำลังขอจับคู่กับคุณอยู่',
-                      style: TextStyle(fontSize: 18)),
-                ],
-              ),
-            );
-          },
-        );
-      } else {
-        // อ้างอิงถึงคอลเลกชันย่อย pet_favorite ในเอกสาร userId
-        CollectionReference petMatchRef =
-            FirebaseFirestore.instance.collection('match');
-
-        try {
-          // ตรวจสอบว่ามีเอกสารที่มี pet_request และ pet_respone เดียวกันอยู่หรือไม่
-          QuerySnapshot querySnapshot = await petMatchRef
-              .where('pet_request', isEqualTo: pet_request)
-              .where('pet_respone', isEqualTo: pet_respone)
-              .get();
-
-          if (querySnapshot.docs.isNotEmpty) {
-            // ถ้ามีเอกสารที่ซ้ำกันอยู่แล้ว
-            setState(() {
-              isLoading = false;
-            });
-
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return const AlertDialog(
-                  title: Text('Error'),
-                  content: Text('สัตว์เลี้ยงนี้มีอยู่ในรายการแล้ว'),
-                );
-              },
-            );
-          } else {
-            // ถ้าไม่มีเอกสารที่ซ้ำกันอยู่
-            DocumentReference newPetMatch = await petMatchRef.add({
-              'created_at': formatted,
-              'description': des,
-              'pet_request': pet_request,
-              'pet_respone': pet_respone,
-              'status': 'กำลังรอ',
-              'updates_at': formatted,
-              'user_req': userId,
-              'user_res': petUserId
-            });
-
-            String docId = newPetMatch.id;
-
-            await newPetMatch.update({'id_match': docId});
-
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  Navigator.of(context)
-                      .pop(true); // ปิดไดอะล็อกหลังจาก 1 วินาที
-                });
-                return AlertDialog(
-                  title: Column(
-                    children: [
-                      Icon(LineAwesomeIcons.heart_1,
-                          color: Colors.pinkAccent, size: 50),
-                      SizedBox(height: 20),
-                      Text('ส่งคำร้องขอการจับคู่กับ $name_petrep สำเร็จ',
-                          style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
-                );
-              },
-            );
-
-            sendNotificationToUser(
-                petUserId, // ผู้ใช้เป้าหมายที่จะได้รับแจ้งเตือน
-                pet_respone,
-                "คุณมีคำขอใหม่!",
-                "สัตว์เลี้ยง $name_petrep ของคุณได้รับคำขอจาก $petName ไปดูรายละเอียดได้เลย!");
-            setState(() {
-              isLoading = false;
-            });
-          }
-        } catch (error) {
-          print("Failed to add pet: $error");
-
-          setState(() {
-            isLoading = false;
-          });
-        }
-      }
-    } catch (error) {
-      print("Failed to add pet: $error");
-
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 

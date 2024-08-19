@@ -28,9 +28,6 @@ class _SplashPageState extends State<Splash_Page> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     _isMounted = true;
 
     // ตรวจสอบสถานะการเชื่อมต่อเริ่มต้น
@@ -55,12 +52,9 @@ class _SplashPageState extends State<Splash_Page> {
         }
       }
     });
-<<<<<<< HEAD
 =======
     _isMounted = true; //วิดเจ็ตได้ถูกติดตั้งและกำลังทำงานอยู่
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   }
 
   @override
@@ -88,9 +82,6 @@ class _SplashPageState extends State<Splash_Page> {
   }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   void _handleUserNavigation() async {
     // รอเสร็จสิ้นการโหลดและนำทางไปยังหน้าที่เหมาะสม
     await Future.delayed(const Duration(seconds: 3));
@@ -136,7 +127,6 @@ class _SplashPageState extends State<Splash_Page> {
                 );
               }
             }
-<<<<<<< HEAD
 =======
     // ทำงานที่ต้องการ
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
@@ -151,8 +141,6 @@ class _SplashPageState extends State<Splash_Page> {
               ),
             );
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
           } else {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(

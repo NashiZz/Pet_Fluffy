@@ -32,14 +32,10 @@ class _Pet_PageState extends State<Pet_Page> {
   final TextEditingController _desController = TextEditingController();
 // Obtain shared preferences.
 <<<<<<< HEAD
-<<<<<<< HEAD
 
 =======
   
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   Uint8List? _profileImage;
   Uint8List? _normalImage;
   final TextEditingController _imageFileController = TextEditingController();
@@ -65,14 +61,12 @@ class _Pet_PageState extends State<Pet_Page> {
   bool _isOtherBreed = false;
 
   bool _isLoading = false;
+  
 
-<<<<<<< HEAD
 <<<<<<< HEAD
 =======
   
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   //ประเภทสัตว์เลี้ยง
   void _fetchTypeData() async {
     try {
@@ -89,14 +83,10 @@ class _Pet_PageState extends State<Pet_Page> {
   }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
 // พันธุ์สุนัข
 =======
   //พันธ์สุนัข
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-// พันธุ์สุนัข
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   void _fetchBreadDataDog() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -119,14 +109,10 @@ class _Pet_PageState extends State<Pet_Page> {
   }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
 // พันธุ์แมว
 =======
   //พันธ์แมว
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-// พันธุ์แมว
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   void _fetchBreadDataCat() async {
     try {
       QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -688,9 +674,6 @@ class _Pet_PageState extends State<Pet_Page> {
       _isLoading = true;
     });
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 
     // ตรวจสอบว่าผู้ใช้ได้เพิ่มรูปภาพหรือไม่
     if (_profileImage == null) {
@@ -706,12 +689,9 @@ class _Pet_PageState extends State<Pet_Page> {
       return;
     }
 
-<<<<<<< HEAD
 =======
     
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     String userId = user!.uid;
     String profileBase64 =
         _profileImage != null ? base64Encode(_profileImage!) : '';
@@ -763,17 +743,11 @@ class _Pet_PageState extends State<Pet_Page> {
       String docId = newPetRef.id;
 
       await newPetRef.update({'pet_id': docId});
-
       // Async func to handle Futures easier; or use Future.then
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString(userId, docId);
-
-      CollectionReference usagePet =
-          FirebaseFirestore.instance.collection('Usage_pet');
-      await usagePet.doc(userId).set({
-        'pet_id': docId,
-        'user_id': userId,
-      });
+      prefs.setString('idPet', docId);
+      
+      
 
       // Async func to handle Futures easier; or use Future.then
       SharedPreferences prefs = await SharedPreferences.getInstance();

@@ -412,17 +412,12 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
 <<<<<<< HEAD
-<<<<<<< HEAD
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
 =======
   //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
   Future<void> _loadAllPet(String petId) async {
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-  // ดึงข้อมูล Vac Dog
-  void _fetchVacDataDog() async {
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     try {
       List<String> breeds =
           await _profileService.fetchVacDataDog('vaccines_more');
@@ -431,7 +426,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       });
     } catch (error) {
       print("Failed to fetch breed data: $error");
-<<<<<<< HEAD
     }
   }
 
@@ -477,52 +471,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
 <<<<<<< HEAD
-=======
-    }
-  }
-
-  // ดึงข้อมูล Vac Cat
-  void _fetchVacDataCat() async {
-    try {
-      List<String> breeds =
-          await _profileService.fetchVacDataCat('vaccines_more');
-      setState(() {
-        _vacOfCat = breeds;
-      });
-    } catch (error) {
-      print("Failed to fetch breed data: $error");
-    }
-  }
-
-  // ดึงข้อมูล Vac_table ที่บันทึกลงไป
-  Future<void> _fetchVaccinationData() async {
-    try {
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('vac_history')
-          .doc(userId)
-          .collection('vac_pet')
-          .where('pet_id', isEqualTo: pet_id)
-          .get();
-
-      setState(() {
-        vaccinationDataFromFirestore = querySnapshot.docs.map((doc) {
-          return {
-            'status': doc['status'] ?? 'ไม่ระบุ',
-            'vaccine': doc['vacName'] ?? 'ไม่ระบุ',
-            'date': doc['date'] ?? 'ไม่ระบุ',
-            'weight': doc['weight'] ?? 'ไม่ระบุ',
-            'price': doc['price'] ?? 'ไม่ระบุ',
-          };
-        }).toList();
-        // อัปเดตลิสต์วัคซีนที่ถูกเลือก
-        _updateVaccinationList();
-      });
-    } catch (e) {
-      print('Error fetching vaccination data: $e');
-    }
-  }
-
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   // บันทึกข้อมูล Vac_table ลง FireStore
   Future<void> _saveVaccineToFirestore() async {
     try {
@@ -546,7 +494,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
       );
-<<<<<<< HEAD
 =======
   //ดึงข้อมูลรูปภาพผู้ใช้ทั้งหมด
   void _getUserDataFromFirestore() async {
@@ -562,8 +509,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
         });
       }
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
     }
   }
 
@@ -876,15 +821,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                             petId: pet_id,
                           ),
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
                           transitionsBuilder:
                               (context, animation, secondaryAnimation, child) {
                             const begin = Offset(1.0, 0.0);
                             const end = Offset.zero;
                             const curve = Curves.ease;
-<<<<<<< HEAD
 =======
                           Expanded(
                             child: TabBarView(
@@ -1052,8 +993,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                                                   DocumentSnapshot imgDoc = snapshot.data!.docs[index];
                                                   Map<String, dynamic>? data = imgDoc.data() as Map<String, dynamic>?;
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
 
                             var tween = Tween(begin: begin, end: end)
                                 .chain(CurveTween(curve: curve));
@@ -1725,9 +1664,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
 
   // รูป Banner
 <<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
   Widget buildCoverImage() => Stack(
         children: [
           Container(
@@ -1803,7 +1739,6 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                   ),
                 )
         ],
-<<<<<<< HEAD
       );
 
   Future<void> _changeBannerImage() async {
@@ -1858,56 +1793,11 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                 fit: BoxFit.cover,
               )
             : const CircularProgressIndicator(), // กรณีที่ไม่มีข้อมูลภาพ
-=======
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
       );
 
-  Future<void> _changeBannerImage() async {
-    final Uint8List? image =
-        await _profileService.pickImage(ImageSource.gallery);
-    if (image != null) {
-      final Uint8List? compressedImage =
-          await _profileService.compressImage(image);
-      if (compressedImage != null) {
-        setState(() {});
-        // อัปเดตรูปภาพใน Firestore
-        await FirebaseFirestore.instance
-            .collection('Pet_User')
-            .doc(pet_id)
-            .update({'img_Banner': base64Encode(compressedImage)});
-        _refreshHomePage(); // รีเฟรชหน้าเพื่อแสดงข้อมูลล่าสุด
-      }
-    }
-  }
-
-  Future<void> _changeProfileImage() async {
-    final Uint8List? image =
-        await _profileService.pickImage(ImageSource.gallery);
-    if (image != null) {
-      final Uint8List? compressedImage =
-          await _profileService.compressImage(image);
-      if (compressedImage != null) {
-        setState(() {});
-        // อัปเดตรูปภาพใน Firestore
-        await FirebaseFirestore.instance
-            .collection('Pet_User')
-            .doc(pet_id)
-            .update({'img_profile': base64Encode(compressedImage)});
-        _refreshHomePage(); // รีเฟรชหน้าเพื่อแสดงข้อมูลล่าสุด
-      }
-    }
-  }
-
   // รูป Profile
-<<<<<<< HEAD
   Widget buildProfileImage() => Container(
 >>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
-=======
-  Widget buildProfileImage(BuildContext context, String status) {
-    return GestureDetector(
-      onTap: () => _showEditOptions(context, status, petImageBase64),
-      child: Container(
->>>>>>> 2a5cb27f872fa17288e57765bbe50a931c73953a
         width: 110,
         height: 110,
         decoration: BoxDecoration(
