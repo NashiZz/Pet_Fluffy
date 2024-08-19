@@ -411,8 +411,13 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     return ageString;
   }
 
+<<<<<<< HEAD
   // ดึงข้อมูล Vac Dog
   void _fetchVacDataDog() async {
+=======
+  //ดึงข้อมูลสัตว์เลี้ยงของผู้ใช้ทั้งหมด
+  Future<void> _loadAllPet(String petId) async {
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     try {
       List<String> breeds =
           await _profileService.fetchVacDataDog('vaccines_more');
@@ -465,6 +470,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     }
   }
 
+<<<<<<< HEAD
   // บันทึกข้อมูล Vac_table ลง FireStore
   Future<void> _saveVaccineToFirestore() async {
     try {
@@ -488,6 +494,21 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล')),
       );
+=======
+  //ดึงข้อมูลรูปภาพผู้ใช้ทั้งหมด
+  void _getUserDataFromFirestore() async {
+    User? userData = FirebaseAuth.instance.currentUser;
+    if (userData != null) {
+      userId = userData.uid;
+      Map<String, dynamic>? userDataFromFirestore =
+          await ApiUserService.getUserDataFromFirestore(userId!);
+      if (userDataFromFirestore != null) {
+        userImageBase64 = userDataFromFirestore['photoURL'] ?? '';
+        setState(() {
+          isLoading = false;
+        });
+      }
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
     }
   }
 
@@ -799,11 +820,179 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
                             userId: userId ?? '',
                             petId: pet_id,
                           ),
+<<<<<<< HEAD
                           transitionsBuilder:
                               (context, animation, secondaryAnimation, child) {
                             const begin = Offset(1.0, 0.0);
                             const end = Offset.zero;
                             const curve = Curves.ease;
+=======
+                          Expanded(
+                            child: TabBarView(
+                              children: [
+                                SingleChildScrollView(
+                                  child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        const SizedBox(height: 15),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 40.0),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                'สี',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(color),
+                                              const Text(
+                                                'น้ำหนัก',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text('$weight Kg')
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 40.0),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              const Text(
+                                                'เพศ',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Center(
+                                                child: gender == 'ตัวผู้'
+                                                    ? const Icon(Icons.male,
+                                                        size: 30,
+                                                        color: Colors.purple)
+                                                    : gender == 'ตัวเมีย'
+                                                        ? const Icon(
+                                                            Icons.female,
+                                                            size: 30,
+                                                            color: Colors.pink)
+                                                        : const Icon(
+                                                            Icons.help_outline,
+                                                            size: 30,
+                                                            color:
+                                                                Colors.black),
+                                              ),
+                                              const Text(
+                                                'อายุ',
+                                                style: TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(age)
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20.0),
+                                          child: Column(
+                                            children: [
+                                              MenuPetWidget(
+                                                title: "ประวัติการจับคู่",
+                                                icon: LineAwesomeIcons.history,
+                                                onPress: () {},
+                                              ),
+                                              MenuPetWidget(
+                                                title: "การประกวด",
+                                                icon: LineAwesomeIcons
+                                                    .certificate,
+                                                onPress: () {},
+                                              ),
+                                              MenuPetWidget(
+                                                title: "ใบเพ็ดดีกรี",
+                                                icon: LineAwesomeIcons.dna,
+                                                onPress: () {},
+                                              ),
+                                              MenuPetWidget(
+                                                title: "ค่าการผสมพันธุ์",
+                                                icon: LineAwesomeIcons.coins,
+                                                trailingText: price.isNotEmpty
+                                                    ? '$price บาท'
+                                                    : 'ไม่มีค่าใช้จ่าย',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        const Row(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Padding(
+                                                  padding: EdgeInsets.only(right: 5),
+                                                  child: Icon(LineAwesomeIcons.image),
+                                                ),
+                                                Text(
+                                                  'รูปภาพ',
+                                                  style: TextStyle(
+                                                    color: Colors.black,
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  textAlign: TextAlign.start,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        
+                                        //ดึงข้อมูลรูปภาพ 9 รูปของสัตว์เลี้ยง
+                                        FutureBuilder<QuerySnapshot>(
+                                          future: FirebaseFirestore.instance
+                                              .collection('imgs_pet')
+                                              .where('pet_id', isEqualTo: widget.petId)
+                                              .get(),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.connectionState == ConnectionState.waiting) {
+                                              return const CircularProgressIndicator();
+                                            }
+                                            if (snapshot.hasError) {
+                                              return Text('Error: ${snapshot.error}');
+                                            }
+                                            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                                              // ดึงข้อมูลและแสดงผลใน GridView.builder
+                                              return GridView.builder(
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: 1,
+                                                  crossAxisSpacing: 10.0,
+                                                  mainAxisSpacing: 10.0,
+                                                ),
+                                                itemCount: snapshot.data!.docs.length,
+                                                itemBuilder: (context, index) {
+                                                  // ดึงข้อมูลทั้งหมดในเอกสารแต่ละเอกสาร
+                                                  DocumentSnapshot imgDoc = snapshot.data!.docs[index];
+                                                  Map<String, dynamic>? data = imgDoc.data() as Map<String, dynamic>?;
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 
                             var tween = Tween(begin: begin, end: end)
                                 .chain(CurveTween(curve: curve));
@@ -1474,6 +1663,7 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
   }
 
   // รูป Banner
+<<<<<<< HEAD
   Widget buildCoverImage() => Stack(
         children: [
           Container(
@@ -1592,6 +1782,22 @@ class _Profile_pet_PageState extends State<Profile_pet_Page>
     return GestureDetector(
       onTap: () => _showEditOptions(context, status, petImageBase64),
       child: Container(
+=======
+  Widget buildCoverImage() => Container(
+        color: Colors.grey,
+        child: petImageBase64.isNotEmpty
+            ? Image.memory(
+                base64Decode(petImageBase64),
+                width: double.infinity,
+                height: coverHeight,
+                fit: BoxFit.cover,
+              )
+            : const CircularProgressIndicator(), // กรณีที่ไม่มีข้อมูลภาพ
+      );
+
+  // รูป Profile
+  Widget buildProfileImage() => Container(
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         width: 110,
         height: 110,
         decoration: BoxDecoration(

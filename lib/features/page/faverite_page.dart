@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +8,15 @@ import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
+=======
+import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 class FaveritePage extends StatefulWidget {
   const FaveritePage({Key? key}) : super(key: key);
 
@@ -17,17 +27,22 @@ class FaveritePage extends StatefulWidget {
 class _FaveritePageState extends State<FaveritePage> {
   late List<Map<String, dynamic>> petUserDataList = [];
   late List<Map<String, dynamic>> getPetDataList = [];
+<<<<<<< HEAD
   User? user = FirebaseAuth.instance.currentUser;
   late String userId;
   late String id_fav;
   bool isLoading = true;
 
+=======
+  
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   @override
   void initState() {
     super.initState();
     _getPetUserDataFromFirestore();
   }
 
+<<<<<<< HEAD
   //ดึงข้อมูลจาก firebase
   Future<void> _getPetUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
@@ -166,6 +181,95 @@ class _FaveritePageState extends State<FaveritePage> {
                 : _buildPetList(allPets),
           )
         ],
+=======
+  //ดึงข้อมูลจาก firebase 
+  Future<void> _getPetUserDataFromFirestore() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString('idPet');
+      print('kuyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy');
+      print(token);
+      //ดึงข้อมูลจาก firebase collection favorites where document pet_request = id pet request
+      QuerySnapshot petUserQuerySnapshot = await FirebaseFirestore.instance
+          .collection('favorites')
+          .where('pet_request', isEqualTo: "rSduQynENWQx1aUESvCO")
+          .get();
+
+      // ดึงข้อมูลจากเอกสารในรูปแบบ Map<String, dynamic> และดึงเฉพาะฟิลด์ pet_respone
+      List<dynamic> petResponses = petUserQuerySnapshot.docs
+          .map((doc) => doc.data() ?? ['pet_respone'])
+          .where((response) => response != null)
+          .toList();
+
+      // ประกาศตัวแปร เพื่อรอรับข้อมูลใน for
+      List<Map<String, dynamic>> allPetDataList = [];
+
+      // ลูปเพื่อดึงข้อมูลแต่ละรายการ
+      for (var petRespone in petResponses) {
+        print(petRespone);
+
+        // ดึงข้อมูลจาก pet_user
+        QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
+            .collection('Pet_User')
+            .where('pet_id', isEqualTo: petRespone['pet_respone'])
+            .get();
+
+        // เพิ่มข้อมูลลงใน List
+        allPetDataList.addAll(getPetQuerySnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList());
+      }
+      
+
+// อัปเดต petUserDataList ด้วยข้อมูลทั้งหมดที่ได้รับ
+      setState(() {
+        petUserDataList = allPetDataList;
+      });
+    } catch (e) {
+      print('Error getting pet user data from Firestore: $e');
+    }
+  }
+
+  List<Map<String, dynamic>> get filteredDogPets =>
+      petUserDataList.where((pet) => pet['type_pet'] == 'สุนัข').toList();
+
+  List<Map<String, dynamic>> get filteredCatPets =>
+      petUserDataList.where((pet) => pet['type_pet'] == 'แมว').toList();
+
+  @override
+  Widget build(BuildContext context) {
+    // print(filteredCatPets);
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: const Icon(LineAwesomeIcons.angle_left)),
+          title: Text(
+            "สัตว์เลี้ยงรายการโปรด",
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          centerTitle: true,
+          automaticallyImplyLeading: false, // กำหนดให้ไม่แสดงปุ่ม Back
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'สุนัข'),
+              Tab(text: 'แมว'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            //สุนัข
+            _buildPetList(filteredDogPets),
+            //แมว
+            _buildPetList(filteredCatPets),
+          ],
+        ),
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       ),
     );
   }
@@ -209,7 +313,10 @@ class _FaveritePageState extends State<FaveritePage> {
         );
       },
       child: Card(
+<<<<<<< HEAD
         color: Colors.white,
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: ListTile(
           leading: CircleAvatar(
@@ -223,6 +330,7 @@ class _FaveritePageState extends State<FaveritePage> {
                 ? const ImageIcon(AssetImage('assets/default_pet_image.png'))
                 : null,
           ),
+<<<<<<< HEAD
           title: Row(
             children: [
               Text(
@@ -236,12 +344,21 @@ class _FaveritePageState extends State<FaveritePage> {
                       : const Icon(Icons.help_outline,
                           size: 20, color: Colors.black),
             ],
+=======
+          title: Text(
+            petUserData['name'] ?? '',
+            style: Theme.of(context).textTheme.titleLarge,
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
+<<<<<<< HEAD
                 '${petUserData['breed_pet'] ?? ''}',
+=======
+                'พันธุ์: ${petUserData['breed_pet'] ?? ''}',
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               Text(
@@ -259,6 +376,7 @@ class _FaveritePageState extends State<FaveritePage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
+<<<<<<< HEAD
                         title: Column(
                           children: [
                             Icon(LineAwesomeIcons.star_1,
@@ -347,6 +465,24 @@ class _FaveritePageState extends State<FaveritePage> {
                                 ),
                               ],
                             ),
+=======
+                        title: const Text("ยืนยันการลบ"),
+                        content:
+                            const Text("คุณแน่ใจหรือไม่ที่ต้องการลบข้อมูลนี้?"),
+                        actions: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยกเลิก"),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              // _deletePetData(petUserData['pet_id']);
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text("ยืนยัน"),
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                           ),
                         ],
                       );
@@ -361,6 +497,7 @@ class _FaveritePageState extends State<FaveritePage> {
       ),
     );
   }
+<<<<<<< HEAD
 
   void _deletePetData(String petId) async {
     try {
@@ -407,4 +544,6 @@ class _FaveritePageState extends State<FaveritePage> {
       print('Error deleting pet data: $e');
     }
   }
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 }

@@ -1,19 +1,30 @@
 // ignore_for_file: use_build_context_synchronously, avoid_print
+<<<<<<< HEAD
 import 'package:Pet_Fluffy/features/page/addData_Google.dart';
 import 'package:Pet_Fluffy/features/page/adminFile/admin_home.dart';
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/reset_password.dart';
 import 'package:Pet_Fluffy/features/page/sign_up_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:Pet_Fluffy/features/splash_screen/setting_position.dart';
+<<<<<<< HEAD
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+<<<<<<< HEAD
+=======
+import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 //หน้า Login
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -292,6 +303,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+<<<<<<< HEAD
 
   void _signInAnonymously() async {
     setState(() {
@@ -320,6 +332,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   // เข้าสู่ระบบ และ สมัครสมาชิกด้วย Google
   Future<void> signInwithGoogle() async {
     setState(() {
@@ -335,6 +349,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
+<<<<<<< HEAD
         try {
           // เช็คว่าผู้ใช้มีข้อมูลในระบบหรือไม่
           QuerySnapshot getPetQuerySnapshot = await FirebaseFirestore.instance
@@ -424,6 +439,15 @@ class _LoginPageState extends State<LoginPage> {
           print('Error: $e');
         }
       } else {
+=======
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const LocationSelectionPage()),
+        );
+      } else {
+        // Handle case when user is null
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to sign in with Google')),
         );
@@ -476,6 +500,7 @@ class _LoginPageState extends State<LoginPage> {
     bool isEmail = emailRegex.hasMatch(emailOrUsername);
 
     try {
+<<<<<<< HEAD
       User? user;
       if (isEmail) {
         // เข้าสู่ระบบด้วยอีเมลและรหัสผ่าน
@@ -486,6 +511,11 @@ class _LoginPageState extends State<LoginPage> {
         user = await _authService.signInWithUsernameAndPassword(
             emailOrUsername, password);
       }
+=======
+      //เข้าสู่ระบบด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
+      User? user =
+          await _authService.signInWithEmailAndPassword(email, password);
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 
       setState(() {
         _isSigning = false;

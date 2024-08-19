@@ -52,6 +52,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
   LocationData? _locationData;
   Location location = Location();
 
+<<<<<<< HEAD
   late Map<String, String> petPosition_ = {};
   late Map<String, String> userLocation_get = {};
   late List<Map<String, dynamic>> petDataMatchList = [];
@@ -95,6 +96,8 @@ class _randomMathch_PageState extends State<randomMathch_Page>
     '10000-30000 บาท',
     'มากกว่า 30000 บาท'
   ];
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
   //ดึงข้อมูลของผู้ใช้
   void _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
@@ -1171,8 +1174,13 @@ class _randomMathch_PageState extends State<randomMathch_Page>
               ),
             ),
             // ดึงข้อมูลสัตว์เลี้ยงจาก ApiPetService.loadAllPet() คืนค่าเป็น List<Map<String, dynamic>>
+<<<<<<< HEAD
             FutureBuilder<List<Map<String, dynamic>>>(
               future: _futurePets, // ใช้ Future ที่คงที่
+=======
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: Stream.fromFuture(ApiPetService.loadAllPet()),
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
               builder: (BuildContext context,
                   AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1197,6 +1205,7 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                   );
                 }
 
+<<<<<<< HEAD
                 // ตรวจสอบว่าเป็นผู้ใช้ Anonymous หรือไม่
                 bool isAnonymousUser =
                     FirebaseAuth.instance.currentUser?.isAnonymous ?? false;
@@ -1291,6 +1300,31 @@ class _randomMathch_PageState extends State<randomMathch_Page>
 
                         if (now.day < birthDate.day) {
                           monthsDifference--;
+=======
+                List<Map<String, dynamic>> randomPetData = snapshot.data!;
+                
+                return Expanded(
+                  //นำข้อมูลสัตว์เลี้ยงที่ได้มาแสดงผลใน ListView.builder โดยดึงข้อมูลเกี่ยวกับอายุของสัตว์เลี้ยงและข้อมูลของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยงด้วย
+                  child: ListView.builder(
+                    itemCount: randomPetData.length,
+                    itemBuilder: (context, index) {
+                      Map<String, dynamic> petData =
+                          randomPetData[index];
+                      DateTime birthDate = DateTime.parse(petData['birthdate']);
+                      final now = DateTime.now();
+                      int years = now.year - birthDate.year;
+                      int months = now.month - birthDate.month;
+
+                      if (months < 0) {
+                        years--;
+                        months += 12;
+                      }
+                      String ageString = '';
+                      if (years > 0) {
+                        ageString += '$years ขวบ';
+                        if (months > 0) {
+                          ageString += ' ';
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                         }
 
                         if (monthsDifference < 0) {
@@ -1359,10 +1393,29 @@ class _randomMathch_PageState extends State<randomMathch_Page>
                         }
                       }
 
+<<<<<<< HEAD
                       bool matchesBreed = pet['breed_pet']
                           .toString()
                           .toLowerCase()
                           .contains(_otherBreedController.text.toLowerCase());
+=======
+                      //ดึงข้อมูลผู้ใช้ทั้งหมดจาก ID ของผู้ใช้ที่เป็นเจ้าของสัตว์เลี้ยง
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: ApiUserService.getUserData(petData['user_id']),
+                        builder: (BuildContext context,
+                            AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                          if (userSnapshot.hasError) {
+                            return Text('Error: ${userSnapshot.error}');
+                          }
+                          if (!userSnapshot.hasData ||
+                              !userSnapshot.data!.exists) {
+                            return const SizedBox(); // ถ้าไม่มีข้อมูลผู้ใช้ ให้แสดง Widget ว่าง
+                          }
+                          //ดึงเอาข้อมูลรูปภาพโปรไฟล์ของผู้ใช้ ทั้งหมดมา 
+                          Map<String, dynamic> userData =
+                              userSnapshot.data!.data() as Map<String, dynamic>;
+                          String? userImageURL = userData['photoURL'];
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 
                       DateTime birthDate = DateTime.parse(pet['birthdate']);
                       bool matchesAge =

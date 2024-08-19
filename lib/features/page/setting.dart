@@ -1,11 +1,18 @@
 import 'dart:convert';
 import 'package:Pet_Fluffy/features/page/edit_pwd.dart';
 import 'package:Pet_Fluffy/features/page/faverite_page.dart';
+<<<<<<< HEAD
 import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/page/pet_all_two.dart';
+=======
+import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
+import 'package:Pet_Fluffy/features/page/login_page.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
+// import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +20,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
 
+//หน้า Menu Setting ใน App
 class Setting_Page extends StatefulWidget {
   const Setting_Page({super.key});
 
@@ -35,12 +43,29 @@ class _Setting_PageState extends State<Setting_Page> {
     _getUserDataFromFirestore();
   }
 
+  //ดึงข้อมูลของผู้ใช้จาก Firestore
   Future<void> _getUserDataFromFirestore() async {
     User? userData = FirebaseAuth.instance.currentUser;
     if (userData != null) {
       userId = userData.uid;
+<<<<<<< HEAD
       isAnonymous = userData.isAnonymous;
       if (isAnonymous) {
+=======
+      try {
+        // ระบุคอลเลคชันที่จะใช้ใน Firestore
+        DocumentSnapshot userDocSnapshot = await FirebaseFirestore.instance
+            .collection('user')
+            .doc(userId)
+            .get();
+
+        // ดึงข้อมูลผู้ใช้จาก Snapshot
+        userName = userDocSnapshot['username'];
+        userEmail = userDocSnapshot['email'];
+        userImageBase64 = userDocSnapshot['photoURL'] ?? '';
+
+        // อัปเดตสถานะของ State
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
         setState(() {
           userName = 'บัญชีผู้เยี่ยมชม';
           userEmail = '';
@@ -149,6 +174,7 @@ class _Setting_PageState extends State<Setting_Page> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 10),
+<<<<<<< HEAD
                     if (!isAnonymous)
                       Column(
                         children: [
@@ -176,6 +202,26 @@ class _Setting_PageState extends State<Setting_Page> {
                           ),
                           const SizedBox(height: 10),
                         ],
+=======
+                    SizedBox(
+                      width: 200,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const Profile_user_Page()),
+                        );
+                        },
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 49, 42, 42),
+                            side: BorderSide.none,
+                            shape: const StadiumBorder()),
+                        child: const Text("ข้อมูลโปรไฟล์เจ้าของ",
+                            style: TextStyle(
+                                color: Color.fromARGB(255, 255, 255, 255))),
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                       ),
                     const Divider(),
                     const SizedBox(height: 10),
@@ -183,6 +229,7 @@ class _Setting_PageState extends State<Setting_Page> {
                       title: "โปรไฟล์สัตว์เลี้ยง",
                       icon: LineAwesomeIcons.dog,
                       onPress: () {
+<<<<<<< HEAD
                         if (petId.isEmpty) {
                           // แสดงข้อความเตือนเมื่อ petId เป็นค่าว่าง
                           showDialog(
@@ -217,6 +264,9 @@ class _Setting_PageState extends State<Setting_Page> {
                             ),
                           );
                         }
+=======
+                        
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                       },
                       isAnonymous: isAnonymous,
                     ),
@@ -235,7 +285,11 @@ class _Setting_PageState extends State<Setting_Page> {
                     const SizedBox(height: 10),
                     MenuWidget(
                       title: "สัตว์เลี้ยงรายการโปรด",
+<<<<<<< HEAD
                       icon: LineAwesomeIcons.star,
+=======
+                      icon: LineAwesomeIcons.gratipay__gittip_,
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                       onPress: () {
                         Navigator.push(
                           context,
@@ -243,7 +297,10 @@ class _Setting_PageState extends State<Setting_Page> {
                               builder: (context) => const FaveritePage()),
                         );
                       },
+<<<<<<< HEAD
                       isAnonymous: isAnonymous,
+=======
+>>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
                     ),
                     const SizedBox(height: 10),
                     MenuWidget(
