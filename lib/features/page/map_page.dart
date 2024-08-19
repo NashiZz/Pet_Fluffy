@@ -4,11 +4,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'package:Pet_Fluffy/features/page/Profile_Pet_All.dart';
+import 'package:Pet_Fluffy/features/page/profile_all_user.dart';
 import 'package:http/http.dart' as http;
 import 'package:Pet_Fluffy/features/api/user_data.dart';
 import 'package:Pet_Fluffy/features/page/historyMatch.dart';
 import 'package:Pet_Fluffy/features/page/owner_pet/profile_user.dart';
-import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -126,7 +127,6 @@ class _MapsPageState extends State<Maps_Page> {
         _loadSelectedLocation();
       });
     });
-    
 
     // แยกการโหลดข้อมูลเป็นครั้งๆ
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3814,7 +3814,9 @@ class _MapsPageState extends State<Maps_Page> {
               'pet_request': pet_request,
               'pet_respone': pet_respone,
               'status': 'กำลังรอ',
-              'updates_at': formatted
+              'updates_at': formatted,
+              'user_req': userId,
+              'user_res': petUserId
             });
 
             String docId = newPetMatch.id;
@@ -3931,7 +3933,7 @@ class _MapsPageState extends State<Maps_Page> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          Profile_pet_Page(petId: petID),
+                                          Profile_pet_AllPage(petId: petID),
                                     ),
                                   );
                                 },
@@ -4188,24 +4190,38 @@ class _MapsPageState extends State<Maps_Page> {
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Colors.grey.shade500.withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(40),
-                                  ),
-                                  child: Center(
-                                    child: CircleAvatar(
-                                      radius: 40,
-                                      backgroundColor: Colors.transparent,
-                                      child: ClipOval(
-                                        child: Image.memory(
-                                          base64Decode(userPhotoURL),
-                                          width: 70,
-                                          height: 70,
-                                          fit: BoxFit.cover,
+                                GestureDetector(
+                                  onTap: () => {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ProfileAllUserPage(
+                                          userId: petUserId,
+                                          userId_req: userId.toString(),
+                                        ),
+                                      ),
+                                    )
+                                  },
+                                  child: Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.grey.shade500.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(40),
+                                    ),
+                                    child: Center(
+                                      child: CircleAvatar(
+                                        radius: 40,
+                                        backgroundColor: Colors.transparent,
+                                        child: ClipOval(
+                                          child: Image.memory(
+                                            base64Decode(userPhotoURL),
+                                            width: 70,
+                                            height: 70,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -4330,7 +4346,8 @@ class _MapsPageState extends State<Maps_Page> {
         return AlertDialog(
           title: Column(
             children: [
-              const Icon(Icons.pets_rounded, color: Colors.deepPurple, size: 50),
+              const Icon(Icons.pets_rounded,
+                  color: Colors.deepPurple, size: 50),
               SizedBox(height: 20),
               Text(
                 'กรุณาเลือกสัตว์เลี้ยงตัวหลัก',

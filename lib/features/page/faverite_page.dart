@@ -1,4 +1,3 @@
-import 'dart:developer';
 
 import 'package:Pet_Fluffy/features/page/pages_widgets/Profile_pet.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

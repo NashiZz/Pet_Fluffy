@@ -2265,7 +2265,9 @@ class _randomMathch_PageState extends State<randomMathch_Page>
           'pet_request': pet_request,
           'pet_respone': pet_respone,
           'status': 'กำลังรอ',
-          'updates_at': formatted
+          'updates_at': formatted,
+          'user_req': userId,
+          'user_res': userIdd
         });
 
         String docId = newPetMatch.id;

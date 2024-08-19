@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:Pet_Fluffy/features/page/login_page.dart';
+import 'package:Pet_Fluffy/features/page/navigator_page.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/PetDegreeDetail.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogContest.dart';
 import 'package:Pet_Fluffy/features/page/pages_widgets/widget_ProfilePet.dart/showDialogHistory_Match.dart';
@@ -45,6 +46,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
   late List<Offset> _randomOffsets;
   late Animation<double> _opacityAnimation;
   bool hasPrimaryPet = false;
+  bool _isPetMatching = false;
 
   User? user = FirebaseAuth.instance.currentUser;
 
@@ -89,6 +91,7 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
     super.initState();
     user = FirebaseAuth.instance.currentUser;
     if (user != null && widget.petId.isNotEmpty) {
+      _checkPetMatchStatus();
       _getUsage_pet();
       _loadAllPet(widget.petId);
       _getUserDataFromFirestore();
@@ -142,6 +145,38 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
       });
       _offsetsInitialized = true;
     }
+  }
+
+  Future<bool> _isPetInMatch(String petId) async {
+    try {
+      // ตรวจสอบว่า `petId` กำลังจับคู่หรือกำลังรอ
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('match')
+          .where('pet_request', isEqualTo: petId)
+          .where('status', whereIn: ["จับคู่แล้ว", "กำลังรอ"]).get();
+
+      // ตรวจสอบอีกครั้งสำหรับ pet_respone
+      if (snapshot.docs.isEmpty) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('match')
+            .where('pet_respone', isEqualTo: petId)
+            .where('status', whereIn: ["จับคู่แล้ว", "กำลังรอ"]).get();
+      }
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error checking match status: $e');
+      return false;
+    }
+  }
+
+  Future<void> _checkPetMatchStatus() async {
+    final petId = widget.petId;
+    bool isMatching = await _isPetInMatch(petId);
+
+    setState(() {
+      _isPetMatching = isMatching;
+    });
   }
 
   // ดึงข้อมูล User
@@ -505,61 +540,57 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                 );
               },
             )
-          : SpeedDial(
-              icon: Icons.menu,
-              foregroundColor: Colors.white,
-              activeIcon: Icons.close,
-              backgroundColor: Colors.blue,
-              overlayColor: Colors.black,
-              overlayOpacity: 0.5,
-              children: [
-                SpeedDialChild(
-                  child: Icon(Icons.star, color: Colors.yellow.shade700),
-                  label: 'ถูกใจ',
-                  onTap: (hasPrimaryPet &&
-                          !user!
-                              .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                      ? () {
-                          // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                          add_Faverite(pet_id);
-                        }
-                      : () {
-                          // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                          if (user!.isAnonymous) {
-                            _showSignInDialog(
-                                context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                          } else {
-                            _showNoPrimaryPetDialog(
-                                context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+          : Visibility(
+              visible: !_isPetMatching, // Hide SpeedDial if pet is matching
+              child: SpeedDial(
+                icon: Icons.menu,
+                foregroundColor: Colors.white,
+                activeIcon: Icons.close,
+                backgroundColor: Colors.blue,
+                overlayColor: Colors.black,
+                overlayOpacity: 0.5,
+                children: [
+                  SpeedDialChild(
+                    child: Icon(Icons.star, color: Colors.yellow.shade700),
+                    label: 'ถูกใจ',
+                    onTap: (hasPrimaryPet && !user!.isAnonymous)
+                        ? () {
+                            add_Faverite(pet_id);
                           }
-                        },
-                ),
-                SpeedDialChild(
-                  child: Icon(
-                    Icons.favorite,
-                    color: Colors.pinkAccent,
+                        : () {
+                            if (user!.isAnonymous) {
+                              _showSignInDialog(context);
+                            } else {
+                              _showNoPrimaryPetDialog(context);
+                            }
+                          },
                   ),
-                  label: 'ขอจับคู่',
-                  onTap: (hasPrimaryPet &&
-                          !user!
-                              .isAnonymous) // ตรวจสอบว่ามีสัตว์เลี้ยงหลักและไม่เป็น anonymous
-                      ? () {
-                          // โค้ดสำหรับทำงานปกติเมื่อมีสัตว์เลี้ยงหลัก
-                          _showRequestDialog(context, petName, pet_id, pet_user,
-                              petImageBase64);
-                        }
-                      : () {
-                          // แสดงการแจ้งเตือนให้ผู้ใช้เพิ่มสัตว์เลี้ยงหลักก่อน หรือให้ล็อกอิน
-                          if (user!.isAnonymous) {
-                            _showSignInDialog(
-                                context); // แสดงการแจ้งเตือนให้ล็อกอิน
-                          } else {
-                            _showNoPrimaryPetDialog(
-                                context); // แสดงการแจ้งเตือนให้เพิ่มสัตว์เลี้ยงหลัก
+                  SpeedDialChild(
+                    child: Icon(
+                      Icons.favorite,
+                      color: Colors.pinkAccent,
+                    ),
+                    label: 'ขอจับคู่',
+                    onTap: (hasPrimaryPet && !user!.isAnonymous)
+                        ? () {
+                            _showRequestDialog(
+                              context,
+                              petName,
+                              pet_id,
+                              pet_user,
+                              petImageBase64,
+                            );
                           }
-                        },
-                ),
-              ],
+                        : () {
+                            if (user!.isAnonymous) {
+                              _showSignInDialog(context);
+                            } else {
+                              _showNoPrimaryPetDialog(context);
+                            }
+                          },
+                  ),
+                ],
+              ),
             ),
     );
   }
@@ -1471,7 +1502,8 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
 
   void _showRequestDialog(BuildContext context, petName, petId, petUser, Img) {
     TextEditingController des = TextEditingController();
-    print('petrequest: $petId_main ,petrespone: $petId, userid: $petUser, name: $namePet' );
+    print(
+        'petrequest: $petId_main ,petrespone: $petId, userid: $petUser, name: $namePet');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1553,7 +1585,13 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
                   child: ElevatedButton(
                     onPressed: () {
                       add_match(petId, petUser, Img, petName, des.text);
-                      Navigator.of(context).pop();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                Navigator_Page(initialIndex: 0)),
+                        (route) => false,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
@@ -1823,7 +1861,9 @@ class _Profile_pet_AllPageState extends State<Profile_pet_AllPage>
           'pet_request': pet_request,
           'pet_respone': pet_respone,
           'status': 'กำลังรอ',
-          'updates_at': formatted
+          'updates_at': formatted,
+          'user_req': userId,
+          'user_res': userIdd
         });
 
         String docId = newPetMatch.id;
