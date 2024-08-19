@@ -201,6 +201,7 @@ class _NotificationMore_PageState extends State<NotificationMore_Page> {
                               child: TextButton(
                                 onPressed: () {
                                   _deleteAllNotifications();
+                                  Navigator.of(context).pop();
                                 },
                                 child: const Text("ยืนยัน"),
                                 style: TextButton.styleFrom(

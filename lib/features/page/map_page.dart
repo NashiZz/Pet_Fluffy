@@ -115,6 +115,7 @@ class _MapsPageState extends State<Maps_Page> {
   @override
   void initState() {
     super.initState();
+    _getImageUser();
     location = Location();
     isAnonymousUser = _authService.isAnonymous();
     _locationSubscription =
@@ -125,7 +126,7 @@ class _MapsPageState extends State<Maps_Page> {
         _loadSelectedLocation();
       });
     });
-    _getImageUser();
+    
 
     // แยกการโหลดข้อมูลเป็นครั้งๆ
     WidgetsBinding.instance.addPostFrameCallback((_) {
