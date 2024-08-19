@@ -1,17 +1,9 @@
 // ignore_for_file: unnecessary_null_comparison, avoid_print, use_build_context_synchronously, no_leading_underscores_for_local_identifiers
 
-<<<<<<< HEAD
 import 'package:Pet_Fluffy/features/page/addDataUser.dart';
 import 'package:Pet_Fluffy/features/page/home.dart';
 import 'package:Pet_Fluffy/features/page/login_page.dart';
 import 'package:Pet_Fluffy/features/services/auth.dart';
-=======
-import 'package:Pet_Fluffy/features/page/email_verifly.dart';
-import 'package:Pet_Fluffy/features/page/home.dart';
-import 'package:Pet_Fluffy/features/page/login_page.dart';
-import 'package:Pet_Fluffy/features/services/auth.dart';
-import 'package:firebase_auth/firebase_auth.dart';
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -335,7 +327,6 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Future<void> _signUp() async {
-<<<<<<< HEAD
     if (_formKey.currentState!.validate()) {
       setState(() {
         isSigningUp = true;
@@ -419,101 +410,6 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
       );
 
-=======
-    setState(() {
-      isSigningUp = true;
-    });
-
-    String email = _emailController.text;
-    String password = _passwordController.text;
-    String compass = _compasswordController.text;
-
-    if (password.length < 6) {
-      setState(() {
-        isSigningUp = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัว'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (password != compass) {
-      setState(() {
-        isSigningUp = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    bool emailExists = await _authService.checkDuplicateEmail(email);
-    if (emailExists) {
-      setState(() {
-        isSigningUp = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('อีเมลนี้มีผู้ใช้งานแล้ว'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    try {
-      // สร้างบัญชีผู้ใช้ใหม่ด้วยอีเมลและรหัสผ่านที่ดึงมาจากฟอร์ม
-      UserCredential? userCredential =
-          await _authService.signUp(email, password);
-
-      if (userCredential == null) {
-        setState(() {
-          isSigningUp = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('เกิดข้อผิดพลาดในการสร้างบัญชีผู้ใช้'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      await _authService.saveUserDataToFirestore(
-        userCredential.user!.uid,
-        _usernameController.text,
-        _nameController.text,
-        email,
-        password,
-        _image,
-      );
-
-      setState(() {
-        isSigningUp = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('กรุณายืนยันอีเมลของคุณโดยเปิดอีเมลและคลิกที่ลิงก์ยืนยัน'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const EmailVerifly_Page()),
-      );
-    } catch (error) {
-      print("Error creating user: $error");
->>>>>>> 071ad19bd082706dbb7cb72bf7b1da10402350a3
       setState(() {
         isSigningUp = false;
       });
